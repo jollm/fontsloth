@@ -1,11 +1,11 @@
-;;; fontsloth.el --- Elisp ttf font renderer -*- lexical-binding: t -*-
+;;; fontsloth-otf.el --- Elisp otf/ttf bindat parser -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.0.1
 ;; Package-Requires: ((cl-lib "1.0") (names "20151201.0") (emacs "26.1"))
-;; Keywords: true-type, font, rasterization, ttf, otf
+;; Keywords: true-type, font, bindat, ttf, otf, parsing
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -24,11 +24,13 @@
 
 ;;; Commentary:
 
-;; the slowest font renderer in the world written in pure elisp
-;; inspired by fontdue
+;; Part of fontsloth: the slowest font renderer in the world written in pure
+;; elisp. inspired by fontdue
 
-;; To use this module, load and enable it as follows:
-;;   (use-package fontsloth)
+;; fontsloth-otf (this file): uses bindat to parse otf/ttf files
+
+;; To use this module by itself, load and enable it as follows:
+;;   (use-package fontsloth-otf)
 ;;
 
 ;;; Code:
@@ -40,7 +42,7 @@
   ;; let names handle cl-defun
   (defalias 'names--convert-cl-defun 'names--convert-defun))
 
-(define-namespace fontsloth-
+(define-namespace fontsloth-otf-
 
 (defvar -header-spec
   '((sfnt-version str 4)
@@ -60,9 +62,9 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledire
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledirectory")
 
 (defvar -tables-spec
-  '((header struct fontsloth--header-spec)
+  '((header struct fontsloth-otf--header-spec)
     (table-props repeat (header num-tables)
-                 (struct fontsloth--table-props-spec)))
+                 (struct fontsloth-otf--table-props-spec)))
   "Bindat spec for the OTF/TTF table directory, including the header.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledirectory")
 
@@ -282,9 +284,9 @@ ID-RANGE-OFFSET sequence of id range offsets from cmap"
     (id-range-offset-start unit bindat-idx)
     (id-range-offset vec seg-count uint 16)
     (glyph-index-map
-     unit (fontsloth--glyph-index-map end-code start-code id-delta
-                                      id-range-offset-start
-                                      id-range-offset)))
+     unit (fontsloth-otf--glyph-index-map end-code start-code id-delta
+                                          id-range-offset-start
+                                          id-range-offset)))
   "Bindat spec for the Format 4 section of the cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-segment-mapping-to-delta-values")
 
@@ -348,13 +350,13 @@ TTF-PATH the path to a ttf file
               (put-table "loca" (unpack-table "loca" -loca-spec))
               (put-table "glyf" (unpack-table "glyf" -glyf-spec)))
             ((string-equal "OTTO" sfnt-ver)
-              (message "fontsloth: cannot yet fully handle OpenType with CFF"))
-            (t (message "fontsloth: unknown sfnt-ver %s" sfnt-ver)))
+              (message "fontsloth-otf: cannot yet fully handle OpenType CFF"))
+            (t (message "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
       -current-tables)))
 )
 
 ;; unset after compile as this is non-standard
 (eval-when-compile (defalias 'names--convert-cl-defun nil))
 
-(provide 'fontsloth)
-;;; fontsloth.el ends here
+(provide 'fontsloth-otf)
+;;; fontsloth-otf.el ends here
