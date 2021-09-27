@@ -206,25 +206,20 @@ GLYPH-LOCATIONS sequence of glyph locations from the loca table"
 
 (defvar -glyf-spec
   (let ((loca (-get-table-value-accessor 'glyph-index-to-location "loca"))
-        (glyf-header-size 10)
-        (current-index))
+        (glyf-header-size 10))
     (bindat-type
-      (-start unit (setf current-index -1))
       (glyphs vec (-get-table-value 'num-glyphs "maxp")
               type
-              (if-let (range (-glyph-data-range (1+ current-index)
-                                                (funcall loca)))
+              (if-let (range (-glyph-data-range bindat--i (funcall loca)))
                   (bindat-type
                     (number-of-countours sint 16 nil)
                     (x-min sint 16 nil)
                     (y-min sint 16 nil)
                     (x-max sint 16 nil)
                     (y-max sint 16 nil)
-                    (index unit (cl-incf current-index))
                     (data fill (- range glyf-header-size)))
                 (bindat-type
-                  (missing unit 'missing-char)
-                  (index unit (cl-incf current-index)))))))
+                  (missing unit 'missing-char))))))
   "Bindat spec for the TrueType glyf table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/glyf")
 
