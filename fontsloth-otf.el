@@ -152,6 +152,16 @@ FIELD the table field
 TAG the table tag"
   (alist-get field (gethash tag -current-tables)))
 
+(defun -get-table-value-accessor (field tag)
+  "Get an accessor fn which caches the value from the named table.
+FIELD the table field
+TAG the table tag"
+  (let (v)
+    (lambda ()
+      (if v
+          v
+        (setq v (alist-get field (gethash tag -current-tables)))))))
+
 (defvar -hmtx-spec
   (cl-flet ((num-hor-metrics ()
               (-get-table-value 'num-of-long-hor-metrics "hhea"))
@@ -195,14 +205,15 @@ GLYPH-LOCATIONS sequence of glyph locations from the loca table"
     (unless (>= 0 range) range)))
 
 (defvar -glyf-spec
-  (bindat-type
-    (glyphs vec (-get-table-value 'num-glyphs "maxp")
-            type
-            (let* ((loca (-get-table-value 'glyph-index-to-location "loca"))
-                   (has-missing-char? (-has-missing-char? loca))
-                   (glyf-header-size 10)
-                   (current-index -1))
-              (if-let (range (-glyph-data-range (1+ current-index) loca))
+  (let ((loca (-get-table-value-accessor 'glyph-index-to-location "loca"))
+        (glyf-header-size 10)
+        (current-index))
+    (bindat-type
+      (-start unit (setf current-index -1))
+      (glyphs vec (-get-table-value 'num-glyphs "maxp")
+              type
+              (if-let (range (-glyph-data-range (1+ current-index)
+                                                (funcall loca)))
                   (bindat-type
                     (number-of-countours sint 16 nil)
                     (x-min sint 16 nil)
