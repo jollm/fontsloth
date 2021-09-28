@@ -79,6 +79,19 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledire
                (+ (/ v (ash 1 16))
                   (/ (* 1.0 (logand v #xffff)) #x10000))))))
 
+(bindat-defmacro v16.16 ()
+  "Version16Dot16 OTF/TTF version number format."
+  (let ((bl (make-symbol "bitlen")))
+    `(let ((,bl 32))
+       (struct :pack-var v
+               (v sint ,bl nil :pack-val v ; TODO pack correctly
+                  )
+               :unpack-val
+               (+ (/ v (ash 1 16))
+                  (let ((frac (logand v #xffff)))
+                    (if (= 0 frac) frac
+                      (/ frac (expt 10.0 (1+ (truncate (log frac 10))))))))))))
+
 (defvar -head-spec
   (bindat-type
     (major-version uint 16)
@@ -104,8 +117,7 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/head")
 
 (defvar -maxp-spec
   (bindat-type
-    ;; FIXME should be Version16Dot16, not Fixed
-    (version ttf-fixed)
+    (version v16.16)
     (num-glyphs uint 16)
     (max-points uint 16)
     (max-contours uint 16)
