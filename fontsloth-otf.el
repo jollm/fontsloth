@@ -266,13 +266,13 @@ ID-RANGE-OFFSET sequence of id range offsets from cmap"
            for delta across id-delta
            for offset across id-range-offset
            for i from 0
-           vconcat
-           `(,(cl-loop for c from start to end
-                       collect
-                       `(,c ,(let ((glyph-id-offset
-                                    (-calc-glyph-id-offset
-                                     c i start id-range-offset-start offset)))
-                               (mod (+ glyph-id-offset delta) #x10000)))))))
+           append
+           (cl-loop for c from start to end
+                    collect
+                    `(,c . ,(let ((glyph-id-offset
+                                   (-calc-glyph-id-offset
+                                    c i start id-range-offset-start offset)))
+                              (mod (+ glyph-id-offset delta) #x10000))))))
 
 (defvar -format4-spec
   (bindat-type
