@@ -42,6 +42,8 @@
   ;; let names handle cl-defun
   (defalias 'names--convert-cl-defun 'names--convert-defun))
 
+(require 'fontsloth-otf--mac-names)
+
 (define-namespace fontsloth-otf-
 
 (defvar -header-spec
@@ -329,6 +331,48 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-
   "Bindat spec for the OTF/TTF cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap")
 
+(bindat-defmacro pascal-str ()
+  "A pascal string, starts with non-inclusive length."
+  `(struct :pack-var v
+           (length uint 8 :pack-val (length v))
+           (name str length :pack-val v)
+           :unpack-val name))
+
+(defvar -post-spec
+  (let ((num-pascal-names 0))
+    (cl-flet ((pack-idx (idx) (if (consp idx) (+ 258 (cdr idx)) idx))
+              (unpack-idx (idx) (if (>= 257 idx) idx
+                                  (progn (cl-incf num-pascal-names)
+                                         `(pstr . ,(- idx 258))))))
+      (bindat-type
+        (version v16.16)
+        (italic-angle ttf-fixed)
+        (underline-position sint 16 nil)
+        (underline-thickness sint 16 nil)
+        (is-fixed-pitch uint 32)
+        (min-mem-type-42 uint 32)
+        (max-mem-type-42 uint 32)
+        (min-mem-type-1 uint 32)
+        (max-mem-type-1 uint 32)
+        (name-mapping
+          type (progn
+                 (setf num-pascal-names 0)
+                 (cond ((= 2.0 version)
+                        (bindat-type
+                          :pack-var v
+                          (num-glyphs uint 16 :pack-val (length v))
+                          (glyph-name-index vec num-glyphs uint 16
+                                            :pack-val (seq-map #'pack-idx v))
+                          :unpack-val (apply #'vector
+                                             (seq-map #'unpack-idx
+                                                      glyph-name-index))))
+                       ((= 3.0 version)
+                        (bindat-type unit 'no-name-information-provided))
+                       (t (bindat-type unit 'unhandled-name-format)))))
+        (names vec num-pascal-names pascal-str))))
+  "Bindat spec for the OTF/TTF post table.
+see URL https://docs.microsoft.com/en-us/typography/opentype/spec/post")
+
 (defun -index-table-props (table-props-list)
   "Convert the `table-props-list' into a map.
 TABLE-PROPS-LIST the list of table props to index"
@@ -364,6 +408,7 @@ TTF-PATH the path to a ttf file
       (put-table "hhea" (unpack-table "hhea" -hhea-spec))
       (put-table "hmtx" (unpack-table "hmtx" -hmtx-spec))
       (put-table "cmap" (unpack-table "cmap" -cmap-spec))
+      (put-table "post" (unpack-table "post" -post-spec))
       (cond ((string-equal "   " sfnt-ver)
               (put-table "loca" (unpack-table "loca" -loca-spec))
               (put-table "glyf" (unpack-table "glyf" -glyf-spec)))
