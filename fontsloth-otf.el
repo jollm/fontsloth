@@ -169,11 +169,11 @@ TAG the table tag"
               (-get-table-value 'num-glyphs "maxp")))
     (bindat-type
       (hmetrics vec (num-hor-metrics)
-       type (bindat-type
-              (advance-width uint 16)
-              (left-side-bearing sint 16 nil)))
+        type (bindat-type
+               (advance-width uint 16)
+               (left-side-bearing sint 16 nil)))
       (left-side-bearing vec (- (num-glyphs) (num-hor-metrics))
-       sint 16 nil)))
+        sint 16 nil)))
   "Bindat spec for the OTF/TTF hmtx table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/hmtx")
 
