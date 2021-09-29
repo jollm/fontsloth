@@ -166,16 +166,6 @@ FIELD the table field
 TAG the table tag"
   (alist-get field (gethash tag -current-tables)))
 
-(defun -get-table-value-accessor (field tag)
-  "Get an accessor fn which caches the value from the named table.
-FIELD the table field
-TAG the table tag"
-  (let (v)
-    (lambda ()
-      (if v
-          v
-        (setq v (alist-get field (gethash tag -current-tables)))))))
-
 (defvar -hmtx-spec
   (cl-flet ((num-hor-metrics ()
               (-get-table-value 'num-of-long-hor-metrics "hhea"))
@@ -272,13 +262,15 @@ PREV-Y sequence of previous y coords"
                               (elt prev-y (1- idx))))
         (bindat-type sint 16 nil)))))
 
-(defun -make-simple-glyf-data-spec (num-contours)
+(defun -make-simple-glyf-data-spec (num-contours range)
   "Given number of contours make a bindat spec to parse simple glyph data.
-NUM-CONTOURS number of contours for the glyph, positive for simple data"
-  (let ((flag-repeat-counter) (flag-to-repeatl))
+NUM-CONTOURS number of contours for the glyph, positive for simple data
+RANGE length in bytes from loca for data, excluding header size"
+  (let ((flag-repeat-counter) (flag-to-repeat) (fill-to))
     (bindat-type
-      (_ unit (progn (setf flag-repeat-counter 0)
-                     (setf flag-to-repeat nil) nil))
+      (_ unit (progn (setf flag-repeat-counter 0
+                           flag-to-repeat nil
+                           fill-to (+ bindat-idx range)) nil))
       (end-pts vec num-contours uint 16)
       (instruction-length uint 16)
       (instructions vec instruction-length uint 8)
@@ -294,24 +286,25 @@ NUM-CONTOURS number of contours for the glyph, positive for simple data"
                                   (bindat-type uint 8)
                                 (bindat-type unit nil)))
                  (_ unit (when repeat
-                           (setf flag-repeat-counter repeat)
-                           (setf flag-to-repeat flag)
-                           nil)))))
+                           (setf flag-repeat-counter repeat
+                                 flag-to-repeat flag) nil)))))
       (x-coords vec num-points type
                 (-compute-x-type-from-flag (car (elt flags bindat--i))
                                            bindat--i bindat--v))
       (y-coords vec num-points type
                 (-compute-y-type-from-flag (car (elt flags bindat--i))
                                            bindat--i bindat--v))
-      (_ align 2))))
+      (_ fill (- fill-to bindat-idx)))))
 
 (defvar -glyf-spec
-  (let ((loca (-get-table-value-accessor 'glyph-index-to-location "loca"))
-        (glyf-header-size 10))
+  (let ((loca) (glyf-header-size 10))
     (bindat-type
+      (_ unit (progn
+                (setf loca (-get-table-value 'glyph-index-to-location "loca"))
+                nil))
       (glyphs vec (-get-table-value 'num-glyphs "maxp")
               type
-              (if-let (range (-glyph-data-range bindat--i (funcall loca)))
+              (if-let (range (-glyph-data-range bindat--i loca))
                   (bindat-type
                     (number-of-contours sint 16 nil)
                     (x-min sint 16 nil)
@@ -319,11 +312,11 @@ NUM-CONTOURS number of contours for the glyph, positive for simple data"
                     (x-max sint 16 nil)
                     (y-max sint 16 nil)
                     (data type
-                          (if (> 0 number-of-contours)
-                              (bindat-type vec (- range glyf-header-size)
-                                           uint 8)
-                            (fontsloth-otf--make-simple-glyf-data-spec
-                             number-of-contours))))
+                          (let ((range (- range glyf-header-size)))
+                            (if (> 0 number-of-contours)
+                                (bindat-type vec range uint 8)
+                              (fontsloth-otf--make-simple-glyf-data-spec
+                               number-of-contours range)))))
                 (bindat-type
                   (missing unit 'missing-char))))))
   "Bindat spec for the TrueType glyf table.
