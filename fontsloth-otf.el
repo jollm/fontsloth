@@ -416,7 +416,29 @@ TTF-PATH the path to a ttf file
               (message "fontsloth-otf: cannot yet fully handle OpenType CFF"))
             (t (message "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
       -current-tables)))
-)
+
+(defun glyph-id-for-code-point (code-point)
+  "Return the font's glyph index for a given code point or nil if not found.
+CODE-POINT a character code point"
+  ;; TODO handle other formats
+  ;; TODO hold somewhere a reference to the format 4 table after first lookup
+  (cl-flet ((format4? (table) (= 4 (alist-get 'format table))))
+    (when-let* ((cmap (gethash "cmap" -current-tables))
+                 (sub-tables (bindat-get-field cmap 'sub-tables))
+                 (format4-table (cadar (seq-filter #'format4? sub-tables))))
+      (let ((glyph-index-map (alist-get 'glyph-index-map format4-table)))
+        (alist-get code-point glyph-index-map)))))
+
+(defun glyph-name (glyph-id)
+  "Return the name the font specifies for the glyph or nil if none is given.
+GLYPH-ID the glyph-id"
+  (when-let* ((post (gethash "post" -current-tables))
+              (name-map (alist-get 'name-mapping post)))
+    (when (vectorp name-map)
+      (let ((idx (elt name-map glyph-id)))
+        (if (consp idx)
+            (elt (alist-get 'names post) (cdr idx))
+          (elt fontsloth-otf--mac-names idx)))))))
 
 ;; unset after compile as this is non-standard
 (eval-when-compile (defalias 'names--convert-cl-defun nil))
