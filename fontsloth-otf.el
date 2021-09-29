@@ -218,6 +218,93 @@ GLYPH-LOCATIONS sequence of glyph locations from the loca table"
                   (elt glyph-locations index))))
     (unless (>= 0 range) range)))
 
+(defvar -simple-glyf-flag-spec
+  (bindat-type
+    :pack-var f
+    (byte uint 8 :pack-val f)           ; TODO pack properly
+    :unpack-val
+    `((on-curve-point . ,(= 1 (logand 1 byte)))
+      (x-short-vector . ,(= 2 (logand 2 byte)))
+      (y-short-vector . ,(= 4 (logand 4 byte)))
+      (repeat . ,(= 8 (logand 8 byte)))
+      (x-is-same-or-pos-x-short-vec
+       . ,(= 16 (logand 16 byte)))
+      (y-is-same-or-pos-y-short-vec
+       . ,(= 32 (logand 32 byte)))
+      (overlap-simple . ,(= 64 (logand 64 byte)))
+      (reserved . ,(= 128 (logand 128 byte))))))
+
+;; TODO compute-x and compute-y could be done with a macro or wrapper fn
+
+(defun -compute-x-type-from-flag (flag idx prev-x)
+  "Given the point flags at point `idx', make a bindat type for the x coord.
+FLAG the point flags for point at `idx'
+IDX the point index
+PREV-X sequence of previous x coords"
+  (let* ((x-short-vector (alist-get 'x-short-vector flag))
+         (x-is-same-or-pos-x-short-vec
+          (alist-get 'x-is-same-or-pos-x-short-vec flag)))
+    (if x-short-vector
+        (if x-is-same-or-pos-x-short-vec
+            (bindat-type u8)
+          (bindat-type :pack-var v (b u8 :pack-val (* -1 v))
+                       :unpack-val (* -1 b)))
+      (if x-is-same-or-pos-x-short-vec
+          (bindat-type unit (if (= 0 idx) 0
+                              (elt prev-x (1- idx))))
+        (bindat-type sint 16 nil)))))
+
+(defun -compute-y-type-from-flag (flag idx prev-y)
+  "Given the point flags at point `idx', make a bindat type for the y coord.
+FLAG the point flags for point at `idx'
+IDX the point index
+PREV-Y sequence of previous y coords"
+  (let ((y-short-vector (alist-get 'y-short-vector flag))
+        (y-is-same-or-pos-y-short-vec
+         (alist-get 'y-is-same-or-pos-y-short-vec flag)))
+    (if y-short-vector
+        (if y-is-same-or-pos-y-short-vec
+            (bindat-type u8)
+          (bindat-type :pack-var v (b u8 :pack-val (* -1 v))
+                       :unpack-val (* -1 b)))
+      (if y-is-same-or-pos-y-short-vec
+          (bindat-type unit (if (= 0 idx) 0
+                              (elt prev-y (1- idx))))
+        (bindat-type sint 16 nil)))))
+
+(defun -make-simple-glyf-data-spec (num-contours)
+  "Given number of contours make a bindat spec to parse simple glyph data.
+NUM-CONTOURS number of contours for the glyph, positive for simple data"
+  (let ((flag-repeat-counter) (flag-to-repeatl))
+    (bindat-type
+      (_ unit (progn (setf flag-repeat-counter 0)
+                     (setf flag-to-repeat nil) nil))
+      (end-pts vec num-contours uint 16)
+      (instruction-length uint 16)
+      (instructions vec instruction-length uint 8)
+      (num-points unit (1+ (elt end-pts (1- num-contours))))
+      (flags vec num-points type
+             (if (< 0 flag-repeat-counter)
+                 (bindat-type
+                   (flag unit flag-to-repeat)
+                   (_ unit (progn (cl-decf flag-repeat-counter) nil)))
+               (bindat-type
+                 (flag type -simple-glyf-flag-spec)
+                 (repeat type (if (alist-get 'repeat flag)
+                                  (bindat-type uint 8)
+                                (bindat-type unit nil)))
+                 (_ unit (when repeat
+                           (setf flag-repeat-counter repeat)
+                           (setf flag-to-repeat flag)
+                           nil)))))
+      (x-coords vec num-points type
+                (-compute-x-type-from-flag (car (elt flags bindat--i))
+                                           bindat--i bindat--v))
+      (y-coords vec num-points type
+                (-compute-y-type-from-flag (car (elt flags bindat--i))
+                                           bindat--i bindat--v))
+      (_ align 2))))
+
 (defvar -glyf-spec
   (let ((loca (-get-table-value-accessor 'glyph-index-to-location "loca"))
         (glyf-header-size 10))
@@ -226,12 +313,17 @@ GLYPH-LOCATIONS sequence of glyph locations from the loca table"
               type
               (if-let (range (-glyph-data-range bindat--i (funcall loca)))
                   (bindat-type
-                    (number-of-countours sint 16 nil)
+                    (number-of-contours sint 16 nil)
                     (x-min sint 16 nil)
                     (y-min sint 16 nil)
                     (x-max sint 16 nil)
                     (y-max sint 16 nil)
-                    (data fill (- range glyf-header-size)))
+                    (data type
+                          (if (> 0 number-of-contours)
+                              (bindat-type vec (- range glyf-header-size)
+                                           uint 8)
+                            (fontsloth-otf--make-simple-glyf-data-spec
+                             number-of-contours))))
                 (bindat-type
                   (missing unit 'missing-char))))))
   "Bindat spec for the TrueType glyf table.
