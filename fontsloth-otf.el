@@ -226,6 +226,10 @@ GLYPH-LOCATIONS sequence of glyph locations from the loca table"
 
 ;; TODO compute-x and compute-y could be done with a macro or wrapper fn
 
+(defun -prev-coord (prev idx)
+  (if (= 0 idx) 0
+    (elt prev (1- idx))))
+
 (defun -compute-x-type-from-flag (flag idx prev-x)
   "Given the point flags at point `idx', make a bindat type for the x coord.
 FLAG the point flags for point at `idx'
@@ -234,15 +238,18 @@ PREV-X sequence of previous x coords"
   (let* ((x-short-vector (alist-get 'x-short-vector flag))
          (x-is-same-or-pos-x-short-vec
           (alist-get 'x-is-same-or-pos-x-short-vec flag)))
-    (if x-short-vector
-        (if x-is-same-or-pos-x-short-vec
-            (bindat-type u8)
-          (bindat-type :pack-var v (b u8 :pack-val (* -1 v))
-                       :unpack-val (* -1 b)))
-      (if x-is-same-or-pos-x-short-vec
-          (bindat-type unit (if (= 0 idx) 0
-                              (elt prev-x (1- idx))))
-        (bindat-type sint 16 nil)))))
+    (let ((x-type
+           (if x-short-vector
+               (if x-is-same-or-pos-x-short-vec
+                   (bindat-type u8)
+                 (bindat-type :pack-var v (b u8 :pack-val (* -1 v))
+                              :unpack-val (* -1 b)))
+             (if x-is-same-or-pos-x-short-vec
+                 (bindat-type unit 0)
+               (bindat-type sint 16 nil)))))
+      (bindat-type :pack-var v (dx type x-type
+                                   :pack-val (- v (-prev-coord prev-x idx)))
+                   :unpack-val (+ dx (-prev-coord prev-x idx))))))
 
 (defun -compute-y-type-from-flag (flag idx prev-y)
   "Given the point flags at point `idx', make a bindat type for the y coord.
@@ -252,15 +259,18 @@ PREV-Y sequence of previous y coords"
   (let ((y-short-vector (alist-get 'y-short-vector flag))
         (y-is-same-or-pos-y-short-vec
          (alist-get 'y-is-same-or-pos-y-short-vec flag)))
-    (if y-short-vector
-        (if y-is-same-or-pos-y-short-vec
-            (bindat-type u8)
-          (bindat-type :pack-var v (b u8 :pack-val (* -1 v))
-                       :unpack-val (* -1 b)))
-      (if y-is-same-or-pos-y-short-vec
-          (bindat-type unit (if (= 0 idx) 0
-                              (elt prev-y (1- idx))))
-        (bindat-type sint 16 nil)))))
+    (let ((y-type
+           (if y-short-vector
+               (if y-is-same-or-pos-y-short-vec
+                   (bindat-type u8)
+                 (bindat-type :pack-var v (b u8 :pack-val (* -1 v))
+                              :unpack-val (* -1 b)))
+             (if y-is-same-or-pos-y-short-vec
+                 (bindat-type unit 0)
+               (bindat-type sint 16 nil)))))
+      (bindat-type :pack-var v (dy type y-type
+                                   :pack-val (- v (-prev-coord prev-y idx)))
+                   :unpack-val (+ dy (-prev-coord prev-y idx))))))
 
 (defun -make-simple-glyf-data-spec (num-contours range)
   "Given number of contours make a bindat spec to parse simple glyph data.
