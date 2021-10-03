@@ -37,16 +37,10 @@
 
 (require 'bindat)
 (require 'cl-lib)
-(eval-when-compile
-  (require 'names)
-  ;; let names handle cl-defun
-  (defalias 'names--convert-cl-defun 'names--convert-defun))
 
 (require 'fontsloth-otf--mac-names)
 
-(define-namespace fontsloth-otf-
-
-(defvar -header-spec
+(defvar fontsloth-otf--header-spec
   '((sfnt-version str 4)
     (num-tables u16)
     (search-range u16)
@@ -55,7 +49,7 @@
   "Bindat spec for the OTF/TTF table directory header.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledirectory")
 
-(defvar -table-props-spec
+(defvar fontsloth-otf--table-props-spec
   '((tag str 4)
     (checksum u32)
     (offset u32)
@@ -63,7 +57,7 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledire
   "Bindat spec for a single entry in the OTF/TTF table directory.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledirectory")
 
-(defvar -tables-spec
+(defvar fontsloth-otf--tables-spec
   '((header struct fontsloth-otf--header-spec)
     (table-props repeat (header num-tables)
                  (struct fontsloth-otf--table-props-spec)))
@@ -94,7 +88,7 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledire
                     (if (= 0 frac) frac
                       (/ frac (expt 10.0 (1+ (truncate (log frac 10))))))))))))
 
-(defvar -head-spec
+(defvar fontsloth-otf--head-spec
   (bindat-type
     (major-version uint 16)
     (minor-version uint 16)
@@ -117,7 +111,7 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledire
   "Bindat spec for the OTF/TTF head table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/head")
 
-(defvar -maxp-spec
+(defvar fontsloth-otf--maxp-spec
   (bindat-type
     (version v16.16)
     (num-glyphs uint 16)
@@ -137,7 +131,7 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/head")
   "Bindat spec for the OTF/TTF maxp table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/maxp")
 
-(defvar -hhea-spec
+(defvar fontsloth-otf--hhea-spec
   (bindat-type
     (version ttf-fixed)
     (ascent sint 16 nil)
@@ -157,20 +151,20 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/maxp")
   "Bindat spec for the OTF/TTF hhea table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/hhea")
 
-(defvar -current-font-bytes nil)
-(defvar -current-tables nil)
+(defvar fontsloth-otf--current-font-bytes nil)
+(defvar fontsloth-otf--current-tables nil)
 
-(defun -get-table-value (field tag)
+(defun fontsloth-otf--get-table-value (field tag)
   "Get a value from the named table in the current context.
 FIELD the table field
 TAG the table tag"
-  (alist-get field (gethash tag -current-tables)))
+  (alist-get field (gethash tag fontsloth-otf--current-tables)))
 
-(defvar -hmtx-spec
+(defvar fontsloth-otf--hmtx-spec
   (cl-flet ((num-hor-metrics ()
-              (-get-table-value 'num-of-long-hor-metrics "hhea"))
+              (fontsloth-otf--get-table-value 'num-of-long-hor-metrics "hhea"))
             (num-glyphs ()
-              (-get-table-value 'num-glyphs "maxp")))
+              (fontsloth-otf--get-table-value 'num-glyphs "maxp")))
     (bindat-type
       (hmetrics vec (num-hor-metrics)
         type (bindat-type
@@ -181,11 +175,12 @@ TAG the table tag"
   "Bindat spec for the OTF/TTF hmtx table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/hmtx")
 
-(defvar -loca-spec
+(defvar fontsloth-otf--loca-spec
   (bindat-type
     (glyph-index-to-location
-     vec (1+ (-get-table-value 'num-glyphs "maxp"))
-     type (if (eql 0 (-get-table-value 'index-to-loc-format "head"))
+     vec (1+ (fontsloth-otf--get-table-value 'num-glyphs "maxp"))
+     type (if (eql 0
+                   (fontsloth-otf--get-table-value 'index-to-loc-format "head"))
               (bindat-type
                 :pack-var v
                 (loc uint 16 :pack-val (ash v -1))
@@ -194,13 +189,13 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/hmtx")
   "Bindat spec for the TrueType loca table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/loca")
 
-(defun -has-missing-char? (glyph-locations)
+(defun fontsloth-otf--has-missing-char? (glyph-locations)
   "Test whether the first glyph in glyf is the missing character.
 GLYPH-LOCATIONS sequence of glyph locations from the loca table"
   (not (eql (elt glyph-locations 0)
             (elt glyph-locations 1))))
 
-(defun -glyph-data-range (index glyph-locations)
+(defun fontsloth-otf--glyph-data-range (index glyph-locations)
   "Calculate data range of glyph `index' in glyf given glyph-locations.
 INDEX the glyph index
 GLYPH-LOCATIONS sequence of glyph locations from the loca table"
@@ -208,7 +203,7 @@ GLYPH-LOCATIONS sequence of glyph locations from the loca table"
                   (elt glyph-locations index))))
     (unless (>= 0 range) range)))
 
-(defvar -simple-glyf-flag-spec
+(defvar fontsloth-otf--simple-glyf-flag-spec
   (bindat-type
     :pack-var f
     (byte uint 8 :pack-val f)           ; TODO pack properly
@@ -226,11 +221,11 @@ GLYPH-LOCATIONS sequence of glyph locations from the loca table"
 
 ;; TODO compute-x and compute-y could be done with a macro or wrapper fn
 
-(defun -prev-coord (prev idx)
+(defun fontsloth-otf--prev-coord (prev idx)
   (if (= 0 idx) 0
     (elt prev (1- idx))))
 
-(defun -compute-x-type-from-flag (flag idx prev-x)
+(defun fontsloth-otf--compute-x-type-from-flag (flag idx prev-x)
   "Given the point flags at point `idx', make a bindat type for the x coord.
 FLAG the point flags for point at `idx'
 IDX the point index
@@ -247,11 +242,12 @@ PREV-X sequence of previous x coords"
              (if x-is-same-or-pos-x-short-vec
                  (bindat-type unit 0)
                (bindat-type sint 16 nil)))))
-      (bindat-type :pack-var v (dx type x-type
-                                   :pack-val (- v (-prev-coord prev-x idx)))
-                   :unpack-val (+ dx (-prev-coord prev-x idx))))))
+      (bindat-type :pack-var v
+                   (dx type x-type
+                       :pack-val (- v (fontsloth-otf--prev-coord prev-x idx)))
+                   :unpack-val (+ dx (fontsloth-otf--prev-coord prev-x idx))))))
 
-(defun -compute-y-type-from-flag (flag idx prev-y)
+(defun fontsloth-otf--compute-y-type-from-flag (flag idx prev-y)
   "Given the point flags at point `idx', make a bindat type for the y coord.
 FLAG the point flags for point at `idx'
 IDX the point index
@@ -268,11 +264,12 @@ PREV-Y sequence of previous y coords"
              (if y-is-same-or-pos-y-short-vec
                  (bindat-type unit 0)
                (bindat-type sint 16 nil)))))
-      (bindat-type :pack-var v (dy type y-type
-                                   :pack-val (- v (-prev-coord prev-y idx)))
-                   :unpack-val (+ dy (-prev-coord prev-y idx))))))
+      (bindat-type :pack-var v
+                   (dy type y-type
+                       :pack-val (- v (fontsloth-otf--prev-coord prev-y idx)))
+                   :unpack-val (+ dy (fontsloth-otf--prev-coord prev-y idx))))))
 
-(defun -make-simple-glyf-data-spec (num-contours range)
+(defun fontsloth-otf--make-simple-glyf-data-spec (num-contours range)
   "Given number of contours make a bindat spec to parse simple glyph data.
 NUM-CONTOURS number of contours for the glyph, positive for simple data
 RANGE length in bytes from loca for data, excluding header size"
@@ -291,7 +288,7 @@ RANGE length in bytes from loca for data, excluding header size"
                    (flag unit flag-to-repeat)
                    (_ unit (progn (cl-decf flag-repeat-counter) nil)))
                (bindat-type
-                 (flag type -simple-glyf-flag-spec)
+                 (flag type fontsloth-otf--simple-glyf-flag-spec)
                  (repeat type (if (alist-get 'repeat flag)
                                   (bindat-type uint 8)
                                 (bindat-type unit nil)))
@@ -299,22 +296,25 @@ RANGE length in bytes from loca for data, excluding header size"
                            (setf flag-repeat-counter repeat
                                  flag-to-repeat flag) nil)))))
       (x-coords vec num-points type
-                (-compute-x-type-from-flag (car (elt flags bindat--i))
-                                           bindat--i bindat--v))
+                (fontsloth-otf--compute-x-type-from-flag
+                 (car (elt flags bindat--i))
+                 bindat--i bindat--v))
       (y-coords vec num-points type
-                (-compute-y-type-from-flag (car (elt flags bindat--i))
-                                           bindat--i bindat--v))
+                (fontsloth-otf--compute-y-type-from-flag
+                 (car (elt flags bindat--i))
+                 bindat--i bindat--v))
       (_ fill (- fill-to bindat-idx)))))
 
-(defvar -glyf-spec
+(defvar fontsloth-otf--glyf-spec
   (let ((loca) (glyf-header-size 10))
     (bindat-type
-      (_ unit (progn
-                (setf loca (-get-table-value 'glyph-index-to-location "loca"))
-                nil))
-      (glyphs vec (-get-table-value 'num-glyphs "maxp")
+      (_ unit
+         (progn
+           (setf loca (fontsloth-otf--get-table-value
+                       'glyph-index-to-location "loca")) nil))
+      (glyphs vec (fontsloth-otf--get-table-value 'num-glyphs "maxp")
               type
-              (if-let (range (-glyph-data-range bindat--i loca))
+              (if-let (range (fontsloth-otf--glyph-data-range bindat--i loca))
                   (bindat-type
                     (number-of-contours sint 16 nil)
                     (x-min sint 16 nil)
@@ -332,7 +332,7 @@ RANGE length in bytes from loca for data, excluding header size"
   "Bindat spec for the TrueType glyf table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/glyf")
 
-(defvar -format0-spec
+(defvar fontsloth-otf--format0-spec
   (let ((header-size 8))                ; includes format uint 16
     (bindat-type
       (length uint 16)
@@ -342,7 +342,7 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/glyf")
   "Bindat spec for the Format 0 section of the cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-0-byte-encoding-table")
 
-(defun -calc-glyph-id-offset (char-code segment start id-range-offset-start offset)
+(defun fontsloth-otf--calc-glyph-id-offset (char-code segment start id-range-offset-start offset)
   "Calculate the format 4 glyphid index for the given `char-code'.
 CHAR-CODE a format 4 char code
 SEGMENT the format 4 segment
@@ -358,10 +358,10 @@ OFFSET the current id range offset for `segment'"
                offset
                (* 2 (- char-code start))))
            (glyph-id (bindat-unpack
-                      '((glyph-index u16)) -current-font-bytes glyphid-offset)))
+                      '((glyph-index u16)) fontsloth-otf--current-font-bytes glyphid-offset)))
       (alist-get 'glyph-index glyph-id))))
 
-(defun -glyph-index-map (end-code
+(defun fontsloth-otf--glyph-index-map (end-code
                          start-code
                          id-delta id-range-offset-start id-range-offset)
   "Compute the format 4 char -> glyph index mapping for each segment in cmap.
@@ -379,11 +379,11 @@ ID-RANGE-OFFSET sequence of id range offsets from cmap"
            (cl-loop for c from start to end
                     collect
                     `(,c . ,(let ((glyph-id-offset
-                                   (-calc-glyph-id-offset
+                                   (fontsloth-otf--calc-glyph-id-offset
                                     c i start id-range-offset-start offset)))
                               (mod (+ glyph-id-offset delta) #x10000))))))
 
-(defvar -format4-spec
+(defvar fontsloth-otf--format4-spec
   (bindat-type
     (length uint 16)
     (language uint 16)
@@ -405,7 +405,7 @@ ID-RANGE-OFFSET sequence of id range offsets from cmap"
   "Bindat spec for the Format 4 section of the cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-segment-mapping-to-delta-values")
 
-(defvar -cmap-spec
+(defvar fontsloth-otf--cmap-spec
   (bindat-type
     (version uint 16)
     (num-tables uint 16)
@@ -419,8 +419,8 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-
      type (bindat-type
             (format uint 16)
             (fmt-table type
-                       (cond ((= 4 format) -format4-spec)
-                             ((= 0 format) -format0-spec)
+                       (cond ((= 4 format) fontsloth-otf--format4-spec)
+                             ((= 0 format) fontsloth-otf--format0-spec)
                              ;; TODO fill with appropriate length
                              (t (bindat-type (unknown-format fill 0))))))))
   "Bindat spec for the OTF/TTF cmap table.
@@ -433,7 +433,7 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap")
            (name str length :pack-val v)
            :unpack-val name))
 
-(defvar -post-spec
+(defvar fontsloth-otf--post-spec
   (let ((num-pascal-names 0))
     (cl-flet ((pack-idx (idx) (if (consp idx) (+ 258 (cdr idx)) idx))
               (unpack-idx (idx) (if (>= 257 idx) idx
@@ -468,7 +468,7 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap")
   "Bindat spec for the OTF/TTF post table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/post")
 
-(defun -index-table-props (table-props-list)
+(defun fontsloth-otf--index-table-props (table-props-list)
   "Convert the `table-props-list' into a map.
 TABLE-PROPS-LIST the list of table props to index"
   (let ((m (make-hash-table :test 'equal)))
@@ -476,67 +476,67 @@ TABLE-PROPS-LIST the list of table props to index"
       (puthash (alist-get 'tag tprops) tprops m))
     m))
 
-(cl-defun -load-font (ttf-path &key (coll-index 0) (scale 40.0))
+(cl-defun fontsloth-otf-load-font (ttf-path &key (coll-index 0) (scale 40.0))
   "Read `ttf-path' into an abstract representation suitable for rendering.
 TTF-PATH the path to a ttf file
 :COLL-INDEX the collection index if this file is a collection, default 0
 :SCALE the scale in px for which the font geometry is optimized, default 40.0"
-  (setq -current-tables (make-hash-table :test 'equal))
-  (setq -current-font-bytes (with-temp-buffer
+  (setq fontsloth-otf--current-tables (make-hash-table :test 'equal))
+  (setq fontsloth-otf--current-font-bytes (with-temp-buffer
                               (set-buffer-multibyte nil)
                               (insert-file-contents-literally ttf-path)
                               (buffer-string)))
-  (let* ((header+table-props (bindat-unpack -tables-spec -current-font-bytes))
+  (let* ((header+table-props (bindat-unpack fontsloth-otf--tables-spec
+                                            fontsloth-otf--current-font-bytes))
          ;; sfnt-ver to check if there is either TrueType or CFF data
          (sfnt-ver (bindat-get-field header+table-props 'header 'sfnt-version))
-         (props (-index-table-props
+         (props (fontsloth-otf--index-table-props
                  (bindat-get-field header+table-props 'table-props))))
     (cl-flet ((unpack-table (tag spec &optional local-offset)
-                (bindat-unpack spec -current-font-bytes
+                (bindat-unpack spec fontsloth-otf--current-font-bytes
                                (+ (or local-offset 0)
                                   (alist-get 'offset (gethash tag props)))))
               (put-table (tag data)
-                (puthash tag data -current-tables)))
+                (puthash tag data fontsloth-otf--current-tables)))
       (put-table "table-directory" header+table-props)
-      (put-table "head" (unpack-table "head" -head-spec))
-      (put-table "maxp" (unpack-table "maxp" -maxp-spec))
-      (put-table "hhea" (unpack-table "hhea" -hhea-spec))
-      (put-table "hmtx" (unpack-table "hmtx" -hmtx-spec))
-      (put-table "cmap" (unpack-table "cmap" -cmap-spec))
-      (put-table "post" (unpack-table "post" -post-spec))
+      (put-table "head" (unpack-table "head" fontsloth-otf--head-spec))
+      (put-table "maxp" (unpack-table "maxp" fontsloth-otf--maxp-spec))
+      (put-table "hhea" (unpack-table "hhea" fontsloth-otf--hhea-spec))
+      (put-table "hmtx" (unpack-table "hmtx" fontsloth-otf--hmtx-spec))
+      (put-table "cmap" (unpack-table "cmap" fontsloth-otf--cmap-spec))
+      (put-table "post" (unpack-table "post" fontsloth-otf--post-spec))
       (cond ((string-equal "   " sfnt-ver)
-              (put-table "loca" (unpack-table "loca" -loca-spec))
-              (put-table "glyf" (unpack-table "glyf" -glyf-spec)))
+              (put-table "loca" (unpack-table "loca" fontsloth-otf--loca-spec))
+              (put-table "glyf" (unpack-table "glyf" fontsloth-otf--glyf-spec)))
             ((string-equal "OTTO" sfnt-ver)
               (message "fontsloth-otf: cannot yet fully handle OpenType CFF"))
             (t (message "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
-      -current-tables)))
+      fontsloth-otf--current-tables)))
 
-(defun glyph-id-for-code-point (code-point)
+(defun fontsloth-otf-glyph-id-for-code-point (code-point)
   "Return the font's glyph index for a given code point or nil if not found.
 CODE-POINT a character code point"
   ;; TODO handle other formats
   ;; TODO hold somewhere a reference to the format 4 table after first lookup
   (cl-flet ((format4? (table) (= 4 (alist-get 'format table))))
-    (when-let* ((cmap (gethash "cmap" -current-tables))
+    (when-let* ((cmap (gethash "cmap" fontsloth-otf--current-tables))
                  (sub-tables (bindat-get-field cmap 'sub-tables))
                  (format4-table (cadar (seq-filter #'format4? sub-tables))))
       (let ((glyph-index-map (alist-get 'glyph-index-map format4-table)))
         (alist-get code-point glyph-index-map)))))
 
-(defun glyph-name (glyph-id)
+(defun fontsloth-otf-glyph-name (glyph-id)
   "Return the name the font specifies for the glyph or nil if none is given.
 GLYPH-ID the glyph-id"
-  (when-let* ((post (gethash "post" -current-tables))
+  (when-let* ((post (gethash "post" fontsloth-otf--current-tables))
               (name-map (alist-get 'name-mapping post)))
     (when (vectorp name-map)
       (let ((idx (elt name-map glyph-id)))
         (if (consp idx)
             (elt (alist-get 'names post) (cdr idx))
-          (elt fontsloth-otf--mac-names idx)))))))
+          (elt fontsloth-otf--mac-names idx))))))
 
-;; unset after compile as this is non-standard
-(eval-when-compile (defalias 'names--convert-cl-defun nil))
+
 
 (provide 'fontsloth-otf)
 ;;; fontsloth-otf.el ends here
