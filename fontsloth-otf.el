@@ -181,8 +181,8 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/hmtx")
   (bindat-type
     (glyph-index-to-location
      vec (1+ (fontsloth-otf--get-table-value 'num-glyphs "maxp"))
-     type (if (eql 0
-                   (fontsloth-otf--get-table-value 'index-to-loc-format "head"))
+     type (if (eq 0
+                  (fontsloth-otf--get-table-value 'index-to-loc-format "head"))
               (bindat-type
                 :pack-var v
                 (loc uint 16 :pack-val (ash v -1))
@@ -194,8 +194,8 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/loca")
 (defun fontsloth-otf--has-missing-char? (glyph-locations)
   "Test whether the first glyph in glyf is the missing character.
 GLYPH-LOCATIONS sequence of glyph locations from the loca table"
-  (not (eql (elt glyph-locations 0)
-            (elt glyph-locations 1))))
+  (not (eq (elt glyph-locations 0)
+           (elt glyph-locations 1))))
 
 (defun fontsloth-otf--glyph-data-range (index glyph-locations)
   "Calculate data range of glyph `index' in glyf given glyph-locations.
