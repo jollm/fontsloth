@@ -552,6 +552,27 @@ GLYPH-ID the glyph-id"
             (elt (alist-get 'names post) (cdr idx))
           (elt fontsloth-otf--mac-names idx))))))
 
+(defun fontsloth-otf-ascender ()
+  "Return the font's horizontal face ascender."
+  ;; TODO: parse OS/2 table
+  ;; TODO: support variation axes
+  (when-let ((hhea (gethash "hhea" fontsloth-otf--current-tables)))
+    (alist-get 'ascent hhea)))
+
+(defun fontsloth-otf-descender ()
+  "Return the font's horizontal face descender."
+  ;; TODO: parse OS/2 table
+  ;; TODO: support variation axes
+  (when-let ((hhea (gethash "hhea" fontsloth-otf--current-tables)))
+    (alist-get 'descent hhea)))
+
+(defun fontsloth-otf-line-gap ()
+  "Return the font's horizontal face line gap."
+  ;; TODO: parse OS/2 table
+  ;; TODO: support variation axes
+  (when-let ((hhea (gethash "hhea" fontsloth-otf--current-tables)))
+    (alist-get 'line-gap hhea)))
+
 (defun fontsloth-otf-glyph-hor-advance (glyph-id)
   "Return the horizontal advance for a glyph."
   ;; TODO: support font variations
