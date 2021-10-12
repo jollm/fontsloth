@@ -515,6 +515,16 @@ TTF-PATH the path to a ttf file
             (t (message "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
       fontsloth-otf--current-tables)))
 
+(defun fontsloth-otf-num-glyphs ()
+  "If a font is loaded, find its specified number of glyphs."
+  (when-let ((maxp (gethash "maxp" fontsloth-otf--current-tables)))
+    (alist-get 'num-glyphs maxp)))
+
+(defun fontsloth-otf-units-per-em ()
+  "If a font is loaded, find its units-per-em."
+  (when-let ((head (gethash "head" fontsloth-otf--current-tables)))
+    (alist-get 'units-per-em head)))
+
 (defun fontsloth-otf-char-to-glyph-map ()
   "Get the font's code-point -> glyph id mapping."
   ;; TODO handle other formats
