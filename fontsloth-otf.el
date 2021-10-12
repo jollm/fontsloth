@@ -552,6 +552,28 @@ GLYPH-ID the glyph-id"
             (elt (alist-get 'names post) (cdr idx))
           (elt fontsloth-otf--mac-names idx))))))
 
+(defun fontsloth-otf-glyph-hor-advance (glyph-id)
+  "Return the horizontal advance for a glyph."
+  ;; TODO: support font variations
+  (when-let* ((hmtx (gethash "hmtx" fontsloth-otf--current-tables))
+              (metrics (alist-get 'hmetrics hmtx))
+              (num-glyphs (fontsloth-otf-num-glyphs)))
+    (let ((num-metrics
+           (fontsloth-otf--get-table-value 'num-of-long-hor-metrics "hhea")))
+      (unless (<= num-glyphs glyph-id)
+        ;; 'As an optimization, the number of records can be less than the
+        ;; number of glyphs, in which case the advance width value of the last
+        ;; record applies to all remaining glyph IDs.'
+        (if (< glyph-id num-metrics)
+            (alist-get 'advance-width (elt metrics glyph-id))
+          (alist-get 'advance-width (elt metrics (1- num-metrics))))))))
+
+(defun fontsloth-otf-glyph-ver-advance (glyph-id)
+  "Return the vertical advance for a glyph."
+  ;; TODO: parse vmtx
+  ;; TODO: support font variations
+  (error "glyph-ver-advance not yet implemented"))
+
 ;;; generics for glyph outline construction (not table specific):
 
 (cl-defgeneric fontsloth-otf-move-to (outliner x y)
