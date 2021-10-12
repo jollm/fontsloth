@@ -515,17 +515,21 @@ TTF-PATH the path to a ttf file
             (t (message "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
       fontsloth-otf--current-tables)))
 
-(defun fontsloth-otf-glyph-id-for-code-point (code-point)
-  "Return the font's glyph index for a given code point or nil if not found.
-CODE-POINT a character code point"
+(defun fontsloth-otf-char-to-glyph-map ()
+  "Get the font's code-point -> glyph id mapping."
   ;; TODO handle other formats
   ;; TODO hold somewhere a reference to the format 4 table after first lookup
   (cl-flet ((format4? (table) (= 4 (alist-get 'format table))))
     (when-let* ((cmap (gethash "cmap" fontsloth-otf--current-tables))
-                 (sub-tables (bindat-get-field cmap 'sub-tables))
-                 (format4-table (cadar (seq-filter #'format4? sub-tables))))
-      (let ((glyph-index-map (alist-get 'glyph-index-map format4-table)))
-        (alist-get code-point glyph-index-map)))))
+                (sub-tables (bindat-get-field cmap 'sub-tables))
+                (format4-table (cadar (seq-filter #'format4? sub-tables))))
+      (alist-get 'glyph-index-map format4-table))))
+
+(defun fontsloth-otf-glyph-id-for-code-point (code-point)
+  "Return the font's glyph index for a given code point or nil if not found.
+CODE-POINT a character code point"
+  (when-let ((glyph-index-map (fontsloth-otf-char-to-glyph-map)))
+    (alist-get code-point glyph-index-map)))
 
 (defun fontsloth-otf-glyph-name (glyph-id)
   "Return the name the font specifies for the glyph or nil if none is given.
