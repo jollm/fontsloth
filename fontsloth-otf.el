@@ -38,6 +38,7 @@
 (require 'bindat)
 (require 'cl-lib)
 
+(require 'fontsloth-log)
 (require 'fontsloth-otf--mac-names)
 (require 'fontsloth-otf--outline-glyf)
 
@@ -511,8 +512,10 @@ TTF-PATH the path to a ttf file
               (put-table "loca" (unpack-table "loca" fontsloth-otf--loca-spec))
               (put-table "glyf" (unpack-table "glyf" fontsloth-otf--glyf-spec)))
             ((string-equal "OTTO" sfnt-ver)
-              (message "fontsloth-otf: cannot yet fully handle OpenType CFF"))
-            (t (message "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
+             (fontsloth:info
+              fontsloth-log
+              "fontsloth-otf: cannot yet fully handle OpenType CFF"))
+            (t (fontsloth:error "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
       fontsloth-otf--current-tables)))
 
 (defun fontsloth-otf-num-glyphs ()
@@ -602,13 +605,13 @@ GLYPH-ID the glyph-id"
 OUTLINER contour outliner implementation
 X x coord of the start point
 Y y coord of the start point"
-  (message "Noop outline move-to %s %s" x y))
+  (fontsloth:verbose fontsloth-log "Noop outline move-to %s %s" x y))
 
 (cl-defgeneric fontsloth-otf-line-to (outliner x y)
   "Append a line-to segment to the contour.
 X x coord of the line end point
 Y y coord of the line end point"
-  (message "Noop outline line-to %s %s" x y))
+  (fontsloth:verbose fontsloth-log "Noop outline line-to %s %s" x y))
 
 (cl-defgeneric fontsloth-otf-quad-to (outliner x1 y1 x y)
   "Append a quad-to segment to the contour.
@@ -616,14 +619,15 @@ X1 x coord of control point
 Y1 y coord of control point
 X x coord of curve end
 Y y coord of curve end"
-  (message "Noop outline quad-to %s %s %s %s" x1 y1 x y))
+  (fontsloth:verbose fontsloth-log "Noop outline quad-to %s %s %s %s"
+                     x1 y1 x y))
 
 (cl-defgeneric fontsloth-otf-curve-to (outliner)
   "Append a curve-to segment to the contour.")
 
 (cl-defgeneric fontsloth-otf-close-contour (outliner)
   "End a contour."
-  (message "Noop outline close contour"))
+  (fontsloth:verbose fontsloth-log "Noop outline close contour"))
 
 ;;; glyph outlining fns
 
