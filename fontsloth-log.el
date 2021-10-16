@@ -53,7 +53,7 @@
 (defvar fontsloth-log--buffer-log
   (make-instance 'logito-buffer-object
                  :buffer fontsloth-log-buffer-name
-                 :level (symbol-value fontsloth-default-log-level))
+                 :level (symbol-value fontsloth-log-default-level))
   "The `logito-buffer-object' to dispatch on when logging.")
 
 (defvaralias 'fontsloth-log 'fontsloth-log--buffer-log
