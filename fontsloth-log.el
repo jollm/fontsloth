@@ -56,6 +56,9 @@
                  :level (symbol-value fontsloth-default-log-level))
   "The `logito-buffer-object' to dispatch on when logging.")
 
+(defvaralias 'fontsloth-log 'fontsloth-log--buffer-log
+  "The logito log to dispatch on when logging.")
+
 (defun fontsloth-log-level-error ()
   "Set fontsloth logging level to error."
   (interactive)
