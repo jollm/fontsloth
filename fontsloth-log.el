@@ -42,10 +42,18 @@
   :type 'string
   :group 'fontsloth)
 
+(defcustom fontsloth-log-default-level 'fontsloth:info-level
+  "Default logging level for fontsloth."
+  :type '(choice (variable-item :tag "Error" fontsloth:error-level)
+                 (variable-item :tag "Info" fontsloth:info-level)
+                 (variable-item :tag "Verbose" fontsloth:verbose-level)
+                 (variable-item :tag "Debug" fontsloth:debug-level))
+  :group 'fontsloth)
+
 (defvar fontsloth-log--buffer-log
   (make-instance 'logito-buffer-object
                  :buffer fontsloth-log-buffer-name
-                 :level fontsloth:error-level)
+                 :level (symbol-value fontsloth-default-log-level))
   "The `logito-buffer-object' to dispatch on when logging.")
 
 (defun fontsloth-log-level-error ()
