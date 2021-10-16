@@ -4,7 +4,7 @@
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.0.1
-;; Package-Requires: ((cl-lib "1.0") (names "20151201.0") (emacs "26.1"))
+;; Package-Requires: ((cl-lib "1.0") (emacs "26.1"))
 ;; Keywords: true-type, font, glyph, glyf, ttf, otf
 
 ;; This file is NOT part of GNU Emacs.
