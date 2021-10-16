@@ -68,5 +68,28 @@
 ;;; usage e.g:
 ;; (fontsloth:info fontsloth-log--buffer-log "an info %s" an-obj)
 
+;;; add macro to avoid obj eval/method dispatch for logging noops
+
+(defmacro fontsloth-log--def-log-macro (level-name)
+  "Define a eval-avoiding helper macro for a logito logger.
+E.g. if the level-name is \"info\" this creates fontsloth:info* to wrap
+the logito generated fontsloth:info macro
+LEVEL-NAME the level name as string such as info, debug, verbose, error"
+  (let* ((prefix "fontsloth:")
+         (suffix "*")
+         (level (intern (concat prefix level-name "-level")))
+         (logger (intern (concat prefix level-name))))
+    `(defmacro ,(intern (concat prefix level-name suffix))
+         (log string &rest objects)
+       ,(format "Macro for `fontsloth:%s' to avoid eval if not %s logging."
+                level-name level-name)
+       `(when (<= ,',level (oref ,log level))
+          (,',logger ,log ,string ,@objects)))))
+
+(fontsloth-log--def-log-macro "error")
+(fontsloth-log--def-log-macro "info")
+(fontsloth-log--def-log-macro "verbose")
+(fontsloth-log--def-log-macro "debug")
+
 (provide 'fontsloth-log)
 ;;; fontsloth-log.el ends here
