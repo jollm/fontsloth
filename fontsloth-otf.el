@@ -479,11 +479,10 @@ TABLE-PROPS-LIST the list of table props to index"
       (puthash (alist-get 'tag tprops) tprops m))
     m))
 
-(cl-defun fontsloth-otf-load-font (ttf-path &key (coll-index 0) (scale 40.0))
+(cl-defun fontsloth-otf-load-font (ttf-path &key (coll-index 0))
   "Read `ttf-path' into an abstract representation suitable for rendering.
 TTF-PATH the path to a ttf file
-:COLL-INDEX the collection index if this file is a collection, default 0
-:SCALE the scale in px for which the font geometry is optimized, default 40.0"
+:COLL-INDEX the collection index if this file is a collection, default 0"
   (setq fontsloth-otf--current-tables (make-hash-table :test 'equal))
   (setq fontsloth-otf--current-font-bytes (with-temp-buffer
                               (set-buffer-multibyte nil)
