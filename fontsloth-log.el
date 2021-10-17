@@ -50,14 +50,14 @@
                  (variable-item :tag "Debug" fontsloth:debug-level))
   :group 'fontsloth)
 
+(defvaralias 'fontsloth-log 'fontsloth-log--buffer-log
+  "The logito log to dispatch on when logging.")
+
 (defvar fontsloth-log--buffer-log
   (make-instance 'logito-buffer-object
                  :buffer fontsloth-log-buffer-name
                  :level (symbol-value fontsloth-log-default-level))
   "The `logito-buffer-object' to dispatch on when logging.")
-
-(defvaralias 'fontsloth-log 'fontsloth-log--buffer-log
-  "The logito log to dispatch on when logging.")
 
 (defun fontsloth-log-level-error ()
   "Set fontsloth logging level to error."
