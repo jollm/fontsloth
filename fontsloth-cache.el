@@ -48,7 +48,6 @@
 (defclass fontsloth-cache (pcache-repository)
   ((entries :initarg :entries :initform (make-hash-table :test 'equal))))
 
-(oset-default 'fontsloth-cache save-delay fontsloth-cache-save-delay)
 (oset-default 'fontsloth-cache version-constant
               fontsloth-cache-version-constant)
 
@@ -61,7 +60,8 @@
     (message "Loading fontsloth-pcache, time taken:")
     (make-instance
      'fontsloth-cache
-     :object-name (format "%s" fontsloth-pcache-path-name)))
+     :object-name (format "%s" fontsloth-pcache-path-name)
+     :save-delay fontsloth-cache-save-delay))
   "The instance of fontsloth-cache, a `pcache-repository'.")
 
 (provide 'fontsloth-cache)
