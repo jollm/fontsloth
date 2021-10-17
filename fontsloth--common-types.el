@@ -112,7 +112,7 @@ RATIO ratio of distance for the new point, between 0.0 and 1.0"
 START the start point of type `fontsloth-point'
 END the end point of type `fontsloth-point'"
   (let* ((floor-nudge 0)
-         (ceil-nudge 0.000000000000001))
+         (ceil-nudge 0.0000000000001))
     (cl-multiple-value-bind (x-start-nudge
                              x-first-adj
                              y-start-nudge
