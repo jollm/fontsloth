@@ -593,6 +593,7 @@ GLYPH-ID the glyph-id"
 
 (defun fontsloth-otf-glyph-ver-advance (glyph-id)
   "Return the vertical advance for a glyph."
+  (ignore glyph-id)
   ;; TODO: parse vmtx
   ;; TODO: support font variations
   (error "glyph-ver-advance not yet implemented"))
@@ -604,12 +605,14 @@ GLYPH-ID the glyph-id"
 OUTLINER contour outliner implementation
 X x coord of the start point
 Y y coord of the start point"
+  (ignore outliner)
   (fontsloth:verbose fontsloth-log "Noop outline move-to %s %s" x y))
 
 (cl-defgeneric fontsloth-otf-line-to (outliner x y)
   "Append a line-to segment to the contour.
 X x coord of the line end point
 Y y coord of the line end point"
+  (ignore outliner)
   (fontsloth:verbose fontsloth-log "Noop outline line-to %s %s" x y))
 
 (cl-defgeneric fontsloth-otf-quad-to (outliner x1 y1 x y)
@@ -618,6 +621,7 @@ X1 x coord of control point
 Y1 y coord of control point
 X x coord of curve end
 Y y coord of curve end"
+  (ignore outliner)
   (fontsloth:verbose fontsloth-log "Noop outline quad-to %s %s %s %s"
                      x1 y1 x y))
 
@@ -626,6 +630,7 @@ Y y coord of curve end"
 
 (cl-defgeneric fontsloth-otf-close-contour (outliner)
   "End a contour."
+  (ignore outliner)
   (fontsloth:verbose fontsloth-log "Noop outline close contour"))
 
 ;;; glyph outlining fns
