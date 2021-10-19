@@ -172,6 +172,13 @@ cache"
   "Return a scaling factor for FONT given PX pixel size."
   (/ (* 1.0 px) (fontsloth-font-units-per-em font)))
 
+(defun fontsloth-font-compute-px (font desired-line-height)
+  "Compute a pixel size for FONT given a DESIRED-LINE-HEIGHT line height."
+  (let* ((line-metrics (fontsloth-font-horizontal-line-metrics font))
+         (new-line-size (fontsloth-line-metrics-new-line-size line-metrics)))
+    (* (/ (* 1.0 desired-line-height) new-line-size)
+       (fontsloth-font-units-per-em font))))
+
 (defun fontsloth-scale-horizontal-line-metrics (font px)
   "Return FONT's horizontal line metrics scaled to PX pixel size."
   (fontsloth-line-metrics-scale (fontsloth-font-horizontal-line-metrics font)
