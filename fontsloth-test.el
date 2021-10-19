@@ -3,8 +3,8 @@
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
-;; Version: 0.11.0
-;; Package-Requires: ((fontsloth "0.11.0") (emacs "26.1"))
+;; Version: 0.12.0
+;; Package-Requires: ((fontsloth "0.12.0") (emacs "26.1"))
 ;; Keywords: true-type, font, ttf, otf
 
 ;; This file is NOT part of GNU Emacs.

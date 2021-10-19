@@ -3,7 +3,7 @@
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
-;; Version: 0.11.0
+;; Version: 0.12.0
 ;; Package-Requires: ((logito "0.1") (emacs "26.1"))
 ;; Keywords: true-type, font, ttf, otf
 
