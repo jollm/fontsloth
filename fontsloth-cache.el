@@ -68,6 +68,7 @@
 
 (defun fontsloth-cache--watch-save-delay (sym nval oper where)
   "Update the cache save delay when the customization value is set."
+  (ignore sym)
   (when (and (not where) (eq 'set oper))
     (oset fontsloth-pcache save-delay nval)))
 
