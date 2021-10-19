@@ -218,7 +218,7 @@ CODE-POINT the character code point to map"
 (cl-defun fontsloth-font-rasterize (font glyph-id px &optional (subpixel? nil))
   "Rasterize FONT's glyph at GLYPH-ID in PX pixel size.
 Produces a greyscale pixmap suitable for PGM. Returns
-`fontsloth-raster-metrics+pixmap'.
+`fontsloth-metrics+pixmap'.
 SUBPIXEL? optional t to produce a subpixel render suitable for PPM"
   (when-let ((glyph (elt (fontsloth-font-glyphs font) glyph-id)))
     (pcase-let* ((scale (fontsloth-font-scale-factor font px))
