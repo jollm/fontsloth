@@ -1,4 +1,4 @@
-(define-package "fontsloth" "0.0.1"
+(define-package "fontsloth" "0.11.0"
   "the slowest font renderer in the world, written in pure elisp"
   '((cl-lib "0.5")
     (emacs "26.1")
