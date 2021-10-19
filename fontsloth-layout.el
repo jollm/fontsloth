@@ -41,6 +41,8 @@
 (require 'fontsloth)
 (require 'fontsloth-layout-linebreak)
 
+;; FIXME: the fontdue author has found a better way to index glyphs
+;; this is awkward and it would be good to do likewise
 (cl-defstruct (fontsloth-layout-glyph-raster-config
                (:constructor fontsloth-layout-glyph-raster-config-create)
                (:copier nil))
