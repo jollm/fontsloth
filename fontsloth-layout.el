@@ -318,7 +318,9 @@
                            (+ y (fontsloth-layout-glyph-position-y glyph)))
                      (push glyph
                            (fontsloth-layout-output layout))))
-          (setf y (- y (* dir (- new-line-size ascent))))))
+          (setf y (- y (* dir (- new-line-size ascent))))
+          (setf (fontsloth-layout-current-pos layout)
+                (+ x (fontsloth-layout-current-pos layout)))))
       (setf (fontsloth-layout-output layout)
             (nreverse (fontsloth-layout-output layout)))
       (fontsloth-layout-output layout))))
