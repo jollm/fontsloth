@@ -325,31 +325,5 @@
             (nreverse (fontsloth-layout-output layout)))
       (fontsloth-layout-output layout))))
 
-(defun fontsloth-layout-concat-layouts (&rest layouts)
-  "Concatenate a sequence of single line LAYOUTS.
-
-Note this only works for single line horizontal layouts. As such,
-it's not generally useful and should be obsoleted prior to API
-finalization.
-
-This is a workaround for layouts containing segments at different
-pixel sizes. In that case, y coords for subsequent segment
-positions are different from those if the same segment were in a
-layout by itself.
-
-LAYOUTS sequence of `fontsloth-layout''"
-  ;; FIXME: this is a workaround and should be obsoleted
-  (cl-loop for l in layouts
-           for rest on (cdr layouts)
-           while rest do
-           (progn (dolist (pos (fontsloth-layout-output (car rest)))
-                    (setf (fontsloth-layout-glyph-position-x pos)
-                          (+ (fontsloth-layout-current-pos l)
-                             (fontsloth-layout-glyph-position-x pos))))
-                  (setf (fontsloth-layout-current-pos (car rest))
-                        (+ (fontsloth-layout-current-pos l)
-                           (fontsloth-layout-current-pos (car rest))))))
-  (apply #'append (seq-map #'fontsloth-layout-output layouts)))
-
 (provide 'fontsloth-layout)
 ;;; fontsloth-layout.el ends here
