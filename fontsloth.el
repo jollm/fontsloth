@@ -237,9 +237,9 @@ SUBPIXEL? optional t to produce a subpixel render suitable for PPM"
       (fontsloth-raster-draw canvas glyph (* (if subpixel? 3.0 1.0) scale)
                              scale
                              offset-x offset-y)
-      (message "bitmap size is %sx%s"
-               (fontsloth-raster-width canvas)
-               (fontsloth-raster-height canvas))
+      (fontsloth:verbose* fontsloth-log "bitmap size is %sx%s"
+                          (fontsloth-raster-width canvas)
+                          (fontsloth-raster-height canvas))
       (fontsloth-metrics+pixmap-create
        :pixmap (fontsloth-raster-get-pixel
                 canvas
