@@ -104,14 +104,14 @@ the seconds if you load more than 10 or so fonts at a time*.
 #+end_src
 * Installation
 Pending upload to MELPA, add this directory to your emacs load path and
-~(require ’fontsloth)~ for loading and rasterization or ~(require
-’fontsloth-layout)~ for those plus layout.
+~(require 'fontsloth)~ for loading and rasterization or ~(require
+'fontsloth-layout)~ for those plus layout.
 * Usage
 See [[*Usage caveats][Usage caveats]] for how to load fonts without caching them in pcache.
 
 ** Load and rasterize
 #+begin_src emacs-lisp
-  (require ’fontsloth)
+  (require 'fontsloth)
   ;; Rasterize the fontawesome wifi icon and put it in a preview buffer
   ;; Saving the buffer should turn on image-mode and display it
   (defvar my/current-font
@@ -135,6 +135,8 @@ See [[*Usage caveats][Usage caveats]] for how to load fonts without caching them
 #+end_src
 ** Layout some text
 #+begin_src emacs-lisp
+  (require 'fontsloth-layout)
+
   ;; this will return a sequence of glyph position structs
   (let ((font (fontsloth-load-font "/usr/share/fonts/TTF/AppleGaramond.ttf"))
         (x-start 0)
