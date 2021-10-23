@@ -1,0 +1,169 @@
+#+TITLE: fontsloth
+
+Fontsloth is an elisp OTF/TTF font loader and renderer.
+
+It is inspired by [[https://github.com/mooman219/fontdue][fontdue]]. While fontdue is “the fastest font renderer in the
+world, written in pure Rust”, fontsloth is “the slowest font renderer in the
+world, written in pure Elisp”.
+
+Despite the name, being slow is neither a goal nor a requirement.
+
+It is currently pre version 1.0 and the API is not yet stable.
+
+Mostly it is modeled after the aforementioned fontdue and the outliner in
+[[https://github.com/RazrFalcon/ttf-parser][Rust ttf-parser]]. The only novel bit is using Emacs bindat.el to unpack OTF/TTF.
+
+* Synopsis of work in progress
+** Now supported
++ Load simple glyphs and character mappings in TTF fonts
+
+  These must contain loca/glyf tables for glyphs and cmap format4 for mappings.
++ Outline and rasterize glyphs that use quadratic bezier curves
+
+  Notably cube curves used in OTF fonts are not yet supported since the loader
+  doesn’t fully handle OTF font tables.
++ Layouts for lines of horizontal text
+** Not currently supported (but planned)
++ Composite glyphs (this is the first priority at present)
++ OTF font outlining and rasterization
++ Font variation indices
++ Vertical metrics tables (and vertical text layout)
++ Font collections
+
+* Project organization
+Fontsloth consists of four primary components:
++ OTF/TTF parser
+  Entry point: file:fontsloth-otf.el
+
+  This uses [[info:elisp#Byte Packing][elisp#Byte Packing]] (i.e. bindat.el) to unpack TTF and OTF fonts.
+
+  Packing is not currently supported but planned for after version 1.0
++ Glyph outliner
+  Entry points:
+  + file:fontsloth-otf.el: generics
+  + [[file:fontsloth-otf--outline-glyf.el::;; Version: 0.12.2][file:fontsloth-otf--outline-glyf.el]]: base implementation
+  + file:fontsloth-geometry.el: dispatch type and method implementations
+
+  This is modeled after Rust ttf-parser and should be extensible for multiple
+  backends. The current backend is modeled after fontdue.
++ Text layout
+  Entry point: file:fontsloth-layout.el
+
+  This is modeled after fontdue’s layout which is in an immature state (as is this).
+
+  The gist of it is that given text styles, fonts, and a coordinate system, it
+  produces a series of indexable glyph positions to aid in compositing glyphs
+  for display.
+
++ Raster
+  Entry point: file:fontsloth-raster.el
+
+  This is currently just a port of fontdue’s raster. It is planned to support
+  multiple raster implementations.
+
+  The fontdue author includes the following:
+  #+begin_quote
+ Notice to anyone that wants to repurpose the raster for your library: Please
+ don't reuse this raster. Fontdue's raster is very unsafe, with nuanced
+ invariants that need to be accounted for. Fontdue sanitizes the input that the
+ raster will consume to ensure it is safe. Please be aware of this.
+ #+end_quote
+
+  This is part of the reason why it is planned to support multiple raster implementations.
+
+  So far, I have tested the elisp implementation to faithfully reproduce
+  fontdue’s raster on a byte by byte level for multiple fonts and pixel sizes.
+* Usage caveats
+Currently fontsloth uses pcache.el to provide a persistent cache for loaded
+fonts, which is the default for ~fontsloth-load-font~.
+
+*Invalidation at present must be handled manually*. *Expect cache load times in
+the seconds if you load more than 10 or so fonts at a time*.
+
+** Bypass the cache
+#+begin_src emacs-lisp
+;; it will take longer, but won’t end up in cache
+;; this is useful if you just want to try it out and see if it works
+(fontsloth-load-font my/font :cache ’bypass)
+#+end_src
+** Force reload a font
+#+begin_src emacs-lisp
+;; this reloads the font and then stores the result in cache
+(fontsloth-load-font my/font :cache ’reload)
+#+end_src
+** Invalidate a cache entry
+#+begin_src emacs-lisp
+;; this removes a single font entry from cache
+(pcache-invalidate fontsloth-pcache my/font)
+#+end_src
+** Clear the cache
+#+begin_src emacs-lisp
+(pcache-clear fontsloth-pcache)
+#+end_src
+* Installation
+Pending upload to MELPA, add this directory to your emacs load path and
+~(require ’fontsloth)~ for loading and rasterization or ~(require
+’fontsloth-layout)~ for those plus layout.
+* Usage
+See [[*Usage caveats][Usage caveats]] for how to load fonts without caching them in pcache.
+
+** Load and rasterize
+#+begin_src emacs-lisp
+  (require ’fontsloth)
+  ;; Rasterize the fontawesome wifi icon and put it in a preview buffer
+  ;; Saving the buffer should turn on image-mode and display it
+  (defvar my/current-font
+    (fontsloth-load-font "/usr/share/fonts/TTF/fontawesome.ttf"))
+  (pcase-let* ((font my/current-font)
+               (glyph-id (fontsloth-font-glyph-id font ?))
+               (px 32.0)
+               ((cl-struct fontsloth-metrics+pixmap metrics pixmap)
+                (benchmark-progn (fontsloth-font-rasterize font glyph-id px)))
+               (pgm (fontsloth-raster-npbm pixmap
+                                           (fontsloth-metrics-width metrics)
+                                           (fontsloth-metrics-height metrics)
+                                           'pgm))
+               (buffer (get-buffer-create "fontsloth-raster-preview")))
+    (with-current-buffer buffer
+      (set-buffer-multibyte nil)
+      (insert pgm)))
+
+  ;; note that fontsloth-raster-npbm is unnecessary if you just want a pixmap
+
+#+end_src
+** Layout some text
+#+begin_src emacs-lisp
+  ;; this will return a sequence of glyph position structs
+  (let ((font (fontsloth-load-font "/usr/share/fonts/TTF/AppleGaramond.ttf"))
+        (x-start 0)
+        (layout (fontsloth-layout-create)))
+    (fontsloth-layout-reset layout (fontsloth-layout-settings-create
+                                    :x x-start))
+    (fontsloth-layout-append layout `(,font) (fontsloth-layout-text-style-create
+                                              :text "Hello world!"
+                                              :px 35.0 :font-index 0))
+    (fontsloth-layout-finalize layout))
+#+end_src
+
+* Attribution
+Fontsloth at this stage wouldn’t at all be possible without [[https://github.com/mooman219/fontdue][fontdue]] and
+[[https://github.com/RazrFalcon/ttf-parser][ttf-parser]]. In addition I began learning about TTF from [[https://tchayen.github.io/posts/ttf-file-parsing][TTF file parsing]].
+* Performance
+How slow is it really? The short answer is I don’t know yet as benchmarking is
+still a TODO.
+
+Anecdotally, on Thinkpad t440 with Emacs 28 native:
+- Glyph rasters for pixel sizes around 30.0 take on the order of a few milliseconds
+- To load a font and outline all of its glyphs at present takes longer
+  (e.g. ~320 milliseconds on the same machine for AppleGaramond TTF), hence the
+  font cache
+- Layout for short text strings takes sub 1 millisecond with the same setup
+
+* Fonts tested so far (working for simple glyphs)
+In order of most to least tested:
++ free version of FontAwesome 5
++ IBMPlex series, the TTF versions
++ all-the-icons TTF
++ AppleGaramond TTF
++ Roboto series, the TTF versions
++ DejaVu series, the TTF versions
