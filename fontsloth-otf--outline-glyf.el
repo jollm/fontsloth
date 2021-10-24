@@ -216,9 +216,9 @@ BUILDER a `fontsloth-otf--glyf-builder'"
         (fontsloth-otf--glyf-builder-last-off-curve builder) nil)
   (fontsloth-otf-close-contour (fontsloth-otf--glyf-builder-outliner builder)))
 
-(defun fontsloth-otf--glyf-outline (glyphs glyph-id outliner)
-  (when-let* ((builder (fontsloth-otf--glyf-builder-create :outliner outliner))
-              (glyph (elt glyphs glyph-id))
+(defun fontsloth-otf--glyf-outline (glyphs glyph-id builder)
+  "Outline glyf table GLYPH-ID in GLYPHS using BUILDER."
+  (when-let* ((glyph (elt glyphs glyph-id))
               (num-contours (alist-get 'number-of-contours glyph))
               (glyph-data (alist-get 'data glyph)))
     (if (< 0 num-contours)
@@ -235,7 +235,37 @@ BUILDER a `fontsloth-otf--glyf-builder'"
                                               ;; TODO do less work here
                                               (seq-some (lambda (p) (= i p))
                                                         end-pts))))
-          (fontsloth-otf--glyf-builder-bbox builder)))))
+          (fontsloth-otf--glyf-builder-bbox builder))
+      (let ((comps
+             (cons glyph-data
+                   (cl-loop for next = (alist-get 'next-component glyph-data)
+                            then (alist-get 'next-component next)
+                            while next collect next))))
+        (dolist (comp comps)
+          (when-let* ((a (map-nested-elt comp '(transform-option a)))
+                      (b (map-nested-elt comp '(transform-option b)))
+                      (c (map-nested-elt comp '(transform-option c)))
+                      (d (map-nested-elt comp '(transform-option d)))
+                      (e (map-elt comp 'argument1))
+                      (f (map-elt comp 'argument2))
+                      (tf (fontsloth-otf--glyf-transform-create
+                           :a a :b b :c c :d d :e e :f f))
+                      (tf (fontsloth-otf--glyf-transform-combine
+                           (fontsloth-otf--glyf-builder-transform builder)
+                           tf))
+                      (b (fontsloth-otf--glyf-builder-create
+                          :outliner (fontsloth-otf--glyf-builder-outliner
+                                     builder)
+                          :bbox (fontsloth-otf--glyf-builder-bbox builder)
+                          :transform tf)))
+            (fontsloth-otf--glyf-outline glyphs (alist-get 'glyph-id comp) b)
+            (setf (fontsloth-otf--glyf-builder-bbox builder)
+                  (fontsloth-otf--glyf-builder-bbox b))))))))
+
+(defun fontsloth-otf-glyf-outline (glyphs glyph-id outliner)
+  "Outline glyf table GLYPH-ID in GLYPHS using OUTLINER."
+  (fontsloth-otf--glyf-outline
+   glyphs glyph-id (fontsloth-otf--glyf-builder-create :outliner outliner)))
 
 
 (provide 'fontsloth-otf--outline-glyf)
