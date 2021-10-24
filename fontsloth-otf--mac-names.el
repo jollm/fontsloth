@@ -3,7 +3,7 @@
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
-;; Version: 0.13.0
+;; Version: 0.13.1
 ;; Package-Requires: ((cl-lib "1.0") (names "20151201.0") (emacs "26.1"))
 ;; Keywords: true-type, font, bindat, ttf, otf, parsing
 
