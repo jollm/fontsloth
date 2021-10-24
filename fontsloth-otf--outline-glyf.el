@@ -105,6 +105,11 @@
 BUILDER a `fontsloth-otf--glyf-builder'
 X x coord of contour start
 Y y coord of contour start"
+  (unless (fontsloth-otf--glyf-transform-default-p
+           (fontsloth-otf--glyf-builder-transform builder))
+    (pcase-let* ((ts (fontsloth-otf--glyf-builder-transform builder))
+                 (`(,tx ,ty) (fontsloth-otf--glyf-transform-apply-to ts x y)))
+      (setq x tx y ty)))
   (fontsloth-bbox-extend-by (fontsloth-otf--glyf-builder-bbox builder) x y)
   (fontsloth-otf-move-to (fontsloth-otf--glyf-builder-outliner builder) x y))
 
@@ -113,6 +118,11 @@ Y y coord of contour start"
 BUILDER a `fontsloth-otf--glyf-builder'
 X x coord of line end
 Y y coord of line end"
+  (unless (fontsloth-otf--glyf-transform-default-p
+           (fontsloth-otf--glyf-builder-transform builder))
+    (pcase-let* ((ts (fontsloth-otf--glyf-builder-transform builder))
+                 (`(,tx ,ty) (fontsloth-otf--glyf-transform-apply-to ts x y)))
+      (setq x tx y ty)))
   (fontsloth-bbox-extend-by (fontsloth-otf--glyf-builder-bbox builder) x y)
   (fontsloth-otf-line-to (fontsloth-otf--glyf-builder-outliner builder) x y))
 
@@ -123,6 +133,13 @@ X1 x coord of control point
 Y1 y coord of control point
 X x coord of curve end
 Y y coord of curve end"
+  (unless (fontsloth-otf--glyf-transform-default-p
+           (fontsloth-otf--glyf-builder-transform builder))
+    (pcase-let* ((ts (fontsloth-otf--glyf-builder-transform builder))
+                 (`(,tx1 ,ty1) (fontsloth-otf--glyf-transform-apply-to
+                                ts x1 y1))
+                 (`(,tx ,ty) (fontsloth-otf--glyf-transform-apply-to ts x y)))
+      (setq x1 tx1 y1 ty1 x tx y ty)))
   (fontsloth-bbox-extend-by (fontsloth-otf--glyf-builder-bbox builder) x1 y1)
   (fontsloth-bbox-extend-by (fontsloth-otf--glyf-builder-bbox builder) x y)
   (fontsloth-otf-quad-to
