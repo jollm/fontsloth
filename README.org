@@ -13,7 +13,7 @@ It is currently pre version 1.0 and the API is not yet stable.
 Mostly it is modeled after the aforementioned fontdue and the outliner in
 [[https://github.com/RazrFalcon/ttf-parser][Rust ttf-parser]]. The only novel bit is using Emacs bindat.el to unpack OTF/TTF.
 
-Current version: *0.13.1*
+Current version: *0.14.0*
 
 * Synopsis of work in progress
 ** Now supported
