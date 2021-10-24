@@ -3,7 +3,7 @@
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
-;; Version: 0.14.0
+;; Version: 0.14.1
 ;; Package-Requires: ((cl-lib "1.0") (logito "0.1") (emacs "26.1"))
 ;; Keywords: true-type, font, rasterization, ttf, otf
 
