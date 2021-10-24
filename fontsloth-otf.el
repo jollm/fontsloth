@@ -91,6 +91,17 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledire
                     (if (= 0 frac) frac
                       (/ frac (expt 10.0 (1+ (truncate (log frac 10))))))))))))
 
+(bindat-defmacro f-2.14 ()
+  "Fixed signed 16 bit integer with 14 fractional bits."
+  (let ((bl (make-symbol "bitlen")))
+    `(let ((,bl 16))
+       (struct :pack-var v
+               (v sint ,bl nil :pack-val v ; TODO pack correctly
+                  )
+               :unpack-val
+               (+ (/ v (ash 1 14))
+                  (/ (* 1.0 (logand v #x3fff)) #x4000))))))
+
 (defvar fontsloth-otf--head-spec
   (bindat-type
     (major-version uint 16)
