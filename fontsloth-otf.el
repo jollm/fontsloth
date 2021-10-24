@@ -319,6 +319,66 @@ RANGE length in bytes from loca for data, excluding header size"
                  bindat--i bindat--v))
       (_ fill (- fill-to bindat-idx)))))
 
+(defvar fontsloth-otf--component-flag-spec
+  (bindat-type
+    :pack-var f
+    (word uint 16 :pack-val f)           ; TODO pack properly
+    :unpack-val
+    `((args-are-words . ,(= 1 (logand 1 word)))
+      (args-are-xy . ,(= 2 (logand 2 word)))
+      (round-xy-to-grid . ,(= 4 (logand 4 word)))
+      (we-have-a-scale . ,(= 8 (logand 8 word)))
+      (more-components . ,(= 32 (logand 32 word)))
+      (we-have-an-xy-scale . ,(= 64 (logand 64 word)))
+      (we-have-a-two-by-two . ,(= 128 (logand 128 word)))
+      (we-have-instructions . ,(= 256 (logand 256 word)))
+      (use-my-metrics . ,(= 512 (logand 512 word)))
+      (overlap-compound . ,(= 1024 (logand 1024 word))))))
+
+(defun fontsloth-otf--make-component-argument-spec (flags)
+  (pcase `(,(alist-get 'args-are-words flags)
+           ,(alist-get 'args-are-xy flags))
+    ('(t t) (bindat-type sint 16 nil))
+    ('(t nil) (bindat-type uint 16))
+    ('(nil t) (bindat-type sint 8 nil))
+    ('(nil nil) (bindat-type uint 8))))
+
+(defun fontsloth-otf--make-transform-option-spec (flags)
+  (pcase `(,(alist-get 'we-have-a-scale flags)
+           ,(alist-get 'we-have-an-xy-scale flags)
+           ,(alist-get 'we-have-a-two-by-two flags))
+    ('(nil nil nil) (bindat-type
+                      (a unit 1.0) (b unit 0.0)
+                      (c unit 0.0) (d unit 1.0)))
+    ('(t nil nil) (bindat-type
+                    (a f-2.14) (b unit 0.0)
+                    (c unit 0.0) (d unit a)))
+    ('(nil t nil) (bindat-type
+                    (a f-2.14) (b unit 0.0)
+                    (c unit 0.0) (d f-2.14)))
+    ('(nil nil t) (bindat-type
+                    (a f-2.14) (b f-2.14)
+                    (c f-2.14) (d f-2.14)))))
+
+(defun fontsloth-otf--make-composite-glyf-data-spec (range)
+  "Given RANGE make a bindat spec to parse composite glyph data.
+RANGE length in bytes from loca for data, excluding header size"
+  (let ((component-start) (fill-to))
+    (bindat-type
+      (_ unit (progn (setf component-start bindat-idx
+                           fill-to (+ bindat-idx range)) nil))
+      (flags type fontsloth-otf--component-flag-spec)
+      (glyph-id uint 16)
+      (argument1 type (fontsloth-otf--make-component-argument-spec flags))
+      (argument2 type (fontsloth-otf--make-component-argument-spec flags))
+      (transform-option type (fontsloth-otf--make-transform-option-spec flags))
+      (next-component type (if (alist-get 'more-components flags)
+                               (fontsloth-otf--make-composite-glyf-data-spec
+                                (- range (- bindat-idx component-start)))
+                             (bindat-type (_ unit nil))))
+      ;; TODO: we-have-instructions
+      (_ fill (- fill-to bindat-idx)))))
+
 (defvar fontsloth-otf--glyf-spec
   (let ((loca) (glyf-header-size 10))
     (bindat-type
