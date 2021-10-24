@@ -17,7 +17,7 @@ Current version: *0.14.0*
 
 * Synopsis of work in progress
 ** Now supported
-+ Load simple glyphs and character mappings in TTF fonts
++ Load simple and composite glyphs and character mappings in TTF fonts
 
   These must contain loca/glyf tables for glyphs and cmap format4 for mappings.
 + Outline and rasterize glyphs that use quadratic bezier curves
@@ -26,8 +26,7 @@ Current version: *0.14.0*
   doesn’t fully handle OTF font tables.
 + Layouts for lines of horizontal text
 ** Not currently supported (but planned)
-+ Composite glyphs (this is the first priority at present)
-+ OTF font outlining and rasterization
++ OTF font outlining and rasterization (this is the first priority at present)
 + Font variation indices
 + Vertical metrics tables (and vertical text layout)
 + Font collections
