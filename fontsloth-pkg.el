@@ -2,6 +2,7 @@
   "the slowest font renderer in the world, written in pure elisp"
   '((cl-lib "0.5")
     (emacs "26.1")
+    (f "0.20.0")
     (logito "0.1")
     (pcache "0.5"))
     :keywords

@@ -4,7 +4,7 @@
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.1
-;; Package-Requires: ((cl-lib "0.5") (logito "0.1") (pcache "0.5") (emacs "26.1"))
+;; Package-Requires: ((cl-lib "0.5") (f "0.20.0") (logito "0.1") (pcache "0.5") (emacs "26.1"))
 ;; Keywords: true-type, font, rasterization, ttf, otf
 
 ;; This file is NOT part of GNU Emacs.
@@ -35,6 +35,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'f)
 (require 'map)
 (require 'fontsloth--common-types)
 (require 'fontsloth-cache)
