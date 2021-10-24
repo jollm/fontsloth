@@ -32,6 +32,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'map)
 
 (require 'fontsloth--common-types)
 
