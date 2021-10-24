@@ -46,6 +46,48 @@
   (e 0.0 :type 'number)
   (f 0.0 :type 'number))
 
+(defsubst fontsloth-otf--glyf-transform-default-p (ts)
+  "Return t if TS is the default transform."
+  (pcase ts
+    ((cl-struct fontsloth-otf--glyf-transform
+                (a '1.0) (b '0.0) (c '0.0) (d '1.0) (e '0.0) (f '0.0)) t)
+    (_ nil)))
+
+(defsubst fontsloth-otf--glyf-transform-combine (ts1 ts2)
+  "Combine transforms TS1 and TS2."
+  (fontsloth-otf--glyf-transform-create
+   :a (+ (* (fontsloth-otf--glyf-transform-a ts1)
+            (fontsloth-otf--glyf-transform-a ts2))
+         (* (fontsloth-otf--glyf-transform-c ts1)
+            (fontsloth-otf--glyf-transform-b ts2)))
+   :b (+ (* (fontsloth-otf--glyf-transform-b ts1)
+            (fontsloth-otf--glyf-transform-a ts2))
+         (* (fontsloth-otf--glyf-transform-d ts1)
+            (fontsloth-otf--glyf-transform-b ts2)))
+   :c (+ (* (fontsloth-otf--glyf-transform-a ts1)
+            (fontsloth-otf--glyf-transform-c ts2))
+         (* (fontsloth-otf--glyf-transform-c ts1)
+            (fontsloth-otf--glyf-transform-d ts2)))
+   :d (+ (* (fontsloth-otf--glyf-transform-b ts1)
+            (fontsloth-otf--glyf-transform-c ts2))
+         (* (fontsloth-otf--glyf-transform-d ts1)
+            (fontsloth-otf--glyf-transform-d ts2)))
+   :e (+ (* (fontsloth-otf--glyf-transform-a ts1)
+            (fontsloth-otf--glyf-transform-e ts2))
+         (* (fontsloth-otf--glyf-transform-c ts1)
+            (fontsloth-otf--glyf-transform-f ts2))
+         (fontsloth-otf--glyf-transform-e ts1))
+   :f (+ (* (fontsloth-otf--glyf-transform-b ts1)
+            (fontsloth-otf--glyf-transform-e ts2))
+         (* (fontsloth-otf--glyf-transform-d ts1)
+            (fontsloth-otf--glyf-transform-f ts2))
+         (fontsloth-otf--glyf-transform-f ts1))))
+
+(defsubst fontsloth-otf--glyf-transform-apply-to (ts x y)
+  "Apply affine transform TS to X and Y."
+  (pcase-let (((cl-struct fontsloth-otf--glyf-transform a b c d e f) ts))
+    `(,(+ (* a x) (* c y) e) ,(+ (* b x) (* d y) f))))
+
 (cl-defstruct
   (fontsloth-otf--glyf-builder
      (:constructor fontsloth-otf--glyf-builder-create)
