@@ -164,7 +164,7 @@ Anecdotally, on Thinkpad t440 with Emacs 28 native:
   font cache
 - Layout for short text strings takes sub 1 millisecond with the same setup
 
-* Fonts tested so far (working for simple glyphs)
+* Fonts tested so far (working for simple and composite glyphs)
 In order of most to least tested:
 + free version of FontAwesome 5
 + IBMPlex series, the TTF versions
