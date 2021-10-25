@@ -26,9 +26,11 @@ Current version: *0.14.1*
   doesn’t fully handle OTF font tables.
 + Layouts for lines of horizontal text
 ** Not currently supported (but planned)
++ kerning (this is also the first priority at present)
 + OTF font outlining and rasterization (this is the first priority at present)
 + Font variation indices
 + Vertical metrics tables (and vertical text layout)
++ more cmap tables than just format4 for char-code to glyph-id mappings
 + Font collections
 
 * Project organization
