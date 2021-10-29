@@ -71,7 +71,8 @@
   (text nil :type 'string)
   (px 12.0 :type 'number)
   (font-index 0 :type 'fixed)
-  (user-data nil))
+  (user-data nil)
+  (horizontal-kern? t :type 'boolean))
 
 (cl-defstruct (fontsloth-layout-line-metrics
                (:constructor fontsloth-layout-line-metrics-create)
