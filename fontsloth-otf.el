@@ -41,7 +41,8 @@
 (require 'fontsloth-log)
 (require 'fontsloth-otf--mac-names)
 (require 'fontsloth-otf--outline-glyf)
-
+(require 'fontsloth-otf-kern)
+(require 'fontsloth-otf-typo)
 
 (defvar fontsloth-otf--header-spec
   '((sfnt-version str 4)
@@ -587,6 +588,16 @@ TTF-PATH the path to a ttf file
               fontsloth-log
               "fontsloth-otf: cannot yet fully handle OpenType CFF"))
             (t (fontsloth:error "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
+      (when (gethash "kern" props)
+        (put-table "kern" (unpack-table "kern" fontsloth-otf--kern-spec)))
+      (when (gethash "GDEF" props)
+        (put-table "GDEF" (unpack-table "GDEF" fontsloth-otf--gdef-spec)))
+      (when (gethash "GPOS" props)
+        (put-table "GPOS" (unpack-table "GPOS" fontsloth-otf--gpos-spec))
+        (put-table
+         "GPOS"
+         (cons `(mappings . , (fontsloth-otf-gpos-build-kern-mappings))
+               (gethash "GPOS" fontsloth-otf--current-tables))))
       fontsloth-otf--current-tables)))
 
 (defun fontsloth-otf-num-glyphs ()
@@ -669,6 +680,12 @@ GLYPH-ID the glyph-id"
   ;; TODO: parse vmtx
   ;; TODO: support font variations
   (error "glyph-ver-advance not yet implemented"))
+
+(defun fontsloth-otf-find-hkern-mappings ()
+  "Try to find indexed horizontal pair kern mappings for the current font."
+  (when-let ((table (or (gethash "kern" fontsloth-otf--current-tables)
+                        (gethash "GPOS" fontsloth-otf--current-tables))))
+    (alist-get 'mappings table)))
 
 ;;; generics for glyph outline construction (not table specific):
 
