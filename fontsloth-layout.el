@@ -209,7 +209,9 @@
                current-new-line)
         (setf (fontsloth-layout-line-metrics-new-line-size line)
               current-new-line)))
-    (cl-loop for character across text do
+    (cl-loop for character across text
+             for line-start? = t then nil
+             with prev-char = nil do
              (pcase-let*
                  ((linebreak
                    (fontsloth-layout-lb-data-mask
@@ -239,6 +241,7 @@
                                     (fontsloth-layout-start-pos layout)))))
                    (setf (fontsloth-layout-linebreak-prev layout)
                          fontsloth-layout-linebreak-none)
+                   (setq line-start? t)
                    (when-let ((line
                                (car (fontsloth-layout-line-metrics layout))))
                      (setf (fontsloth-layout-line-metrics-end-index line)
@@ -265,7 +268,15 @@
                                bounds)
                               (y (if flip
                                      (floor (- (* -1 bounds.height) ymin))
-                                   (floor ymin))))
+                                   (floor ymin)))
+                              (should-kern? (and (not line-start?) prev-char))
+                              (kern (if should-kern?
+                                        (fontsloth-font-horizontal-kern-by-code-point
+                                         font prev-char character px)
+                                      0)))
+                   (when (/= 0 kern)
+                     (fontsloth:verbose* fontsloth-log "kerning %s %s by %s"
+                                         prev-char character kern))
                    (push
                     (fontsloth-layout-glyph-position-create
                      :key (fontsloth-layout-glyph-raster-config-create
@@ -274,7 +285,7 @@
                            :font-index font-index)
                      :parent character
                      :x (floor (+ (fontsloth-layout-current-pos layout)
-                                  xmin))
+                                  xmin kern))
                      :y y
                      :width width
                      :height height
@@ -282,7 +293,8 @@
                      :user-data user-data)
                     (fontsloth-layout-glyphs layout))
                    (setf (fontsloth-layout-current-pos layout)
-                         (+ advance (fontsloth-layout-current-pos layout)))))))
+                         (+ advance (fontsloth-layout-current-pos layout))
+                         prev-char character)))))
     (when-let ((line (car (fontsloth-layout-line-metrics layout))))
       (setf (fontsloth-layout-line-metrics-padding line)
             (- max-width (- (fontsloth-layout-current-pos layout)
