@@ -176,7 +176,8 @@ Currently only format 4 x-advance is supported.
 TODO: support more formats"
   (cl-case format
     (0 (bindat-type unit nil))
-    (4 (bindat-type (x-advance sint 16 nil)))))
+    (4 (bindat-type (x-advance sint 16 nil)))
+    (t (bindat-type unit nil))))
 
 (defun fontsloth-otf--make-pair-set-spec (value-format-1 value-format-2)
   "Given VALUE-FORMAT-1 and VALUE-FORMAT2, return a GPOS pair set spec.
@@ -326,7 +327,8 @@ TODO: support more types"
                            fontsloth-otf--mark-array-spec))
          (base-array type (fontsloth-otf--offset-spec
                            (+ offset-base base-array-offset)
-                           fontsloth-otf--base-array-spec))))))
+                           fontsloth-otf--base-array-spec))))
+    (t (bindat-type unit nil))))
 
 (defvar fontsloth-otf--lookup-flag-spec
   (bindat-type
