@@ -135,7 +135,7 @@ LINE-GAP the line gap"
                                    (fontsloth-otf-ascender)
                                    (fontsloth-otf-descender)
                                    (fontsloth-otf-line-gap)))
-         (horizontal-kern) ; TODO: horizontal kern
+         (horizontal-kern (fontsloth-otf-find-hkern-mappings))
          (vertical-line-metrics) ; TODO: vertical line metrics
          )
     (record 'fontsloth-font name units-per-em glyphs char-to-glyph
@@ -190,6 +190,22 @@ cache"
 FONT a `fontsloth-font'
 CODE-POINT the character code point to map"
   (map-elt (fontsloth-font-char-to-glyph font) code-point))
+
+(defun fontsloth-font-horizontal-kern-by-id (font left right px)
+  "Return FONT's horizontal kern value for LEFT/RIGHT scaled to PX or 0."
+  (let ((scale (fontsloth-font-scale-factor font px)))
+    (* (or (when-let ((mappings (fontsloth-font-horizontal-kern font)))
+             (gethash (logior (ash left 16) right) mappings))
+           0)
+       scale)))
+
+(defun fontsloth-font-horizontal-kern-by-code-point
+    (font left-code-point right-code-point px)
+  "Return FONT's horizontal kern value for left and right scaled to PX or 0."
+  (or (when-let ((left (fontsloth-font-glyph-id font left-code-point))
+                 (right (fontsloth-font-glyph-id font right-code-point)))
+        (fontsloth-font-horizontal-kern-by-id font left right px))
+      0))
 
 (defun fontsloth-font-metrics-raw (scale glyph offset)
   "Determine the expected metrics for a render of GLYPH at SCALE and OFFSET."
