@@ -194,7 +194,7 @@
   (pcase-let* (((cl-struct fontsloth-layout
                            flip max-width glyphs wrap-mask linebreaker) layout)
                ((cl-struct fontsloth-layout-text-style
-                           text px font-index user-data)
+                           text px font-index user-data horizontal-kern?)
                 style)
                (font (elt fonts font-index))
                (metrics
@@ -270,7 +270,8 @@
                               (y (if flip
                                      (floor (- (* -1 bounds.height) ymin))
                                    (floor ymin)))
-                              (should-kern? (and (not line-start?) prev-char))
+                              (should-kern? (and horizontal-kern?
+                                                 (not line-start?) prev-char))
                               (kern (if should-kern?
                                         (fontsloth-font-horizontal-kern-by-code-point
                                          font prev-char character px)
