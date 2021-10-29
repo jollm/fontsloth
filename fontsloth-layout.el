@@ -234,7 +234,7 @@
                        (fontsloth-layout-linebreak-pos layout)
                        (fontsloth-layout-current-pos layout)
                        (fontsloth-layout-linebreak-idx layout) (length glyphs)))
-               (let ((advance (ceiling advance-width)))
+               (let ((advance (round advance-width)))
                  (when (or (fontsloth-layout-lb-data-hard-p linebreak)
                            (< max-width
                               (+ advance
