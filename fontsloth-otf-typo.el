@@ -35,7 +35,8 @@
 
 (require 'bindat)
 (require 'cl-lib)
-(require 'dash)
+(require 'map)
+(require 'seq)
 
 (require 'fontsloth-log)
 
