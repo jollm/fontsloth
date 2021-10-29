@@ -295,7 +295,7 @@
                      :user-data user-data)
                     (fontsloth-layout-glyphs layout))
                    (setf (fontsloth-layout-current-pos layout)
-                         (+ advance (fontsloth-layout-current-pos layout))
+                         (+ kern advance (fontsloth-layout-current-pos layout))
                          prev-char character)))))
     (when-let ((line (car (fontsloth-layout-line-metrics layout))))
       (setf (fontsloth-layout-line-metrics-padding line)
