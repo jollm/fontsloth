@@ -590,8 +590,8 @@ TTF-PATH the path to a ttf file
             (t (fontsloth:error "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
       (when (gethash "kern" props)
         (put-table "kern" (unpack-table "kern" fontsloth-otf--kern-spec)))
-      (when (gethash "GDEF" props)
-        (put-table "GDEF" (unpack-table "GDEF" fontsloth-otf--gdef-spec)))
+      ;; (when (gethash "GDEF" props)
+      ;;   (put-table "GDEF" (unpack-table "GDEF" fontsloth-otf--gdef-spec)))
       (when (gethash "GPOS" props)
         (put-table "GPOS" (unpack-table "GPOS" fontsloth-otf--gpos-spec))
         (put-table
