@@ -426,11 +426,12 @@ If LANG is nil it will be the default lang sys."
   (when-let* ((lang-sys (fontsloth-otf-gpos-get-lang-sys-table script lang))
               (feature-indices (alist-get 'feature-indices lang-sys))
               (feature-list (fontsloth-otf--get-table-value 'feature-list "GPOS"))
-              (features (alist-get 'features feature-list)))
-    (elt features (seq-find (lambda (i)
-                              (when-let ((f (elt features i)))
-                                (equal feature (alist-get 'tag f))))
-                            feature-indices))))
+              (features (alist-get 'features feature-list))
+              (feature-idx (seq-find (lambda (i)
+                                       (when-let ((f (elt features i)))
+                                         (equal feature (alist-get 'tag f))))
+                                     feature-indices)))
+    (elt features feature-idx)))
 
 (defun fontsloth-otf-gpos-get-lookup-tables (script lang feature type)
   "Given SCRIPT and LANG find all FEATURE's GPOS lookup tables of TYPE.
