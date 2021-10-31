@@ -59,14 +59,16 @@
 
 (defun fontsloth-test--pre-fixture (body)
   (unwind-protect
-      (progn (setq fontsloth-test--post-invalidate?
-                   (not (pcache-has fontsloth-pcache fontsloth-test--font)))
+      (progn (unless fontsloth-cache
+               (fontsloth-cache-init))
+             (setq fontsloth-test--post-invalidate?
+                   (not (pcache-has fontsloth-cache fontsloth-test--font)))
              (funcall body))))
 
 (defun fontsloth-test--post-fixture (body)
   (unwind-protect (funcall body)
     (when fontsloth-test--post-invalidate?
-      (pcache-invalidate fontsloth-pcache fontsloth-test--font))))
+      (pcache-invalidate fontsloth-cache fontsloth-test--font))))
 
 (ert-deftest fontsloth-test-font-load-rasterize ()
   "Test loading a font and then rasterizing a glyph."

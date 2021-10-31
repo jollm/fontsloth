@@ -97,11 +97,11 @@ the seconds if you load more than 10 or so fonts at a time*.
 ** Invalidate a cache entry
 #+begin_src emacs-lisp
 ;; this removes a single font entry from cache
-(pcache-invalidate fontsloth-pcache my/font)
+(pcache-invalidate fontsloth-cache my/font)
 #+end_src
 ** Clear the cache
 #+begin_src emacs-lisp
-(pcache-clear fontsloth-pcache)
+(pcache-clear fontsloth-cache)
 #+end_src
 * Installation
 Pending upload to MELPA, add this directory to your emacs load path and

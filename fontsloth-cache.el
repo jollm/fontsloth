@@ -46,36 +46,34 @@
   :type 'integer
   :group 'fontsloth)
 
-(defclass fontsloth-cache (pcache-repository)
+(defclass fontsloth-cache-pcache (pcache-repository)
   ((entries :initarg :entries :initform (make-hash-table :test 'equal))))
 
-(oset-default 'fontsloth-cache version-constant
+(oset-default 'fontsloth-cache-pcache version-constant
               fontsloth-cache-version-constant)
 
 ;;; TODO: separate caches for fonts and for raster output
 
-(defvar fontsloth-pcache-path-name "fontsloth"
+(defvar fontsloth-cache-pcache-path-name "fontsloth"
   "The pcache pathname for fontsloth-cache.")
-(defvar fontsloth-pcache nil
+(defvar fontsloth-cache nil
   "The instance of fontsloth-cache, a `pcache-repository'.")
 
 (defun fontsloth-cache-init ()
   "Initialize the cache."
-  (setq fontsloth-pcache
-        (benchmark-progn
-          (message "Loading fontsloth-pcache, time taken:")
-          (let ((cache
-                 (make-instance
-                  'fontsloth-cache
-                  :object-name (format "%s" fontsloth-pcache-path-name))))
-            (oset cache save-delay fontsloth-cache-save-delay)
-            cache))))
+  (setq fontsloth-cache
+        (let ((cache
+               (make-instance
+                'fontsloth-cache-pcache
+                :object-name (format "%s" fontsloth-cache-pcache-path-name))))
+          (oset cache save-delay fontsloth-cache-save-delay)
+          cache)))
 
 (defun fontsloth-cache--watch-save-delay (sym nval oper where)
   "Update the cache save delay when the customization value is set."
   (ignore sym)
-  (when (and fontsloth-pcache (not where) (eq 'set oper))
-    (oset fontsloth-pcache save-delay nval)))
+  (when (and fontsloth-cache (not where) (eq 'set oper))
+    (oset fontsloth-cache save-delay nval)))
 
 (add-variable-watcher 'fontsloth-cache-save-delay
                       #'fontsloth-cache--watch-save-delay)
