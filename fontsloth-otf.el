@@ -36,6 +36,7 @@
 
 ;;; Code:
 
+(defvar bindat--v)
 (require 'bindat)
 (require 'cl-lib)
 
