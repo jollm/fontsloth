@@ -42,7 +42,7 @@
   "Version constant used for cache invalidation.")
 
 (defcustom fontsloth-cache-save-delay 5
-  "The delay in seconds for updating the fontsloth-cache after a put."
+  "The delay in seconds for updating the `fontsloth-cache' after a put."
   :type 'integer
   :group 'fontsloth)
 
@@ -55,9 +55,9 @@
 ;;; TODO: separate caches for fonts and for raster output
 
 (defvar fontsloth-cache-pcache-path-name "fontsloth"
-  "The pcache pathname for fontsloth-cache.")
+  "The pcache pathname for `fontsloth-cache'.")
 (defvar fontsloth-cache nil
-  "The instance of fontsloth-cache, a `pcache-repository'.")
+  "The instance of `fontsloth-cache', a symbol `pcache-repository'.")
 
 (defun fontsloth-cache-init ()
   "Initialize the cache."
@@ -70,7 +70,11 @@
           cache)))
 
 (defun fontsloth-cache--watch-save-delay (sym nval oper where)
-  "Update the cache save delay when the customization value is set."
+  "Update the cache save delay when the customization value is set.
+SYM symbol
+NVAL new value
+OPER type of operation
+WHERE where it occurs"
   (ignore sym)
   (when (and fontsloth-cache (not where) (eq 'set oper))
     (oset fontsloth-cache save-delay nval)))

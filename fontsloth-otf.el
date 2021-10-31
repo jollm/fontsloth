@@ -26,7 +26,7 @@
 ;;; Commentary:
 
 ;; Part of fontsloth: the slowest font renderer in the world written in pure
-;; elisp. inspired by fontdue
+;; elisp.  inspired by fontdue
 
 ;; fontsloth-otf (this file): uses bindat to parse otf/ttf files
 
@@ -239,6 +239,7 @@ GLYPH-LOCATIONS sequence of glyph locations from the loca table"
 ;; TODO compute-x and compute-y could be done with a macro or wrapper fn
 
 (defun fontsloth-otf--prev-coord (prev idx)
+  "Return the previous coord given seq PREV and IDX."
   (if (= 0 idx) 0
     (elt prev (1- idx))))
 
@@ -339,6 +340,7 @@ RANGE length in bytes from loca for data, excluding header size"
       (overlap-compound . ,(= 1024 (logand 1024 word))))))
 
 (defun fontsloth-otf--make-component-argument-spec (flags)
+  "Given FLAGS, make a bindat spec to for a component-argument."
   (pcase `(,(alist-get 'args-are-words flags)
            ,(alist-get 'args-are-xy flags))
     ('(t t) (bindat-type sint 16 nil))
@@ -347,6 +349,7 @@ RANGE length in bytes from loca for data, excluding header size"
     ('(nil nil) (bindat-type uint 8))))
 
 (defun fontsloth-otf--make-transform-option-spec (flags)
+  "Given FLAGS, make a bindat spec to for a transform-option."
   (pcase `(,(alist-get 'we-have-a-scale flags)
            ,(alist-get 'we-have-an-xy-scale flags)
            ,(alist-get 'we-have-a-two-by-two flags))
@@ -590,7 +593,7 @@ TTF-PATH the path to a ttf file
              (fontsloth:info
               fontsloth-log
               "fontsloth-otf: cannot yet fully handle OpenType CFF"))
-            (t (fontsloth:error "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
+            (t (fontsloth:error "fontsloth-otf: Unknown sfnt-ver %s" sfnt-ver)))
       (when (gethash "kern" props)
         (put-table "kern" (unpack-table "kern" fontsloth-otf-kern-spec)))
       ;; (when (gethash "GDEF" props)
@@ -662,8 +665,8 @@ GLYPH-ID the glyph-id"
     (alist-get 'line-gap hhea)))
 
 (defun fontsloth-otf-glyph-hor-advance (glyph-id)
-  "Return the horizontal advance for a glyph."
-  ;; TODO: support font variations
+  "Return the horizontal advance for GLYPH-ID."
+  ;; Todo: support font variations
   (when-let* ((hmtx (gethash "hmtx" fontsloth-otf--current-tables))
               (metrics (alist-get 'hmetrics hmtx))
               (num-glyphs (fontsloth-otf-num-glyphs)))
@@ -678,11 +681,11 @@ GLYPH-ID the glyph-id"
           (alist-get 'advance-width (elt metrics (1- num-metrics))))))))
 
 (defun fontsloth-otf-glyph-ver-advance (glyph-id)
-  "Return the vertical advance for a glyph."
+  "Return the vertical advance for a GLYPH-ID."
   (ignore glyph-id)
   ;; TODO: parse vmtx
   ;; TODO: support font variations
-  (error "glyph-ver-advance not yet implemented"))
+  (error "Glyph-ver-advance not yet implemented"))
 
 (defun fontsloth-otf-find-hkern-mappings ()
   "Try to find indexed horizontal pair kern mappings for the current font."
@@ -701,14 +704,14 @@ Y y coord of the start point"
   (fontsloth:verbose fontsloth-log "Noop outline move-to %s %s" x y))
 
 (cl-defgeneric fontsloth-otf-line-to (outliner x y)
-  "Append a line-to segment to the contour.
+  "Append a line-to segment to OUTLINER's contour.
 X x coord of the line end point
 Y y coord of the line end point"
   (ignore outliner)
   (fontsloth:verbose fontsloth-log "Noop outline line-to %s %s" x y))
 
 (cl-defgeneric fontsloth-otf-quad-to (outliner x1 y1 x y)
-  "Append a quad-to segment to the contour.
+  "Append a quad-to segment to OUTLINER's contour.
 X1 x coord of control point
 Y1 y coord of control point
 X x coord of curve end
@@ -718,10 +721,10 @@ Y y coord of curve end"
                      x1 y1 x y))
 
 (cl-defgeneric fontsloth-otf-curve-to (outliner)
-  "Append a curve-to segment to the contour.")
+  "Append a curve-to segment to OUTLINER's contour.")
 
 (cl-defgeneric fontsloth-otf-close-contour (outliner)
-  "End a contour."
+  "End OUTLINER's contour."
   (ignore outliner)
   (fontsloth:verbose fontsloth-log "Noop outline close contour"))
 

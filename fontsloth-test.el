@@ -58,6 +58,7 @@
                                        fontsloth-test-font-pcache-rasterize))
 
 (defun fontsloth-test--pre-fixture (body)
+  "A fixture to run before BODY."
   (unwind-protect
       (progn (unless fontsloth-cache
                (fontsloth-cache-init))
@@ -66,6 +67,7 @@
              (funcall body))))
 
 (defun fontsloth-test--post-fixture (body)
+  "A fixture to run after BODY."
   (unwind-protect (funcall body)
     (when fontsloth-test--post-invalidate?
       (pcache-invalidate fontsloth-cache fontsloth-test--font))))

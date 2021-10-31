@@ -58,7 +58,7 @@
   (make-instance 'logito-buffer-object
                  :buffer fontsloth-log-buffer-name
                  :level (symbol-value fontsloth-log-default-level))
-  "The `logito-buffer-object' to dispatch on when logging.")
+  "The symbol `logito-buffer-object' to dispatch on when logging.")
 
 (defun fontsloth-log-level-error ()
   "Set fontsloth logging level to error."

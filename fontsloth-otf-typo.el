@@ -28,7 +28,7 @@
 ;; Part of fontsloth.
 
 ;; fontsloth-otf-typo.el: uses bindat to parse the advanced typography
-;; portions of otf/ttf files. if it appears to be bananas it kind of is
+;; portions of otf/ttf files.  if it appears to be bananas it kind of is
 
 
 ;;; Code:
@@ -46,7 +46,7 @@ OFFSET is the true offset, not relative.
 
 This is helpful because everything in GGG-land is done with offsets.
 XXX: sometimes you will have to set the offset back :()
-(.e.g. if you want keep reading from the previous place)
+\(.e.g.  if you want keep reading from the previous place)
 this needs to understand how better to work with bindat-idx,
 maybe a with-offset would be a nice addition"
   (bindat-type type (progn (setq bindat-idx offset) spec)))
@@ -171,7 +171,8 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gdef'")
 
 (defun fontsloth-otf-typo--make-value-record-spec (format)
   "Given FORMAT, make a GPOS value record spec.
-see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#valueRecord'
+see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos
+#valueRecord'
 Currently only format 4 x-advance is supported.
 TODO: support more formats"
   (cl-case format
@@ -180,7 +181,7 @@ TODO: support more formats"
     (t (bindat-type unit nil))))
 
 (defun fontsloth-otf-typo--make-pair-set-spec (value-format-1 value-format-2)
-  "Given VALUE-FORMAT-1 and VALUE-FORMAT2, return a GPOS pair set spec.
+  "Given VALUE-FORMAT-1 and VALUE-FORMAT-2, return a GPOS pair set spec.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable'"
   (bindat-type
     (count uint 16)
@@ -302,7 +303,8 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#mark-to-
 
 (defun fontsloth-otf-typo--make-lookup-subtable-spec (lookup-type)
   "Given LOOKUP-TYPE, return a spec for a GSUB/GPOS lookup subtable.
-See URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#lulTbl'
+See URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2
+#lulTbl'
 Currently only GPOS type 2 pair positioning adjustment and GPOS type 4
 mark-to-base attachement are supported.
 TODO: support more types"
@@ -489,7 +491,7 @@ Return nil if value is not found."
                                 range)))))
 
 (defun fontsloth-otf-typo-gpos-get-coverage-index (coverage glyph-id)
-  "Given a GPOS coverage table try to find a coverage index/range for GLYPH-ID.
+  "Given a GPOS COVERAGE table try to find a coverage index/range for GLYPH-ID.
 Return nil if not found."
   (cl-case (alist-get 'format coverage)
     (1 (fontsloth-otf-typo--bin-search (alist-get 'glyphs coverage) glyph-id))
@@ -500,7 +502,7 @@ Return nil if not found."
             (alist-get 'start-glyph-id range))))))
 
 (defun fontsloth-otf-typo-gpos-get-glyph-class (class-def glyph-id)
-  "Given a GPOS class def table try to find a class for glyph-id.
+  "Given a GPOS CLASS-DEF table try to find a class for GLYPH-ID.
 Return class 0 if not found."
   (or (cl-case (alist-get 'format class-def)
         (1 (let ((start-glyph-id (alist-get 'start-glyph-id class-def)))
@@ -554,7 +556,7 @@ Return a x-advance adjustment or 0."
       0))
 
 (defun fontsloth-otf-typo--gpos-map-pair-kerns (mappings left-is subtable)
-  "Given left of pair LEFT-IS map from SUBTABLE pair sets into MAPPINGS."
+  "Given left of pair LEFT-IS map from SUBTABLE pair-sets into MAPPINGS."
   (let* ((pair-sets (alist-get 'pair-sets subtable)))
     (cl-loop
      for (left . idx) in left-is do
@@ -591,7 +593,7 @@ Return a x-advance adjustment or 0."
                  (puthash id v mappings)))))))
 
 (defun fontsloth-otf-typo--n-choose-k (n k)
-  "Just an n choose k calc."
+  "Just an N choose K calc."
   (if (= 0 k) 1
     (/ (* n (fontsloth-otf-typo--n-choose-k (1- n) (1- k))) k)))
 

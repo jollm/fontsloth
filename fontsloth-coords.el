@@ -38,6 +38,7 @@
 (declare-function fontsloth-coords-y1 "fontsloth--common-types")
 
 (defun fontsloth-coords-reverse (coords)
+  "Reverse a `fontsloth-coords' COORDS."
   (fontsloth-coords-create :x0 (fontsloth-coords-x1 coords)
                            :y0 (fontsloth-coords-y1 coords)
                            :x1 (fontsloth-coords-x0 coords)

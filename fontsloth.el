@@ -204,7 +204,9 @@ CODE-POINT the character code point to map"
 
 (defun fontsloth-font-horizontal-kern-by-code-point
     (font left-code-point right-code-point px)
-  "Return FONT's horizontal kern value for left and right scaled to PX or 0."
+  "Return FONT's horizontal kern value for left and right scaled to PX or 0.
+LEFT-CODE-POINT the char code point for the left hand side
+RIGHT-CODE-POINT the char code point for the right hand side"
   (or (when-let ((left (fontsloth-font-glyph-id font left-code-point))
                  (right (fontsloth-font-glyph-id font right-code-point)))
         (fontsloth-font-horizontal-kern-by-id font left right px))
@@ -244,7 +246,7 @@ CODE-POINT the character code point to map"
 
 (cl-defun fontsloth-font-rasterize (font glyph-id px &optional (subpixel? nil))
   "Rasterize FONT's glyph at GLYPH-ID in PX pixel size.
-Produces a greyscale pixmap suitable for PGM. Returns
+Produces a greyscale pixmap suitable for PGM.  Returns
 `fontsloth-metrics+pixmap'.
 SUBPIXEL? optional t to produce a subpixel render suitable for PPM"
   (when-let ((glyph (elt (fontsloth-font-glyphs font) glyph-id)))

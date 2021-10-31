@@ -52,10 +52,12 @@ RATIO ratio of distance for the new point, between 0.0 and 1.0"
          (* ratio (- (fontsloth-point-y p2) (fontsloth-point-y p1))))))
 
 (defun fontsloth-point-scale (p scale)
+  "Scale P given SCALE."
   (setf (fontsloth-point-x p) (* scale (fontsloth-point-x p))
         (fontsloth-point-y p) (* scale (fontsloth-point-y p))))
 
 (defun fontsloth-point-distance-squared (p1 p2)
+  "Compute distance squared between points P1 and P2."
   (let ((dx (- (fontsloth-point-x p1) (fontsloth-point-x p2)))
         (dy (- (fontsloth-point-y p1) (fontsloth-point-y p2))))
     (+ (* dx dx) (* dy dy))))

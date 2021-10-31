@@ -39,6 +39,13 @@
 
 (cl-defun fontsloth-layout-test--verify-glyph-position
     (pos &key ekey eparent ex ey ewidth eheight echar-data euser-data)
+  "Check POS against expected values.
+EKEY expected key
+EPARENT expected parent
+EX EY expected x,y
+EWIDTH EHEIGHT expected width and height
+ECHAR-DATA expected char data
+EUSER-DATA expected user data"
   (pcase-let (((cl-struct fontsloth-layout-glyph-position
                           key parent x y width height char-data user-data)
                pos))

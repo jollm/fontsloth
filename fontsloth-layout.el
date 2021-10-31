@@ -26,7 +26,7 @@
 ;;; Commentary:
 
 ;; Part of fontsloth: the slowest font renderer in the world written in pure
-;; elisp. inspired by fontdue
+;; elisp.  inspired by fontdue
 
 ;; fontsloth-layout (this file): glyph layout helpers
 

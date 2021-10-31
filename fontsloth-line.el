@@ -95,6 +95,7 @@ END the end point of type `fontsloth-point'"
          :params (fontsloth-params-create :tdx tdx :tdy tdy :dx dx :dy dy))))))
 
 (defun fontsloth-line-reposition (line bounds reverse)
+  "Reposition LINE given BOUNDS and REVERSE."
   (let* ((coords (if reverse (fontsloth-coords-reverse
                               (fontsloth-line-coords line))
                    (fontsloth-line-coords line)))
