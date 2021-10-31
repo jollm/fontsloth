@@ -55,21 +55,25 @@
 
 (defvar fontsloth-pcache-path-name "fontsloth"
   "The pcache pathname for fontsloth-cache.")
-(defvar fontsloth-pcache
-  (benchmark-progn
-    (message "Loading fontsloth-pcache, time taken:")
-    (let ((cache
-           (make-instance
-            'fontsloth-cache
-            :object-name (format "%s" fontsloth-pcache-path-name))))
-      (oset cache save-delay fontsloth-cache-save-delay)
-      cache))
+(defvar fontsloth-pcache nil
   "The instance of fontsloth-cache, a `pcache-repository'.")
+
+(defun fontsloth-cache-init ()
+  "Initialize the cache."
+  (setq fontsloth-pcache
+        (benchmark-progn
+          (message "Loading fontsloth-pcache, time taken:")
+          (let ((cache
+                 (make-instance
+                  'fontsloth-cache
+                  :object-name (format "%s" fontsloth-pcache-path-name))))
+            (oset cache save-delay fontsloth-cache-save-delay)
+            cache))))
 
 (defun fontsloth-cache--watch-save-delay (sym nval oper where)
   "Update the cache save delay when the customization value is set."
   (ignore sym)
-  (when (and (not where) (eq 'set oper))
+  (when (and fontsloth-pcache (not where) (eq 'set oper))
     (oset fontsloth-pcache save-delay nval)))
 
 (add-variable-watcher 'fontsloth-cache-save-delay

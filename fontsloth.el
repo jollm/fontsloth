@@ -144,6 +144,8 @@ LINE-GAP the line gap"
 
 (defun fontsloth--load-font-cached (path font-settings)
   "Retrieve a font from cache and if not load it with PATH and FONT-SETTINGS."
+  (unless fontsloth-pcache
+    (fontsloth-cache-init))
   (if-let ((font (pcache-get fontsloth-pcache path)))
       font
     (let ((font (fontsloth--load-font path font-settings)))
