@@ -102,7 +102,7 @@ To be handed to `fontsloth-otf-outline-glyph'"
           :type 'fontsloth-glyph-outline-bounds
           :documentation "calculated outline bounds"))
 
-(defun fontsloth--quad-curve-point (qc time)
+(defun fontsloth-geometry--quad-curve-point (qc time)
   "Determine the point along a curve at a given time.
 QC the curve
 TIME the time"
@@ -126,7 +126,7 @@ UNITS-PER-EM a number indicating units per em"
          (max-area (* 2.0 error-threshold-px (/ units-per-em scale))))
     (fontsloth-make-geometry :max-area max-area)))
 
-(defun fontsloth--geometry-push (geom start end)
+(defun fontsloth-geometry-push (geom start end)
   "Push a new line into the outline geometry.
 GEOM a `fontsloth-geometry'
 START the line start point
@@ -206,7 +206,7 @@ OUTLINER geometry struct
 X x coord
 Y y coord"
   (let ((next-point (fontsloth-point-create :x x :y y)))
-    (fontsloth--geometry-push
+    (fontsloth-geometry-push
      outliner (fontsloth-geometry-previous-point outliner) next-point)
     (setf (fontsloth-geometry-previous-point outliner) next-point)))
 
@@ -230,7 +230,7 @@ Y1 y coord of the next curve point"
              while seg do
              (let* ((bt (* 0.5 (+ (fontsloth-segment-at seg)
                                   (fontsloth-segment-ct seg))))
-                    (b (fontsloth--quad-curve-point curve bt))
+                    (b (fontsloth-geometry--quad-curve-point curve bt))
                     (area (- (* (- (fontsloth-point-x b)
                                    (fontsloth-point-x
                                     (fontsloth-segment-a seg)))
@@ -254,7 +254,7 @@ Y1 y coord of the next curve point"
                                  :at bt
                                  :c (fontsloth-segment-c seg)
                                  :ct (fontsloth-segment-ct seg)) stack))
-                 (fontsloth--geometry-push
+                 (fontsloth-geometry-push
                   outliner
                   (fontsloth-segment-a seg)
                   (fontsloth-segment-c seg)))))
@@ -265,9 +265,9 @@ Y1 y coord of the next curve point"
 OUTLINER the geometry"
   (when (not (equal (fontsloth-geometry-start-point outliner)
                     (fontsloth-geometry-previous-point outliner)))
-    (fontsloth--geometry-push outliner
-                              (fontsloth-geometry-previous-point outliner)
-                              (fontsloth-geometry-start-point outliner)))
+    (fontsloth-geometry-push outliner
+                             (fontsloth-geometry-previous-point outliner)
+                             (fontsloth-geometry-start-point outliner)))
   (setf (fontsloth-geometry-previous-point outliner)
         (fontsloth-geometry-start-point outliner)))
 
