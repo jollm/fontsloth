@@ -217,10 +217,10 @@ CODE-POINT the character code point to map"
                ((cl-struct fontsloth-glyph-outline-bounds
                            xmin ymin width height)
                 bounds)
-               (offset-x (fontsloth--raster-fract (+ xmin offset)))
-               (offset-y (fontsloth--raster-fract
-                          (- 1.0 (fontsloth--raster-fract height)
-                             (fontsloth--raster-fract ymin)))))
+               (offset-x (fontsloth-raster-fract (+ xmin offset)))
+               (offset-y (fontsloth-raster-fract
+                          (- 1.0 (fontsloth-raster-fract height)
+                             (fontsloth-raster-fract ymin)))))
     (when (> 0 offset-x)
       (setf offset-x (1+ offset-x)))
     (when (> 0 offset-y)

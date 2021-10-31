@@ -51,12 +51,12 @@ HEIGHT the expected height"
   (make-fontsloth-raster :width width :height height
                          :canvas (make-vector (+ 3 (* width height)) 0)))
 
-(defun fontsloth--raster-fract (f)
+(defun fontsloth-raster-fract (f)
   "Return the fractional part of float `f'.
 F float to fract"
   (- f (truncate f)))
 
-(defun fontsloth--raster-add (raster index height mid-x)
+(defun fontsloth-raster-add (raster index height mid-x)
   "Add a raster output at the given index and coordinates.
 RASTER the raster to update
 INDEX the raster index
@@ -67,7 +67,7 @@ MID-X the computed mid x coord of the output"
     (aset c index (+ (- height m) (aref c index)))
     (aset c (1+ index) (+ (aref c (1+ index)) m))))
 
-(defun fontsloth--raster-v-line (raster line coords)
+(defun fontsloth-raster-v-line (raster line coords)
   "Rasterize a v-line.
 RASTER the raster to update
 LINE the v-line
@@ -87,7 +87,7 @@ COORDS the scaled coordinates"
          (index-y-inc (truncate
                        (copysign (* 1.0 (fontsloth-raster-width raster)) sy)))
          (dist (truncate (abs (- sty ey))))
-         (mid-x (fontsloth--raster-fract x0)))
+         (mid-x (fontsloth-raster-fract x0)))
     (fontsloth:debug* fontsloth-log
                       (concat
                        "start v-line: "
@@ -97,18 +97,18 @@ COORDS the scaled coordinates"
                       dist stx sty ex ey
                       index index-y-inc)
     (dotimes (_ dist)
-      (fontsloth--raster-add raster index (- y-prev target-y) mid-x)
+      (fontsloth-raster-add raster index (- y-prev target-y) mid-x)
       (setf index (+ index index-y-inc))
       (setf y-prev target-y)
       (setf target-y (+ target-y sy))
       (fontsloth:debug* fontsloth-log "index %s index-y-inc %s"
                         index index-y-inc))
-    (fontsloth--raster-add
+    (fontsloth-raster-add
      raster (truncate (+ ex (* ey (fontsloth-raster-width raster))))
      (- y-prev y1) mid-x))
   (fontsloth:debug* fontsloth-log "end v-line"))
 
-(defun fontsloth--raster-m-line (raster line coords params)
+(defun fontsloth-raster-m-line (raster line coords params)
   "Rasterize an m-line.
 RASTER the raster to update
 LINE the m-line
@@ -165,17 +165,17 @@ PARAMS the scaled parameters"
                 tmy (+ tmy tdy)
                 target-y (+ target-y sy)
                 index (+ index index-y-inc)))
-        (fontsloth--raster-add raster prev-index (- y-prev y-next)
-                               (fontsloth--raster-fract (/ (+ x-prev x-next)
-                                                           2.0)))
+        (fontsloth-raster-add raster prev-index (- y-prev y-next)
+                              (fontsloth-raster-fract (/ (+ x-prev x-next)
+                                                         2.0)))
         (setf x-prev x-next y-prev y-next)
         (fontsloth:debug* fontsloth-log "index %s index-x-inc %s index-y-inc %s"
                           index index-x-inc index-y-inc)))
-    (fontsloth--raster-add raster
-                           (truncate (+ ex
-                                        (* (fontsloth-raster-width raster) ey)))
-                           (- y-prev y1)
-                           (fontsloth--raster-fract (/ (+ x-prev x1) 2.0)))
+    (fontsloth-raster-add raster
+                          (truncate (+ ex
+                                       (* (fontsloth-raster-width raster) ey)))
+                          (- y-prev y1)
+                          (fontsloth-raster-fract (/ (+ x-prev x1) 2.0)))
     (fontsloth:debug* fontsloth-log "end m-line")))
 
 (defun fontsloth-raster-draw (raster glyph scale-x scale-y offset-x offset-y)
@@ -197,12 +197,13 @@ OFFSET-Y y offset"
                   ,(* (caddr params) (caddr lparams))
                   ,(* (cadddr params) (cadddr lparams)))))
       (cl-loop for ln across (fontsloth-glyph-v-lines glyph) do
-               (fontsloth--raster-v-line raster ln
-                 (scale-off (fontsloth-line-coords ln))))
+               (fontsloth-raster-v-line
+                raster ln (scale-off (fontsloth-line-coords ln))))
       (cl-loop for ln across (fontsloth-glyph-m-lines glyph) do
-               (fontsloth--raster-m-line raster ln
-                 (scale-off (fontsloth-line-coords ln))
-                 (parameterize (fontsloth-line-params ln)))))))
+               (fontsloth-raster-m-line
+                raster ln
+                (scale-off (fontsloth-line-coords ln))
+                (parameterize (fontsloth-line-params ln)))))))
 
 (defun fontsloth-raster-get-pixel (raster length)
   "Get the pixelated output of the raster.
