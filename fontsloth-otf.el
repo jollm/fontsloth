@@ -558,6 +558,7 @@ TABLE-PROPS-LIST the list of table props to index"
   "Read `ttf-path' into an abstract representation suitable for rendering.
 TTF-PATH the path to a ttf file
 :COLL-INDEX the collection index if this file is a collection, default 0"
+  (ignore coll-index)
   (setq fontsloth-otf--current-tables (make-hash-table :test 'equal))
   (setq fontsloth-otf--current-font-bytes (with-temp-buffer
                               (set-buffer-multibyte nil)
