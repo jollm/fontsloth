@@ -4,8 +4,9 @@
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.15.2
-;; Package-Requires: ((cl-lib "1.0") (emacs "26.1"))
-;; Keywords: true-type, font, glyph, glyf, ttf, otf
+;; Homepage: https://github.com/jollm/fontsloth
+;; Package-Requires: ((emacs "26.1"))
+;; Keywords: data, font, glyph, glyf, ttf, otf
 
 ;; This file is NOT part of GNU Emacs.
 

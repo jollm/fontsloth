@@ -1,11 +1,12 @@
-;;; fontsloth-otf-typo.el --- Advanced typography table portion of an Elisp otf/ttf bindat parser -*- lexical-binding: t -*-
+;;; fontsloth-otf-typo.el --- Advanced typography table portion of otf/ttf bindat parser -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.15.2
-;; Package-Requires: ((cl-lib "0.5") (emacs "26.1"))
-;; Keywords: true-type, font, bindat, ttf, otf, parsing
+;; Homepage: https://github.com/jollm/fontsloth
+;; Package-Requires: ((emacs "26.1"))
+;; Keywords: data, font, bindat, ttf, otf, parsing
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -24,10 +25,9 @@
 
 ;;; Commentary:
 
-;; Part of fontsloth: the slowest font renderer in the world written in pure
-;; elisp. inspired by fontdue
+;; Part of fontsloth.
 
-;; fontsloth-otf-typo (this file): uses bindat to parse the advanced typography
+;; fontsloth-otf-typo.el: uses bindat to parse the advanced typography
 ;; portions of otf/ttf files. if it appears to be bananas it kind of is
 
 

@@ -4,8 +4,9 @@
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.15.2
-;; Package-Requires: ((cl-lib "1.0") (names "20151201.0") (emacs "26.1"))
-;; Keywords: true-type, font, bindat, ttf, otf, parsing
+;; Homepage: https://github.com/jollm/fontsloth
+;; Package-Requires: ((emacs "26.1"))
+;; Keywords: data, font, bindat, ttf, otf, parsing
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -296,4 +297,4 @@
    "dcroat"))
 
 (provide 'fontsloth-otf--mac-names)
-;;; fontsloth--mac-names.el ends here
+;;; fontsloth-otf--mac-names.el ends here

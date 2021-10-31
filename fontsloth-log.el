@@ -4,8 +4,9 @@
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.15.2
+;; Homepage: https://github.com/jollm/fontsloth
 ;; Package-Requires: ((logito "0.1") (emacs "26.1"))
-;; Keywords: true-type, font, ttf, otf
+;; Keywords: data, font, ttf, otf
 
 ;; This file is NOT part of GNU Emacs.
 

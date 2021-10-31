@@ -4,8 +4,9 @@
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.15.2
+;; Homepage: https://github.com/jollm/fontsloth
 ;; Package-Requires: ((emacs "26.1"))
-;; Keywords: true-type, font, bindat, ttf, otf, parsing
+;; Keywords: data, font, bindat, ttf, otf, parsing
 
 ;; This file is NOT part of GNU Emacs.
 
