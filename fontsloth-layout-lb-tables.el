@@ -52,7 +52,7 @@
 
 ;;; Code:
 
-(defconst fontsloth-layout--linebreak-1-2
+(defconst fontsloth-layout-lb-tables-1-2
   [ 9 9 9 9 9 9 9 9 9 4 17 6 6 10 9 9 9 9 9 9 9 9 9 9 9
     9 9 9 9 9 9 9 26 11 23 2 22 21 2 23 20 36 2 22 16 13
     16 27 19 19 19 19 19 19 19 19 19 19 16 16 2 2 2 11 2 2
@@ -138,7 +138,7 @@
     2 2 2 2 2 2 2 2 2 2 2 2 2 2 9 9 9 9 9 9 9 9 9 2 2
     2 2 16 11 2 0 0 0 0 0])
 
-(defconst fontsloth-layout--linebreak-3-root
+(defconst fontsloth-layout-lb-tables-3-root
   [ 255 255 255 255 255 255 255 255 255 255 255 255 255 255 255
     255 255 255 255 255 255 255 255 255 255 255 255 255 255 255
     255 255 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18
@@ -205,7 +205,7 @@
     124 124 124 124 124 124 124 169 170 40 171 40 40 40 40 172
     173 174 175 176 177 40 178 179 180 181 182])
 
-(defconst fontsloth-layout--linebreak-3-child
+(defconst fontsloth-layout-lb-tables-3-child
   [ 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 9 9 9
     9 2 9 9 9 9 9 9 9 9 9 2 9 9 9 2 9 9 9 9 9 0 0 2 2
     2 2 2 2 2 2 2 2 2 2 2 2 2 0 2 2 2 2 2 2 2 2 2 2 2
@@ -717,7 +717,7 @@
     14 14 14 22 22 0 2 2 2 2 2 2 2 0 0 0 0 0 0 0 0 0 0 9
     9 9 7 1 0 0])
 
-(defconst fontsloth-layout--linebreak-4-root
+(defconst fontsloth-layout-lb-tables-4-root
   [255 255 255 255 255 255 255 255 255 255 255 255 255 255 255
    255 0 1 2 3 4 5 6 7 8 5 5 9 5 10 11 12 7 7 7 7 7 7 7
    7 7 7 7 7 7 7 7 13 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 13
@@ -731,7 +731,7 @@
    5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5
    5 5 5 5 5 5 5 5])
 
-(defconst fontsloth-layout--linebreak-4-mid
+(defconst fontsloth-layout-lb-tables-4-mid
   [ 0 1 2 3 4 2 5 6 7 7 8 9 10 11 12 13 2 2 14 15 16 17 7
     7 2 2 2 2 18 19 7 7 20 21 22 23 24 7 25 26 27 28 29 30
     31 32 33 7 2 34 35 36 7 7 7 7 7 37 7 7 7 7 7 7 38 39
@@ -777,7 +777,7 @@
     7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7
     7 7 7 7 7 7 7 7 7 7 7 7])
 
-(defconst fontsloth-layout--linebreak-4-leaves
+(defconst fontsloth-layout-lb-tables-4-leaves
   [ 2 2 2 2 2 2 2 2 2 2 2 2 0 2 2 2 2 2 2 2 2 2 2 2 2
     2 2 2 2 2 2 2 2 2 2 2 2 2 2 0 2 2 2 2 2 2 2 2 2 2
     2 2 2 2 2 2 2 2 2 0 2 2 0 2 2 2 2 2 2 2 2 2 2 2 2
@@ -1174,9 +1174,9 @@
     9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9
     9 9 9 9 9 9 9 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0])
 
-(defconst fontsloth-layout--n-linebreak-categories 43)
+(defconst fontsloth-layout-lb-tables-n-linebreak-categories 43)
 
-(defconst fontsloth-layout--linebreak-state-machine
+(defconst fontsloth-layout-lb-tables-state-machine
   [
     ;; state 0: XX
     0 1 2 131 4 133 6 135 8 0 10 11 12 13 142 15 16 17 18 19
@@ -1536,7 +1536,7 @@
     160 161 162 163 36 165 166 167 168 169 170
 ])
 
-(defconst fontsloth-layout--emoji-table
+(defconst fontsloth-layout-lb-tables-emoji-table
   [#x23 #x2A #x30 #x31 #x32 #x33 #x34 #x35
    #x36 #x37 #x38 #x39 #xA9 #xAE #x203C #x2049
    #x2122 #x2139 #x2194 #x2195 #x2196 #x2197 #x2198 #x2199
@@ -1695,7 +1695,7 @@
    #x1F9F6 #x1F9F7 #x1F9F8 #x1F9F9 #x1F9FA #x1F9FB #x1F9FC #x1F9FD
    #x1F9FE #x1F9FF])
 
-(defconst fontsloth-layout--emoji-modifier-base
+(defconst fontsloth-layout-lb-tables-emoji-modifier-base
   [#x261D #x26F9 #x270A #x270B #x270C #x270D #x1F385 #x1F3C2
    #x1F3C3 #x1F3C4 #x1F3C7 #x1F3CA #x1F3CB #x1F3CC #x1F442 #x1F443
    #x1F446 #x1F447 #x1F448 #x1F449 #x1F44A #x1F44B #x1F44C #x1F44D

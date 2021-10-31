@@ -98,7 +98,7 @@ HAS-WIDTH? t if has width"
   "Reset the linebreaker LBREAKER."
   (setf (fontsloth-layout-linebreaker-state lbreaker) 0))
 
-(defun fontsloth--u8->i8 (u8)
+(defun fontsloth-layout-linebreak--u8->i8 (u8)
   "Interpret an unsigned byte U8 as a signed byte."
   (let* ((max (ash 1 7))
          (wrap (+ max max)))
@@ -108,22 +108,22 @@ HAS-WIDTH? t if has width"
   "Step the linebreaker LBREAKER state machine forward with CODE-POINT."
   (let* ((lb (cond
               ((> #x800 code-point)
-               (aref fontsloth-layout--linebreak-1-2 code-point))
+               (aref fontsloth-layout-lb-tables-1-2 code-point))
               ((> #x10000 code-point)
-               (let ((child (aref fontsloth-layout--linebreak-3-root
+               (let ((child (aref fontsloth-layout-lb-tables-3-root
                                   (ash code-point -6))))
-                 (aref fontsloth-layout--linebreak-3-child
+                 (aref fontsloth-layout-lb-tables-3-child
                        (+ (* child #x40) (logand code-point #x3f)))))
-              (t (let* ((mid (aref fontsloth-layout--linebreak-4-root
+              (t (let* ((mid (aref fontsloth-layout-lb-tables-4-root
                                    (ash code-point -12)))
-                        (leaf (aref fontsloth-layout--linebreak-4-mid
+                        (leaf (aref fontsloth-layout-lb-tables-4-mid
                                     (+ (* mid #x40)
                                        (logand (ash code-point -6) #x3f)))))
-                   (aref fontsloth-layout--linebreak-4-leaves leaf)))))
+                   (aref fontsloth-layout-lb-tables-4-leaves leaf)))))
          (i (+ lb (* (fontsloth-layout-linebreaker-state lbreaker)
-                     fontsloth-layout--n-linebreak-categories)))
-         (new (aref fontsloth-layout--linebreak-state-machine i)))
-    (if (> 0 (fontsloth--u8->i8 new))
+                     fontsloth-layout-lb-tables-n-linebreak-categories)))
+         (new (aref fontsloth-layout-lb-tables-state-machine i)))
+    (if (> 0 (fontsloth-layout-linebreak--u8->i8 new))
         (progn (setf (fontsloth-layout-linebreaker-state lbreaker)
                      (logand new #x3f))
                (if (<= #xc0 new)
