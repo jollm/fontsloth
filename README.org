@@ -13,7 +13,7 @@ It is currently pre version 1.0 and the API is not yet stable.
 Mostly it is modeled after the aforementioned fontdue and the outliner in
 [[https://github.com/RazrFalcon/ttf-parser][Rust ttf-parser]]. The only novel bit is using Emacs bindat.el to unpack OTF/TTF.
 
-Current version: *0.15.1*
+Current version: *0.15.2*
 
 * Synopsis of work in progress
 ** Now supported
@@ -25,7 +25,7 @@ Current version: *0.15.1*
   Notably cube curves used in OTF fonts are not yet supported since the loader
   doesn’t fully handle OTF font tables.
 + Layouts for lines of horizontal text
-+ kerning (as of 0.15.1)
++ kerning (as of 0.15.2)
 ** Not currently supported (but planned)
 + OTF font outlining and rasterization (this is the first priority at present)
 + Font variation indices
