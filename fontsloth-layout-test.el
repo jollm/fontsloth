@@ -66,62 +66,62 @@
        (elt output 0)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 45 :px 35.0)
        :eparent ?H :ex 2.0 :ey -37.0 :ewidth 21 :eheight 25
-       :echar-data (fontsloth-layout-char-data-create))
+       :echar-data (fontsloth-layout-linebreak-char-data-create))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 1)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 74 :px 35.0)
        :eparent ?e :ex 26.0 :ey -38.0 :ewidth 17 :eheight 20
-       :echar-data (fontsloth-layout-char-data-create))
+       :echar-data (fontsloth-layout-linebreak-char-data-create))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 2)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 81 :px 35.0)
        :eparent ?l :ex 46.0 :ey -37.0 :ewidth 4 :eheight 27
-       :echar-data (fontsloth-layout-char-data-create))
+       :echar-data (fontsloth-layout-linebreak-char-data-create))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 3)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 81 :px 35.0)
        :eparent ?l :ex 54.0 :ey -37.0 :ewidth 4 :eheight 27
-       :echar-data (fontsloth-layout-char-data-create))
+       :echar-data (fontsloth-layout-linebreak-char-data-create))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 4)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 84 :px 35.0)
        :eparent ?o :ex 61.0 :ey -38.0 :ewidth 18 :eheight 20
-       :echar-data (fontsloth-layout-char-data-create))
+       :echar-data (fontsloth-layout-linebreak-char-data-create))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 5)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 5 :px 35.0)
        :eparent '? ' :ex 80.0 :ey -37.0 :ewidth 0 :eheight 0
-       :echar-data (fontsloth-layout-char-data-create :bits 1))
+       :echar-data (fontsloth-layout-linebreak-char-data-create :bits 1))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 6)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 92 :px 35.0)
        :eparent ?w :ex 89.0 :ey -37.0 :ewidth 26 :eheight 19
-       :echar-data (fontsloth-layout-char-data-create))
+       :echar-data (fontsloth-layout-linebreak-char-data-create))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 7)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 84 :px 35.0)
        :eparent ?o :ex 116.0 :ey -38.0 :ewidth 18 :eheight 20
-       :echar-data (fontsloth-layout-char-data-create))
+       :echar-data (fontsloth-layout-linebreak-char-data-create))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 8)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 87 :px 35.0)
        :eparent ?r :ex 137.0 :ey -37.0 :ewidth 10 :eheight 19
-       :echar-data (fontsloth-layout-char-data-create))
+       :echar-data (fontsloth-layout-linebreak-char-data-create))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 9)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 81 :px 35.0)
        :eparent ?l :ex 149.0 :ey -37.0 :ewidth 4 :eheight 27
-       :echar-data (fontsloth-layout-char-data-create))
+       :echar-data (fontsloth-layout-linebreak-char-data-create))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 10)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 73 :px 35.0)
        :eparent ?d :ex 156.0 :ey -38.0 :ewidth 17 :eheight 28
-       :echar-data (fontsloth-layout-char-data-create))
+       :echar-data (fontsloth-layout-linebreak-char-data-create))
       (fontsloth-layout-test--verify-glyph-position
        (elt output 11)
        :ekey (fontsloth-layout-glyph-raster-config-create :glyph-id 6 :px 35.0)
        :eparent ?! :ex 177.0 :ey -38.0 :ewidth 5 :eheight 26
-       :echar-data (fontsloth-layout-char-data-create)))))
+       :echar-data (fontsloth-layout-linebreak-char-data-create)))))
 
 (provide 'fontsloth-layout-test)
 ;;; fontsloth-layout-test.el ends here

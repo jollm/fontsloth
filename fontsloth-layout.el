@@ -62,7 +62,7 @@
   (y nil :type 'number)
   (width nil :type 'fixed)
   (height nil :type 'fixed)
-  (char-data nil :type 'fontsloth-layout-char-data)
+  (char-data nil :type 'fontsloth-layout-linebreak-char-data)
   (user-data nil))
 
 (cl-defstruct (fontsloth-layout-text-style
@@ -133,7 +133,7 @@
         (fontsloth-layout-y layout)
         (fontsloth-layout-settings-y settings)
         (fontsloth-layout-wrap-mask layout)
-        (fontsloth-layout-lb-data-from-mask
+        (fontsloth-layout-linebreak-data-from-mask
          (eq (fontsloth-layout-settings-wrap-style settings) 'word)
          (fontsloth-layout-settings-wrap-hard-breaks settings)
          (fontsloth-layout-settings-max-width settings))
@@ -216,15 +216,16 @@
              with prev-char = nil do
              (pcase-let*
                  ((linebreak
-                   (fontsloth-layout-lb-data-mask
+                   (fontsloth-layout-linebreak-data-mask
                     (fontsloth-layout-linebreaker-next linebreaker character)
                     wrap-mask))
                   (glyph-id (fontsloth-font-glyph-id font character))
                   (char-data
-                   (fontsloth-layout-char-data-classify character glyph-id))
+                   (fontsloth-layout-linebreak-char-data-classify
+                    character glyph-id))
                   ((cl-struct fontsloth-metrics
                               width height advance-width bounds)
-                   (if (fontsloth-layout-char-data-control-p
+                   (if (fontsloth-layout-linebreak-char-data-control-p
                         char-data)
                        (fontsloth-metrics-create)
                      (fontsloth-font-metrics font glyph-id px))))
@@ -236,7 +237,7 @@
                        (fontsloth-layout-current-pos layout)
                        (fontsloth-layout-linebreak-idx layout) (length glyphs)))
                (let ((advance (round advance-width)))
-                 (when (or (fontsloth-layout-lb-data-hard-p linebreak)
+                 (when (or (fontsloth-layout-linebreak-data-hard-p linebreak)
                            (< max-width
                               (+ advance
                                  (- (fontsloth-layout-current-pos layout)

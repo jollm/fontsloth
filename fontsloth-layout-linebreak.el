@@ -36,9 +36,9 @@
 
 (require 'fontsloth-layout-lb-tables)
 
-(defconst fontsloth-layout--linebreak-none #b00000000)
-(defconst fontsloth-layout--linebreak-soft #b00000001)
-(defconst fontsloth-layout--linebreak-hard #b00000010)
+(defconst fontsloth-layout-linebreak--none #b00000000)
+(defconst fontsloth-layout-linebreak--soft #b00000001)
+(defconst fontsloth-layout-linebreak--hard #b00000010)
 
 (cl-defstruct
     (fontsloth-layout-linebreak-data
@@ -49,15 +49,16 @@
 
 (defconst fontsloth-layout-linebreak-none
   (fontsloth-layout-linebreak-data-create
-   :bits fontsloth-layout--linebreak-none))
+   :bits fontsloth-layout-linebreak--none))
 (defconst fontsloth-layout-linebreak-soft
   (fontsloth-layout-linebreak-data-create
-   :bits fontsloth-layout--linebreak-soft))
+   :bits fontsloth-layout-linebreak--soft))
 (defconst fontsloth-layout-linebreak-hard
   (fontsloth-layout-linebreak-data-create
-   :bits fontsloth-layout--linebreak-hard))
+   :bits fontsloth-layout-linebreak--hard))
 
-(defun fontsloth-layout-lb-data-from-mask (wrap-soft? wrap-hard? has-width?)
+(defun fontsloth-layout-linebreak-data-from-mask
+    (wrap-soft? wrap-hard? has-width?)
   "Create a linebreak-data given mask set criteria.
 WRAP-SOFT? t if soft wrapping
 WRAP-HARD? t if hard wrapping
@@ -65,23 +66,23 @@ HAS-WIDTH? t if has width"
   (fontsloth-layout-linebreak-data-create
    :bits
    (let ((hard (if wrap-hard?
-                   fontsloth-layout--linebreak-hard
+                   fontsloth-layout-linebreak--hard
                  0)))
      (if (and wrap-soft? has-width?)
-         (logior hard fontsloth-layout--linebreak-soft)
+         (logior hard fontsloth-layout-linebreak--soft)
        hard))))
 
-(defsubst fontsloth-layout-lb-data-hard-p (lb-data)
+(defsubst fontsloth-layout-linebreak-data-hard-p (lb-data)
   "Test whether LB-DATA indicates a hard break."
   (= (fontsloth-layout-linebreak-data-bits lb-data)
-     fontsloth-layout--linebreak-hard))
+     fontsloth-layout-linebreak--hard))
 
-(defsubst fontsloth-layout-lb-data-soft-p (lb-data)
+(defsubst fontsloth-layout-linebreak-data-soft-p (lb-data)
   "Test whether LB-DATA indicates a soft break."
   (= (fontsloth-layout-linebreak-data-bits lb-data)
-     fontsloth-layout--linebreak-soft))
+     fontsloth-layout-linebreak--soft))
 
-(defsubst fontsloth-layout-lb-data-mask (lb-data1 lb-data2)
+(defsubst fontsloth-layout-linebreak-data-mask (lb-data1 lb-data2)
   "Mask LB-DATA1 with LB-DATA2."
   (fontsloth-layout-linebreak-data-create
    :bits (logand (fontsloth-layout-linebreak-data-bits lb-data1)
@@ -133,47 +134,50 @@ HAS-WIDTH? t if has width"
              fontsloth-layout-linebreak-none))))
 
 (cl-defstruct
-    (fontsloth-layout-char-data
-     (:constructor fontsloth-layout-char-data-create)
+    (fontsloth-layout-linebreak-char-data
+     (:constructor fontsloth-layout-linebreak-char-data-create)
      (:copier nil))
   "Container for character metadata."
   (bits 0 :type 'fixed))
 
-(defconst fontsloth-layout-char-data-whitespace #b00000001)
-(defconst fontsloth-layout-char-data-control #b00000010)
-(defconst fontsloth-layout-char-data-missing #b00000100)
+(defconst fontsloth-layout-linebreak-char-data-whitespace #b00000001)
+(defconst fontsloth-layout-linebreak-char-data-control #b00000010)
+(defconst fontsloth-layout-linebreak-char-data-missing #b00000100)
 
-(defun fontsloth-layout-char-data-classify (char index)
+(defun fontsloth-layout-linebreak-char-data-classify (char index)
   "Create a char-data for CHAR at INDEX."
-  (fontsloth-layout-char-data-create
+  (fontsloth-layout-linebreak-char-data-create
    :bits
-   (let* ((class (if (= 0 index) fontsloth-layout-char-data-missing 0))
+   (let* ((class (if (= 0 index)
+                     fontsloth-layout-linebreak-char-data-missing
+                   0))
           (whitespace
            (cl-case char
              ((?\t ?\n ?\x0c ?\r ?\ )
-              (logior class fontsloth-layout-char-data-whitespace))
+              (logior class fontsloth-layout-linebreak-char-data-whitespace))
              (t class))))
      (or (cl-loop for c in (cons #x7f (cl-loop for c from 0 upto #x1f
                                                collect c))
                   thereis
                   (when (= c char)
-                    (logior whitespace fontsloth-layout-char-data-control)))
+                    (logior whitespace
+                            fontsloth-layout-linebreak-char-data-control)))
          whitespace))))
 
-(defsubst fontsloth-layout-char-data-whitespace-p (char-data)
+(defsubst fontsloth-layout-linebreak-char-data-whitespace-p (char-data)
   "Test whether CHAR-DATA indicates whitespace."
-  (not (= 0 (logand fontsloth-layout-char-data-whitespace
-                    (fontsloth-layout-char-data-bits char-data)))))
+  (not (= 0 (logand fontsloth-layout-linebreak-char-data-whitespace
+                    (fontsloth-layout-linebreak-char-data-bits char-data)))))
 
-(defsubst fontsloth-layout-char-data-control-p (char-data)
+(defsubst fontsloth-layout-linebreak-char-data-control-p (char-data)
   "Test whether CHAR-DATA indicates control character."
-  (not (= 0 (logand fontsloth-layout-char-data-control
-                    (fontsloth-layout-char-data-bits char-data)))))
+  (not (= 0 (logand fontsloth-layout-linebreak-char-data-control
+                    (fontsloth-layout-linebreak-char-data-bits char-data)))))
 
-(defsubst fontsloth-layout-char-data-missing-p (char-data)
+(defsubst fontsloth-layout-linebreak-char-data-missing-p (char-data)
   "Test whether CHAR-DATA indicates missing char."
-  (not (= 0 (logand fontsloth-layout-char-data-missing
-                    (fontsloth-layout-char-data-bits char-data)))))
+  (not (= 0 (logand fontsloth-layout-linebreak-char-data-missing
+                    (fontsloth-layout-linebreak-char-data-bits char-data)))))
 
 (provide 'fontsloth-layout-linebreak)
 ;;; fontsloth-layout-linebreak.el ends here
