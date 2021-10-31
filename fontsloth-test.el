@@ -3,9 +3,9 @@
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
-;; Version: 0.15.2
+;; Version: 0.15.3
 ;; Homepage: https://github.com/jollm/fontsloth
-;; Package-Requires: ((fontsloth "0.15.2") (emacs "26.1"))
+;; Package-Requires: ((fontsloth "0.15.3") (emacs "26.1"))
 ;; Keywords: data, font, ttf, otf
 
 ;; This file is NOT part of GNU Emacs.
