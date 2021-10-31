@@ -37,14 +37,14 @@
 (require 'bindat)
 (require 'cl-lib)
 
-(defun fontsloth-otf--kern-format0-mappings (pairs)
+(defun fontsloth-otf-kern--format0-mappings (pairs)
   "Index TTF kern table format0 PAIRS."
   (let ((mappings (make-hash-table :test 'eq)))
     (cl-loop for p across pairs do
       (puthash (alist-get 'id p) (alist-get 'value p) mappings))
     mappings))
 
-(defun fontsloth-otf--kern-format3-mappings
+(defun fontsloth-otf-kern--format3-mappings
     (glyph-count
      left-hand-classes right-hand-classes
      left-hand-classes-count right-hand-classes-count
@@ -77,7 +77,7 @@ KERNING-VALUES the actual kerning values"
               (puthash id value mappings))))))
     mappings))
 
-(defvar fontsloth-otf--kern-format0-spec
+(defvar fontsloth-otf-kern--format0-spec
   (bindat-type
     (num-pairs uint 16)
     (_ fill 6)
@@ -87,11 +87,11 @@ KERNING-VALUES the actual kerning values"
              (right uint 16)
              (id unit (logior (ash left 16) right))
              (value sint 16 nil)))
-    (mappings unit (fontsloth-otf--kern-format0-mappings pairs)))
+    (mappings unit (fontsloth-otf-kern--format0-mappings pairs)))
   "A spec for kern table format0 pairwise kerning.
 see URL `https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6kern.html'")
 
-(defvar fontsloth-otf--kern-format3-spec
+(defvar fontsloth-otf-kern--format3-spec
   (bindat-type
     (glyph-count uint 16)
     (kerning-values-count uint 8)
@@ -107,7 +107,7 @@ see URL `https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6k
     (indices vec indices-count uint 8)
     (mappings
      unit
-     (fontsloth-otf--kern-format3-mappings
+     (fontsloth-otf-kern--format3-mappings
       glyph-count
       left-hand-classes right-hand-classes
       left-hand-classes-count
@@ -116,7 +116,7 @@ see URL `https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6k
   "A spec for kern table format3 class based kerning.
 see URL `https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6kern.html'")
 
-(defvar fontsloth-otf--kern-spec
+(defvar fontsloth-otf-kern-spec
   (bindat-type
     (major-version uint 16)
     (minor-version type
@@ -145,8 +145,8 @@ see URL `https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6k
     ;; only read the first subtable for now
     (_ type
        (cl-case (alist-get 'format (elt sub-tables 0))
-         (0 fontsloth-otf--kern-format0-spec)
-         (3 fontsloth-otf--kern-format3-spec)
+         (0 fontsloth-otf-kern--format0-spec)
+         (3 fontsloth-otf-kern--format3-spec)
          (t (bindat-type (mappings unit nil))))))
   "A spec for a TTF kern table.
 see URL `https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6kern.html'")
