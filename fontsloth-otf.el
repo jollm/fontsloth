@@ -42,7 +42,7 @@
 
 (require 'fontsloth-log)
 (require 'fontsloth-otf--mac-names)
-(require 'fontsloth-otf--outline-glyf)
+(require 'fontsloth-otf-glyf)
 (require 'fontsloth-otf-kern)
 (require 'fontsloth-otf-typo)
 
@@ -592,14 +592,14 @@ TTF-PATH the path to a ttf file
               "fontsloth-otf: cannot yet fully handle OpenType CFF"))
             (t (fontsloth:error "fontsloth-otf: unknown sfnt-ver %s" sfnt-ver)))
       (when (gethash "kern" props)
-        (put-table "kern" (unpack-table "kern" fontsloth-otf--kern-spec)))
+        (put-table "kern" (unpack-table "kern" fontsloth-otf-kern-spec)))
       ;; (when (gethash "GDEF" props)
-      ;;   (put-table "GDEF" (unpack-table "GDEF" fontsloth-otf--gdef-spec)))
+      ;;   (put-table "GDEF" (unpack-table "GDEF" fontsloth-otf-typo-gdef-spec)))
       (when (gethash "GPOS" props)
-        (put-table "GPOS" (unpack-table "GPOS" fontsloth-otf--gpos-spec))
+        (put-table "GPOS" (unpack-table "GPOS" fontsloth-otf-typo-gpos-spec))
         (put-table
          "GPOS"
-         (cons `(mappings . , (fontsloth-otf-gpos-build-kern-mappings))
+         (cons `(mappings . , (fontsloth-otf-typo-gpos-build-kern-mappings))
                (gethash "GPOS" fontsloth-otf--current-tables))))
       fontsloth-otf--current-tables)))
 
