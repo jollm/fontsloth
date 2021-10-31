@@ -1,4 +1,4 @@
-;;; fontsloth-otf--outline-glyf.el --- Outlining glyphs using glyf -*- lexical-binding: t -*-
+;;; fontsloth-otf-glyf.el --- Outlining glyphs using glyf -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
@@ -27,8 +27,8 @@
 
 ;; Part of fontsloth
 
-;; fontsloth-otf--outline-glyf (this file): Glyph outline implementation that
-;; relies on the OTF/TTF loca/glyf tables
+;; fontsloth-otf-glyf (this file): Glyph outline implementation that relies on
+;; the OTF/TTF loca/glyf tables
 
 ;;; Code:
 
@@ -269,5 +269,5 @@ BUILDER a `fontsloth-otf-glyf-builder'"
   (fontsloth-otf-glyf--outline
    glyphs glyph-id (fontsloth-otf-glyf-builder-create :outliner outliner)))
 
-(provide 'fontsloth-otf--outline-glyf)
-;;; fontsloth-otf--outline-glyf.el ends here
+(provide 'fontsloth-otf-glyf)
+;;; fontsloth-otf-glyf.el ends here
