@@ -41,12 +41,12 @@ positioning data."
   ;; first load a font with both pair set and class def pair position data
   (fontsloth-load-font "/usr/share/fonts/TTF/IBMPlexSerif-Regular.ttf"
                        :cache 'bypass)
-  (let ((mappings (fontsloth-otf-gpos-build-kern-mappings)))
+  (let ((mappings (fontsloth-otf-typo-gpos-build-kern-mappings)))
     (cl-loop for k in (map-keys mappings)
              for l = (ash (logand #xffff0000 k) -16)
              for r = (logand #x0000ffff k) do
              (should (= (gethash k mappings)
-                        (fontsloth-otf-gpos-hkern l r))))))
+                        (fontsloth-otf-typo-gpos-hkern l r))))))
 
 (provide 'fontsloth-otf-typo-test)
 ;;; fontsloth-otf-typo-test.el ends here
