@@ -150,10 +150,10 @@ END the line end point"
     (if (eql (fontsloth-point-x start) (fontsloth-point-x end))
         (setf (fontsloth-geometry-v-lines geom)
               (vconcat (fontsloth-geometry-v-lines geom)
-                       `(,(fontsloth--line-create start end))))
+                       `(,(fontsloth-line-create start end))))
       (setf (fontsloth-geometry-m-lines geom)
             (vconcat (fontsloth-geometry-m-lines geom)
-                     `(,(fontsloth--line-create start end)))))
+                     `(,(fontsloth-line-create start end)))))
     (fontsloth-bbox-extend-by (fontsloth-geometry-effective-bounds geom)
                               (fontsloth-point-x start)
                               (fontsloth-point-y start))
@@ -176,7 +176,7 @@ ADVANCE-HEIGHT glyph's advance height"
     (cl-flet ((reposition-lines (lines)
                 (cl-loop for ln across lines
                          collect
-                         (fontsloth--reposition-line
+                         (fontsloth-line-reposition
                           ln ebounds
                           (fontsloth-geometry-reverse-points geom)))))
       (setf (fontsloth-geometry-reverse-points geom)
