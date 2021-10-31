@@ -40,7 +40,7 @@
 
 (require 'fontsloth-log)
 
-(defsubst fontsloth-otf--offset-spec (offset spec)
+(defsubst fontsloth-otf-typo--offset-spec (offset spec)
   "Offset a bindat SPEC to OFFSET index.
 OFFSET is the true offset, not relative.
 
@@ -51,7 +51,7 @@ this needs to understand how better to work with bindat-idx,
 maybe a with-offset would be a nice addition"
   (bindat-type type (progn (setq bindat-idx offset) spec)))
 
-(defvar fontsloth-otf--glyph-range-spec
+(defvar fontsloth-otf-typo--glyph-range-spec
   (bindat-type
     (range-count uint 16)
     (ranges
@@ -64,7 +64,7 @@ maybe a with-offset would be a nice addition"
             (index uint 16))))
   "A spec for glyph ranges used by class defs and coverage tables.")
 
-(defvar fontsloth-otf--gdef-glyph-class-def-spec
+(defvar fontsloth-otf-typo--gdef-glyph-class-def-spec
   (bindat-type
     (format uint 16)
     (_ type (cl-case format
@@ -72,23 +72,23 @@ maybe a with-offset would be a nice addition"
                    (start-glyph-id uint 16)
                    (glyph-count uint 16)
                    (class-value-array vec glyph-count uint 16)))
-              (2 fontsloth-otf--glyph-range-spec))))
+              (2 fontsloth-otf-typo--glyph-range-spec))))
   "A spec for a class def used by GPOS and GDEF.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#class-definition-table'")
 
-(defvar fontsloth-otf--coverage-spec
+(defvar fontsloth-otf-typo--coverage-spec
   (bindat-type
     (format uint 16)
     (_ type (cl-case format
               (1 (bindat-type
                    (glyph-count uint 16)
                    (glyphs vec glyph-count uint 16)))
-              (2 fontsloth-otf--glyph-range-spec))))
+              (2 fontsloth-otf-typo--glyph-range-spec))))
   "A spec for a GPOS Coverage table.
 Note that this is very similar to class def table but not quite!
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#coverage-table'")
 
-(defvar fontsloth-otf--gdef-spec
+(defvar fontsloth-otf-typo-gdef-spec
   (bindat-type
     (major-version uint 16)
     (minor-version uint 16)
@@ -105,17 +105,17 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#cove
     (glyph-class-def type
                      (if (/= 0 glyph-class-def-offset)
                        (let ((bindat-idx glyph-class-def-offset))
-                         fontsloth-otf--gdef-glyph-class-def-spec)
+                         fontsloth-otf-typo--gdef-glyph-class-def-spec)
                        (bindat-type unit nil)))
     (mark-attach-class-def type
                            (if (/= 0 mark-attach-class-def-offset)
                                (let ((bindat-idx mark-attach-class-def-offset))
-                                 fontsloth-otf--gdef-glyph-class-def-spec)
+                                 fontsloth-otf-typo--gdef-glyph-class-def-spec)
                              (bindat-type unit nil))))
   "A spec for OTF GDEF.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gdef'")
 
-(defvar fontsloth-otf--lang-sys-spec
+(defvar fontsloth-otf-typo--lang-sys-spec
   (bindat-type
     (lookup-order uint 16)
     (req-feature-idx uint 16)
@@ -123,7 +123,7 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gdef'")
     (feature-indices vec feature-count uint 16))
   "A spec for a GPOS script language.")
 
-(defvar fontsloth-otf--script-list-spec
+(defvar fontsloth-otf-typo--script-list-spec
   (bindat-type
     (script-list-offset unit bindat-idx)
     (count uint 16)
@@ -142,16 +142,16 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gdef'")
                       (default-lang-sys-offset uint 16)
                       (lang-sys-count uint 16)
                       (default-lang-sys type
-                        (fontsloth-otf--offset-spec
+                        (fontsloth-otf-typo--offset-spec
                          (+ default-lang-sys-offset
                             (alist-get 'offset (elt script-offsets bindat--i))
                             script-list-offset)
-                         fontsloth-otf--lang-sys-spec))
+                         fontsloth-otf-typo--lang-sys-spec))
                       ;; TODO: read all lang-sys
                       ))))
   "A spec for a GPOS script list.")
 
-(defvar fontsloth-otf--feature-list-spec
+(defvar fontsloth-otf-typo--feature-list-spec
   (bindat-type
     (feature-list-offset unit bindat-idx)
     (count uint 16)
@@ -169,7 +169,7 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gdef'")
                        (lookup-indices vec lookup-count uint 16)))))
   "A spec for a GPOS feature list.")
 
-(defun fontsloth-otf--make-value-record-spec (format)
+(defun fontsloth-otf-typo--make-value-record-spec (format)
   "Given FORMAT, make a GPOS value record spec.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#valueRecord'
 Currently only format 4 x-advance is supported.
@@ -179,7 +179,7 @@ TODO: support more formats"
     (4 (bindat-type (x-advance sint 16 nil)))
     (t (bindat-type unit nil))))
 
-(defun fontsloth-otf--make-pair-set-spec (value-format-1 value-format-2)
+(defun fontsloth-otf-typo--make-pair-set-spec (value-format-1 value-format-2)
   "Given VALUE-FORMAT-1 and VALUE-FORMAT2, return a GPOS pair set spec.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable'"
   (bindat-type
@@ -187,57 +187,57 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-t
     (pair-values vec count type
                  (bindat-type
                    (second-glyph-id uint 16)
-                   (value-1 type (fontsloth-otf--make-value-record-spec
+                   (value-1 type (fontsloth-otf-typo--make-value-record-spec
                                   value-format-1))
-                   (value-2 type (fontsloth-otf--make-value-record-spec
+                   (value-2 type (fontsloth-otf-typo--make-value-record-spec
                                   value-format-2))))))
 
-(defun fontsloth-otf--make-pair-pos-spec (offset format)
+(defun fontsloth-otf-typo--make-pair-pos-spec (offset format)
   "Given pair pos table OFFSET and FORMAT, return a GPOS pair pos spec.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable"
   (cl-case format
     (1 (bindat-type
          (coverage-offset uint 16)
-         (_mark-offset unit bindat-idx)
-         (coverage type (fontsloth-otf--offset-spec
+         (mark-offset unit bindat-idx)
+         (coverage type (fontsloth-otf-typo--offset-spec
                          (+ offset coverage-offset)
-                         fontsloth-otf--coverage-spec))
-         (_ unit (progn (setq bindat-idx _mark-offset) nil))
+                         fontsloth-otf-typo--coverage-spec))
+         (_ unit (progn (setq bindat-idx mark-offset) nil))
          (value-format-1 uint 16)
          (value-format-2 uint 16)
          (pair-set-count uint 16)
          (pair-set-offsets
           vec pair-set-count uint 16)
          (pair-sets vec pair-set-count type
-                    (fontsloth-otf--offset-spec
+                    (fontsloth-otf-typo--offset-spec
                      (+ offset (elt pair-set-offsets bindat--i))
-                     (fontsloth-otf--make-pair-set-spec
+                     (fontsloth-otf-typo--make-pair-set-spec
                       value-format-1 value-format-2)))))
     (2 (bindat-type
          (coverage-offset uint 16)
-         (_mark-offset unit bindat-idx)
-         (coverage type (fontsloth-otf--offset-spec
+         (mark-offset1 unit bindat-idx)
+         (coverage type (fontsloth-otf-typo--offset-spec
                          (+ offset coverage-offset)
-                         fontsloth-otf--coverage-spec))
-         (_ unit (progn (setq bindat-idx _mark-offset) nil))
+                         fontsloth-otf-typo--coverage-spec))
+         (_ unit (progn (setq bindat-idx mark-offset1) nil))
          (value-format-1 uint 16)
          (value-format-2 uint 16)
          (class-def-1-offset uint 16)
-         (mark-offset unit bindat-idx)
+         (mark-offset2 unit bindat-idx)
          (class-def-1 type
-                      (fontsloth-otf--offset-spec
+                      (fontsloth-otf-typo--offset-spec
                        (+ offset class-def-1-offset)
-                       fontsloth-otf--gdef-glyph-class-def-spec))
-         (_ unit (progn (setq bindat-idx mark-offset) nil))
+                       fontsloth-otf-typo--gdef-glyph-class-def-spec))
+         (_ unit (progn (setq bindat-idx mark-offset2) nil))
          (class-def-2-offset uint 16)
-         (mark-offset unit bindat-idx)
+         (mark-offset3 unit bindat-idx)
          (class-def-2 type
                       (if (= 0 class-def-2-offset)
                           (bindat-type unit nil)
-                        (fontsloth-otf--offset-spec
+                        (fontsloth-otf-typo--offset-spec
                          (+ offset class-def-2-offset)
-                         fontsloth-otf--gdef-glyph-class-def-spec)))
-         (_ unit (progn (setq bindat-idx mark-offset) nil))
+                         fontsloth-otf-typo--gdef-glyph-class-def-spec)))
+         (_ unit (progn (setq bindat-idx mark-offset3) nil))
          (class1-count uint 16)
          (class2-count uint 16)
          (class-records
@@ -246,21 +246,21 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-t
             vec class2-count type
             (bindat-type
               (value-1 type
-                       (fontsloth-otf--make-value-record-spec
+                       (fontsloth-otf-typo--make-value-record-spec
                         value-format-1))
               (value-2 type
-                       (fontsloth-otf--make-value-record-spec
+                       (fontsloth-otf-typo--make-value-record-spec
                         value-format-2)))))))))
 
-(defvar fontsloth-otf--pair-pos-spec
+(defvar fontsloth-otf-typo--pair-pos-spec
   (bindat-type
     (offset unit bindat-idx)
     (pair-pos-format uint 16)
-    (_ type (fontsloth-otf--make-pair-pos-spec offset pair-pos-format)))
+    (_ type (fontsloth-otf-typo--make-pair-pos-spec offset pair-pos-format)))
   "A spec for a GPOS pair positioning lookup subtable.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable")
 
-(defvar fontsloth-otf--mark-array-spec
+(defvar fontsloth-otf-typo--mark-array-spec
   (bindat-type
     (mark-base-offset unit bindat-idx)
     (mark-count uint 16)
@@ -271,7 +271,7 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-t
   "A spec for a GPOS mark array.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#markArrayTable'")
 
-(defvar fontsloth-otf--anchor-spec
+(defvar fontsloth-otf-typo--anchor-spec
   (bindat-type
     (anchor-format uint 16)
     (x-coord uint 16)
@@ -288,26 +288,26 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#markArra
   "A spec for a GPOS anchor table.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#anchor-tables'")
 
-(defvar fontsloth-otf--base-array-spec
+(defvar fontsloth-otf-typo--base-array-spec
   (bindat-type
     (base-offset unit bindat-idx)
     (base-count uint 16)
     (base-anchor-offsets vec base-count uint 16)
-    (anchors vec base-count type (fontsloth-otf--offset-spec
+    (anchors vec base-count type (fontsloth-otf-typo--offset-spec
                                   (+ base-offset
                                      (elt base-anchor-offsets bindat--i))
-                                  fontsloth-otf--anchor-spec)))
+                                  fontsloth-otf-typo--anchor-spec)))
   "A spec for a GPOS base array.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#mark-to-base-attachment-positioning-format-1-mark-to-base-attachment-point'")
 
-(defun fontsloth-otf--make-lookup-subtable-spec (lookup-type)
+(defun fontsloth-otf-typo--make-lookup-subtable-spec (lookup-type)
   "Given LOOKUP-TYPE, return a spec for a GSUB/GPOS lookup subtable.
 See URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#lulTbl'
 Currently only GPOS type 2 pair positioning adjustment and GPOS type 4
 mark-to-base attachement are supported.
 TODO: support more types"
   (cl-case lookup-type
-    (2 fontsloth-otf--pair-pos-spec)
+    (2 fontsloth-otf-typo--pair-pos-spec)
     (4 (bindat-type
          (offset-base unit bindat-idx)
          (format uint 16)
@@ -316,21 +316,21 @@ TODO: support more types"
          (class-count uint 16)
          (mark-array-offset uint 16)
          (base-array-offset uint 16)
-         (mark-coverage type (fontsloth-otf--offset-spec
+         (mark-coverage type (fontsloth-otf-typo--offset-spec
                               (+ offset-base mark-coverage-offset)
-                              fontsloth-otf--coverage-spec))
-         (base-coverage type (fontsloth-otf--offset-spec
+                              fontsloth-otf-typo--coverage-spec))
+         (base-coverage type (fontsloth-otf-typo--offset-spec
                               (+ offset-base base-coverage-offset)
-                              fontsloth-otf--coverage-spec))
-         (mark-array type (fontsloth-otf--offset-spec
+                              fontsloth-otf-typo--coverage-spec))
+         (mark-array type (fontsloth-otf-typo--offset-spec
                            (+ offset-base mark-array-offset)
-                           fontsloth-otf--mark-array-spec))
-         (base-array type (fontsloth-otf--offset-spec
+                           fontsloth-otf-typo--mark-array-spec))
+         (base-array type (fontsloth-otf-typo--offset-spec
                            (+ offset-base base-array-offset)
-                           fontsloth-otf--base-array-spec))))
+                           fontsloth-otf-typo--base-array-spec))))
     (t (bindat-type unit nil))))
 
-(defvar fontsloth-otf--lookup-flag-spec
+(defvar fontsloth-otf-typo--lookup-flag-spec
   (bindat-type
     :pack-var f
     (word uint 16 :pack-val f)           ; TODO pack properly
@@ -342,39 +342,39 @@ TODO: support more types"
       (mark-attachment-type . ,(ash (logand #xff00 word) -8))))
   "A spec to unpack the GSUB/GPOS lookup flag.")
 
-(defvar fontsloth-otf--lookup-table-spec
+(defvar fontsloth-otf-typo--lookup-table-spec
   (bindat-type
     (lookup-offset unit bindat-idx)
     (lookup-type uint 16)
-    (flag type fontsloth-otf--lookup-flag-spec)
+    (flag type fontsloth-otf-typo--lookup-flag-spec)
     (range-count uint 16)
     (range-offsets vec range-count uint 16)
     (subtables
      type
      (bindat-type
        vec range-count type
-       (fontsloth-otf--offset-spec
+       (fontsloth-otf-typo--offset-spec
         (+ lookup-offset
            (elt range-offsets bindat--i))
-        (fontsloth-otf--make-lookup-subtable-spec lookup-type)))))
+        (fontsloth-otf-typo--make-lookup-subtable-spec lookup-type)))))
   "A spec for a GSUB/GPOS lookup table.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#lulTbl'")
 
-(defvar fontsloth-otf--lookup-list-spec
+(defvar fontsloth-otf-typo--lookup-list-spec
   (bindat-type
     (lookup-list-offset unit bindat-idx)
     (count uint 16)
     (lookup-offsets vec count type (bindat-type (offset uint 16)))
     (lookups vec count type
-             (fontsloth-otf--offset-spec
+             (fontsloth-otf-typo--offset-spec
               (+ lookup-list-offset
                  (alist-get 'offset
                             (elt lookup-offsets bindat--i)))
-              fontsloth-otf--lookup-table-spec)))
+              fontsloth-otf-typo--lookup-table-spec)))
   "A spec for a GPOS lookup-list.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#lookup-list-table'")
 
-(defvar fontsloth-otf--gpos-spec
+(defvar fontsloth-otf-typo-gpos-spec
   (bindat-type
     (table-offset unit bindat-idx)
     (major-version uint 16)
@@ -386,21 +386,21 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#look
                                 (bindat-type uint 32)
                               (bindat-type unit nil)))
     (script-list
-     type (fontsloth-otf--offset-spec
+     type (fontsloth-otf-typo--offset-spec
            (+ table-offset script-list-offset)
-           fontsloth-otf--script-list-spec))
+           fontsloth-otf-typo--script-list-spec))
     (feature-list
-     type (fontsloth-otf--offset-spec
+     type (fontsloth-otf-typo--offset-spec
            (+ table-offset feature-list-offset)
-           fontsloth-otf--feature-list-spec))
+           fontsloth-otf-typo--feature-list-spec))
     (lookup-list
-     type (fontsloth-otf--offset-spec
+     type (fontsloth-otf-typo--offset-spec
            (+ table-offset lookup-list-offset)
-           fontsloth-otf--lookup-list-spec)))
+           fontsloth-otf-typo--lookup-list-spec)))
   "A spec for a GPOS table.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos'")
 
-(defun fontsloth-otf-gpos-get-script-table (script)
+(defun fontsloth-otf-typo-gpos-get-script-table (script)
   "Given SCRIPT try to find the corresponding GPOS script table.
 If SCRIPT is nil it will be the default script."
   (when-let* ((script (or script "DFLT"))
@@ -408,22 +408,23 @@ If SCRIPT is nil it will be the default script."
               (scripts (alist-get 'scripts script-list)))
     (seq-find (lambda (l) (equal script (alist-get 'tag l))) scripts)))
 
-(defun fontsloth-otf-gpos-get-lang-sys-table (script lang)
+(defun fontsloth-otf-typo-gpos-get-lang-sys-table (script lang)
   "Given SCRIPT and LANG try to find the corresponding GPOS lang sys table.
 If SCRIPT is nil it will be the default script.
 If LANG is nil it will be the default lang sys."
-  (when-let ((script (fontsloth-otf-gpos-get-script-table script))
+  (when-let ((script (fontsloth-otf-typo-gpos-get-script-table script))
              (lang (or lang "DFLT")))
     (if (equal "DFLT" lang)
         (alist-get 'default-lang-sys script)
       (when-let ((langs (alist-get 'langs script)))
         (seq-find (lambda (l) (equal lang (alist-get 'tag l))) langs)))))
 
-(defun fontsloth-otf-gpos-get-feature-table (script lang feature)
+(defun fontsloth-otf-typo-gpos-get-feature-table (script lang feature)
   "Given SCRIPT, LANG, and FEATURE try to find a GPOS feature table.
 If SCRIPT is nil it will be the default script.
 If LANG is nil it will be the default lang sys."
-  (when-let* ((lang-sys (fontsloth-otf-gpos-get-lang-sys-table script lang))
+  (when-let* ((lang-sys (fontsloth-otf-typo-gpos-get-lang-sys-table
+                         script lang))
               (feature-indices (alist-get 'feature-indices lang-sys))
               (feature-list (fontsloth-otf--get-table-value 'feature-list "GPOS"))
               (features (alist-get 'features feature-list))
@@ -433,11 +434,12 @@ If LANG is nil it will be the default lang sys."
                                      feature-indices)))
     (elt features feature-idx)))
 
-(defun fontsloth-otf-gpos-get-lookup-tables (script lang feature type)
+(defun fontsloth-otf-typo-gpos-get-lookup-tables (script lang feature type)
   "Given SCRIPT and LANG find all FEATURE's GPOS lookup tables of TYPE.
 If SCRIPT is nil it will be the default script.
 If LANG is nil it will be the default lang sys."
-  (when-let* ((feature (fontsloth-otf-gpos-get-feature-table script lang feature))
+  (when-let* ((feature (fontsloth-otf-typo-gpos-get-feature-table
+                        script lang feature))
               (lookup-indices (alist-get 'lookup-indices feature))
               (lookup-list (fontsloth-otf--get-table-value 'lookup-list "GPOS"))
               (lookups (alist-get 'lookups lookup-list)))
@@ -447,14 +449,14 @@ If LANG is nil it will be the default lang sys."
                                   lookup-indices)
              collect (elt lookups i))))
 
-(defsubst fontsloth-otf-gpos-kerning-tables (script lang)
+(defsubst fontsloth-otf-typo-gpos-kerning-tables (script lang)
   "Find all GPOS \"kern\" feature lookup tables for SCRIPT and LANG.
 If SCRIPT is nil it will be the default script.
 If LANG is nil it will be the default lang sys."
   ;; TODO: enumerate the lookup type enumeration
-  (fontsloth-otf-gpos-get-lookup-tables script lang "kern" 2))
+  (fontsloth-otf-typo-gpos-get-lookup-tables script lang "kern" 2))
 
-(defun fontsloth-otf--bin-search (arr value)
+(defun fontsloth-otf-typo--bin-search (arr value)
   "Binary search (presumably ascendingly sorted) array ARR for VALUE.
 Return nil if value is not found."
   (cl-loop with imin = 0
@@ -468,7 +470,7 @@ Return nil if value is not found."
            for val = (elt arr imid)
            when (= val value) return imid))
 
-(defun fontsloth-otf--range-search (ranges value)
+(defun fontsloth-otf-typo--range-search (ranges value)
   "Search GPOS RANGES for VALUE and return a matching range or nil."
   (cl-loop with imin = 0
            with imax = (1- (length ranges))
@@ -486,18 +488,18 @@ Return nil if value is not found."
                               (when (<= value (alist-get 'end-glyph-id range))
                                 range)))))
 
-(defun fontsloth-otf-gpos-get-coverage-index (coverage glyph-id)
+(defun fontsloth-otf-typo-gpos-get-coverage-index (coverage glyph-id)
   "Given a GPOS coverage table try to find a coverage index/range for GLYPH-ID.
 Return nil if not found."
   (cl-case (alist-get 'format coverage)
-    (1 (fontsloth-otf--bin-search (alist-get 'glyphs coverage) glyph-id))
+    (1 (fontsloth-otf-typo--bin-search (alist-get 'glyphs coverage) glyph-id))
     (2 (when-let ((range
-                   (fontsloth-otf--range-search
+                   (fontsloth-otf-typo--range-search
                     (alist-get 'ranges coverage) glyph-id)))
          (- (+ (alist-get 'index range) glyph-id)
             (alist-get 'start-glyph-id range))))))
 
-(defun fontsloth-otf-gpos-get-glyph-class (class-def glyph-id)
+(defun fontsloth-otf-typo-gpos-get-glyph-class (class-def glyph-id)
   "Given a GPOS class def table try to find a class for glyph-id.
 Return class 0 if not found."
   (or (cl-case (alist-get 'format class-def)
@@ -508,21 +510,21 @@ Return class 0 if not found."
                (elt (alist-get 'class-value-array class-def)
                     (- glyph-id start-glyph-id)))))
         (2 (when-let ((range
-                       (fontsloth-otf--range-search
+                       (fontsloth-otf-typo--range-search
                         (alist-get 'ranges class-def) glyph-id)))
              (alist-get 'index range))))
       0))
 
-(defun fontsloth-otf-gpos-hkern (left-glyph-id right-glyph-id)
+(defun fontsloth-otf-typo-gpos-hkern (left-glyph-id right-glyph-id)
   "Try to kern a pair LEFT-GLYPH-ID/RIGHT-GLYPH-ID using default lang kerning.
 Return a x-advance adjustment or 0."
-  (or (when-let* ((kerning (fontsloth-otf-gpos-kerning-tables nil "DFLT")))
+  (or (when-let* ((kerning (fontsloth-otf-typo-gpos-kerning-tables nil "DFLT")))
         (seq-some
          (lambda (k)
            (cl-loop
             for st across (alist-get 'subtables k)
             for coverage = (alist-get 'coverage st)
-            for coverage-index = (fontsloth-otf-gpos-get-coverage-index
+            for coverage-index = (fontsloth-otf-typo-gpos-get-coverage-index
                                   coverage left-glyph-id)
             for value =
             (when coverage-index
@@ -536,10 +538,10 @@ Return a x-advance adjustment or 0."
                               return (or (map-nested-elt
                                           pair
                                           '(value-1 x-advance)) 0))))
-                (2 (let* ((class1 (fontsloth-otf-gpos-get-glyph-class
+                (2 (let* ((class1 (fontsloth-otf-typo-gpos-get-glyph-class
                                    (alist-get 'class-def-1 st)
                                    left-glyph-id))
-                          (class2 (fontsloth-otf-gpos-get-glyph-class
+                          (class2 (fontsloth-otf-typo-gpos-get-glyph-class
                                    (alist-get 'class-def-2 st)
                                    right-glyph-id))
                           (class-records (alist-get 'class-records st))
@@ -551,7 +553,7 @@ Return a x-advance adjustment or 0."
          kerning))
       0))
 
-(defun fontsloth-otf--gpos-map-pair-kerns (mappings left-is subtable)
+(defun fontsloth-otf-typo--gpos-map-pair-kerns (mappings left-is subtable)
   "Given left of pair LEFT-IS map from SUBTABLE pair sets into MAPPINGS."
   (let* ((pair-sets (alist-get 'pair-sets subtable)))
     (cl-loop
@@ -567,11 +569,11 @@ Return a x-advance adjustment or 0."
             (unless (map-contains-key mappings id)
               (puthash id v mappings)))))))))
 
-(defun fontsloth-otf--gpos-map-class-kerns (mappings left-is subtable)
+(defun fontsloth-otf-typo--gpos-map-class-kerns (mappings left-is subtable)
   "Given left of pair LEFT-IS map from SUBTABLE class 2 as right into MAPPINGS."
   (cl-loop
    for (left . _) in left-is do
-   (let* ((c1 (fontsloth-otf-gpos-get-glyph-class
+   (let* ((c1 (fontsloth-otf-typo-gpos-get-glyph-class
                (alist-get 'class-def-1 subtable) left))
           (class-records (alist-get 'class-records subtable))
           (c2s (elt class-records c1))
@@ -588,12 +590,12 @@ Return a x-advance adjustment or 0."
                (unless (map-contains-key mappings id)
                  (puthash id v mappings)))))))
 
-(defun fontsloth-otf--n-choose-k (n k)
+(defun fontsloth-otf-typo--n-choose-k (n k)
   "Just an n choose k calc."
   (if (= 0 k) 1
-    (/ (* n (fontsloth-otf--n-choose-k (1- n) (1- k))) k)))
+    (/ (* n (fontsloth-otf-typo--n-choose-k (1- n) (1- k))) k)))
 
-(defun fontsloth-otf-gpos-build-kern-mappings ()
+(defun fontsloth-otf-typo-gpos-build-kern-mappings ()
   "Try to index all active default lang kerning pairs into a flat map.
 This is very expensive, but the result can be cached along with the font."
   ;; TODO: improve efficiency
@@ -602,9 +604,9 @@ This is very expensive, but the result can be cached along with the font."
   ;; (and possibly then reverse index the covered glyphs by class)
   ;; map-pair-kerns should be O(num-pairs) which is the best given the task
   ;; map-class-kerns binary searches each left for its class
-  (when-let* ((kerning (fontsloth-otf-gpos-kerning-tables nil "DFLT"))
+  (when-let* ((kerning (fontsloth-otf-typo-gpos-kerning-tables nil "DFLT"))
               (num-glyphs (fontsloth-otf-num-glyphs))
-              (size-estimate (fontsloth-otf--n-choose-k num-glyphs 2))
+              (size-estimate (fontsloth-otf-typo--n-choose-k num-glyphs 2))
               (mappings (make-hash-table :test 'eq :size size-estimate)))
     (dolist (k kerning)
       (cl-loop for st across (alist-get 'subtables k)
@@ -623,8 +625,10 @@ This is very expensive, but the result can be cached along with the font."
                                           `(,gid . ,(- (+ idx gid) sid))))))))
                do
                (cl-case (alist-get 'pair-pos-format st)
-                 (1 (fontsloth-otf--gpos-map-pair-kerns mappings left-is st))
-                 (2 (fontsloth-otf--gpos-map-class-kerns mappings left-is st)))))
+                 (1 (fontsloth-otf-typo--gpos-map-pair-kerns
+                     mappings left-is st))
+                 (2 (fontsloth-otf-typo--gpos-map-class-kerns
+                     mappings left-is st)))))
     ;; there will be many zeros because of the way GPOS pair pos works
     ;; zeroes effectively mask later pairs that would otherwise be active
     (cl-loop for k being the hash-keys of mappings do
