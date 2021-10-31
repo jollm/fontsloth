@@ -137,7 +137,7 @@ LINE-GAP the line gap"
                                    (fontsloth-otf-descender)
                                    (fontsloth-otf-line-gap)))
          (horizontal-kern (fontsloth-otf-find-hkern-mappings))
-         (vertical-line-metrics) ; TODO: vertical line metrics
+         (vertical-line-metrics nil) ; TODO: vertical line metrics
          )
     (record 'fontsloth-font name units-per-em glyphs char-to-glyph
             horizontal-line-metrics horizontal-kern
