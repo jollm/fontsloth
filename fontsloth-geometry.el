@@ -87,17 +87,6 @@ To be handed to `fontsloth-otf-outline-glyph'"
   (width 0.0 :type 'number :documentation "calculated width")
   (height 0.0 :type 'number :documentation "calculated height"))
 
-(defun fontsloth-glyph-outline-bounds-scale (bounds scale)
-  "Non-destructively scale an outline bounds by a scale factor.
-returns a new object
-BOUNDS the bounds to scale
-SCALE the scale factor"
-  (fontsloth-glyph-outline-bounds-create
-   :xmin (* scale (fontsloth-glyph-outline-bounds-xmin bounds))
-   :ymin (* scale (fontsloth-glyph-outline-bounds-ymin bounds))
-   :width (* scale (fontsloth-glyph-outline-bounds-width bounds))
-   :height (* scale (fontsloth-glyph-outline-bounds-height bounds))))
-
 (cl-defstruct
     (fontsloth-glyph
      (:constructor nil)
@@ -200,16 +189,7 @@ ADVANCE-HEIGHT glyph's advance height"
                :height (- (fontsloth-bbox-ymax ebounds)
                           (fontsloth-bbox-ymin ebounds)))))))
 
-(defun fontsloth-glyph-create (glyph-id scale units-per-em)
-  "Construct a glyph given its id and desired units-per-em.
-GLYPH-ID the id
-SCALE the geometry scale
-UNITS-PER-EM the units per em"
-  (let ((geom (fontsloth-geometry-create scale units-per-em)))
-    (fontsloth-otf-outline-glyph glyph-id geom)
-    (fontsloth-geometry-finalize
-     geom (fontsloth-otf-glyph-hor-advance glyph-id) 0.0)))
-
+(require 'fontsloth-glyph)
 
 (cl-defmethod fontsloth-otf-move-to ((outliner fontsloth-geometry) x y)
   "Implement move-to on fontsloth-geometry.
