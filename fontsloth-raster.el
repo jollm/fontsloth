@@ -5,7 +5,6 @@
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.15.3
 ;; Homepage: https://github.com/jollm/fontsloth
-;; Package-Requires: ((logito "0.1") (emacs "27.1"))
 ;; Keywords: data, font, rasterization, ttf, otf
 
 ;; This file is NOT part of GNU Emacs.

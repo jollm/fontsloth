@@ -5,7 +5,6 @@
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.15.3
 ;; Homepage: https://github.com/jollm/fontsloth
-;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: data, font, glyph, glyf, ttf, otf
 
 ;; This file is NOT part of GNU Emacs.
