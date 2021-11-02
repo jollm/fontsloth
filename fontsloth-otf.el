@@ -591,8 +591,8 @@ TTF-PATH the path to a ttf file
             ((string-equal "OTTO" sfnt-ver)
              (fontsloth:info
               fontsloth-log
-              "fontsloth-otf: cannot yet fully handle OpenType CFF"))
-            (t (fontsloth:error "fontsloth-otf: Unknown sfnt-ver %s" sfnt-ver)))
+              "Fontsloth-otf: cannot yet fully handle OpenType CFF"))
+            (t (fontsloth:error "Fontsloth-otf: Unknown sfnt-ver %s" sfnt-ver)))
       (when (gethash "kern" props)
         (put-table "kern" (unpack-table "kern" fontsloth-otf-kern-spec)))
       ;; (when (gethash "GDEF" props)
