@@ -101,6 +101,8 @@
   (first-off-curve nil :type 'fontsloth-point)
   (last-off-curve nil :type 'fontsloth-point))
 
+(declare-function fontsloth-otf-move-to "fontsloth-otf" (outliner x y))
+
 (defun fontsloth-otf-glyf-move-to (builder x y)
   "Move to the start of a contour at x,y.
 BUILDER a `fontsloth-otf-glyf-builder'
@@ -114,6 +116,8 @@ Y y coord of contour start"
   (fontsloth-bbox-extend-by (fontsloth-otf-glyf-builder-bbox builder) x y)
   (fontsloth-otf-move-to (fontsloth-otf-glyf-builder-outliner builder) x y))
 
+(declare-function fontsloth-otf-line-to "fontsloth-otf" (outliner x y))
+
 (defun fontsloth-otf-glyf-line-to (builder x y)
   "Add a contour segment ending at x,y.
 BUILDER a `fontsloth-otf-glyf-builder'
@@ -126,6 +130,8 @@ Y y coord of line end"
       (setq x tx y ty)))
   (fontsloth-bbox-extend-by (fontsloth-otf-glyf-builder-bbox builder) x y)
   (fontsloth-otf-line-to (fontsloth-otf-glyf-builder-outliner builder) x y))
+
+(declare-function fontsloth-otf-quad-to "fontsloth-otf" (outliner x1 y1 x y))
 
 (defun fontsloth-otf-glyf-quad-to (builder x1 y1 x y)
   "Add the parabolic curve with control point x1, y1 ending at x,y.
@@ -185,6 +191,8 @@ LAST-POINT? t if the point is the last of a contour"
                      builder (fontsloth-point-x p) (fontsloth-point-y p)))
         (_ (setf (fontsloth-otf-glyf-builder-last-off-curve builder) p)))))
   (when last-point? (fontsloth-otf-glyf-finish-contour builder)))
+
+(declare-function fontsloth-otf-close-contour "fontsloth-otf" (outliner))
 
 (defun fontsloth-otf-glyf-finish-contour (builder)
   "Finish a contour.

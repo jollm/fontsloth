@@ -177,6 +177,9 @@ PARAMS the scaled parameters"
                           (fontsloth-raster-fract (/ (+ x-prev x1) 2.0)))
     (fontsloth:debug* fontsloth-log "end m-line")))
 
+(declare-function fontsloth-glyph-v-lines "fontsloth-geometry")
+(declare-function fontsloth-glyph-m-lines "fontsloth-geometry")
+
 (defun fontsloth-raster-draw (raster glyph scale-x scale-y offset-x offset-y)
   "Enter into the raster with a given outlined GLYPH and scaling/offset.
 RASTER the raster in which to draw

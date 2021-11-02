@@ -401,6 +401,8 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#look
   "A spec for a GPOS table.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos'")
 
+(declare-function fontsloth-otf--get-table-value "fontsloth-otf" (key tag))
+
 (defun fontsloth-otf-typo-gpos-get-script-table (script)
   "Given SCRIPT try to find the corresponding GPOS script table.
 If SCRIPT is nil it will be the default script."
@@ -595,6 +597,8 @@ Return a x-advance adjustment or 0."
   "Just an N choose K calc."
   (if (= 0 k) 1
     (/ (* n (fontsloth-otf-typo--n-choose-k (1- n) (1- k))) k)))
+
+(declare-function fontsloth-otf-num-glyphs "fontsloth-otf")
 
 (defun fontsloth-otf-typo-gpos-build-kern-mappings ()
   "Try to index all active default lang kerning pairs into a flat map.
