@@ -84,7 +84,8 @@ maybe a with-offset would be a nice addition"
                    (start-glyph-id uint 16)
                    (glyph-count uint 16)
                    (class-value-array vec glyph-count uint 16)))
-              (2 fontsloth-otf-typo--glyph-range-spec))))
+              (2 fontsloth-otf-typo--glyph-range-spec)
+              (t (bindat-type unit nil)))))
   "A spec for a class def used by GPOS and GDEF.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#class-definition-table'")
 
@@ -95,7 +96,8 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#clas
               (1 (bindat-type
                    (glyph-count uint 16)
                    (glyphs vec glyph-count uint 16)))
-              (2 fontsloth-otf-typo--glyph-range-spec))))
+              (2 fontsloth-otf-typo--glyph-range-spec)
+              (t (bindat-type unit nil)))))
   "A spec for a GPOS Coverage table.
 Note that this is very similar to class def table but not quite!
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#coverage-table'")
