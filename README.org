@@ -26,6 +26,9 @@ Current version: *0.15.3*
   - [[#invalidate-a-cache-entry][Invalidate a cache entry]]
   - [[#clear-the-cache][Clear the cache]]
 - [[#installation][Installation]]
+  - [[#install-directly][Install directly]]
+  - [[#install-with-use-package][Install with use-package]]
+  - [[#update-to-the-latest-git-commit][Update to the latest git commit]]
 - [[#usage][Usage]]
   - [[#load-and-rasterize][Load and rasterize]]
   - [[#layout-some-text][Layout some text]]
@@ -122,9 +125,38 @@ the seconds if you load more than 10 or so fonts at a time*.
 (pcache-clear fontsloth-cache)
 #+end_src
 * Installation
-Pending upload to MELPA, add this directory to your emacs load path and
-~(require 'fontsloth)~ for loading and rasterization or ~(require
-'fontsloth-layout)~ for those plus layout.
+At present there is a pull request open for MELPA. Until then, install using
+[[https://github.com/quelpa/quelpa][quelpa]].
+
+Quelpa allows an installation directly from this repo that is then managed the
+usual way via package.el. Quelpa can be installed from MELPA or bootstrapped
+directly from source if desired.
+
+** Install directly
+#+BEGIN_SRC emacs-lisp
+  ;;; after installing quelpa
+
+  ;; note this uses a MELPA recipe, so the usual MELPA options also apply
+  (quelpa '(fontsloth :fetcher github :repo "jollm/fontsloth"))
+#+END_SRC
+
+** Install with use-package
+First install [[https://github.com/quelpa/quelpa-use-package][quelpa-use-package]] (either with quelpa or from MELPA).
+
+#+BEGIN_SRC emacs-lisp
+  ;; if quelpa use-package is installed, this should install fontsloth
+  (use-package fontsloth
+    :quelpa ((fontsloth :fetcher github :repo "jollm/fontsloth")))
+
+  ;; if you want to auto-check for upgrades
+  (use-package fontsloth
+    :quelpa ((fontsloth :fetcher github :repo "jollm/fontsloth") :upgrade t))
+#+END_SRC
+
+** Update to the latest git commit
+After installation:
+~M-x: quelpa-upgrade~
+
 * Usage
 See [[*Usage caveats][Usage caveats]] for how to load fonts without caching them in pcache.
 
