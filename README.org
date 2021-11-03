@@ -1,4 +1,5 @@
 #+TITLE: fontsloth
+#+OPTIONS: toc:2
 
 Fontsloth is an elisp OTF/TTF font loader and renderer.
 
