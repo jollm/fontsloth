@@ -1,5 +1,4 @@
 #+TITLE: fontsloth
-#+OPTIONS: toc:2
 
 Fontsloth is an elisp OTF/TTF font loader and renderer.
 
@@ -15,6 +14,24 @@ Mostly it is modeled after the aforementioned fontdue and the outliner in
 [[https://github.com/RazrFalcon/ttf-parser][Rust ttf-parser]]. The only novel bit is using Emacs bindat.el to unpack OTF/TTF.
 
 Current version: *0.15.3*
+
+* Contents                                                              :TOC:
+- [[#synopsis-of-work-in-progress][Synopsis of work in progress]]
+  - [[#now-supported][Now supported]]
+  - [[#not-currently-supported-but-planned][Not currently supported (but planned)]]
+- [[#project-organization][Project organization]]
+- [[#usage-caveats][Usage caveats]]
+  - [[#bypass-the-cache][Bypass the cache]]
+  - [[#force-reload-a-font][Force reload a font]]
+  - [[#invalidate-a-cache-entry][Invalidate a cache entry]]
+  - [[#clear-the-cache][Clear the cache]]
+- [[#installation][Installation]]
+- [[#usage][Usage]]
+  - [[#load-and-rasterize][Load and rasterize]]
+  - [[#layout-some-text][Layout some text]]
+- [[#attribution][Attribution]]
+- [[#performance][Performance]]
+- [[#fonts-tested-so-far-working-for-simple-and-composite-glyphs][Fonts tested so far (working for simple and composite glyphs)]]
 
 * Synopsis of work in progress
 ** Now supported
