@@ -15,6 +15,12 @@ Mostly it is modeled after the aforementioned fontdue and the outliner in
 
 Current version: *0.15.3*
 
+*Note: at present this requires Emacs 28.1*
+
+To make it work on Emacs 27.1 would involved backporting the latest bindat.el
+which itself involves backporting the latest subr-x.el If you would like this
+to happen, please let me know.
+
 * Contents                                                              :TOC:
 - [[#synopsis-of-work-in-progress][Synopsis of work in progress]]
   - [[#now-supported][Now supported]]
