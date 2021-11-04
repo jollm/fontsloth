@@ -59,6 +59,12 @@ to happen, please let me know.
 + Vertical metrics tables (and vertical text layout)
 + more cmap tables than just format4 for char-code to glyph-id mappings
 + Font collections
++ Allow custom per font family sets of additional char-code -> glyph mappings
+  that derive new glyph outlines not in a font from those already
+  present. E.g. subtract, add, or modify contours to produce glyphs that are
+  variations of one or more existing glyphs. This could be fun for icon fonts
+  or possibly to fill in missing standard unicode chars for fonts with similar
+  enough existing glyphs.
 
 * Project organization
 Fontsloth consists of four primary components:
