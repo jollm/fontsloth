@@ -54,6 +54,7 @@
 
 (require 'fontsloth-log)
 (require 'fontsloth-otf--mac-names)
+(require 'fontsloth-otf-cff)
 (require 'fontsloth-otf-glyf)
 (require 'fontsloth-otf-kern)
 (require 'fontsloth-otf-typo)
@@ -604,7 +605,8 @@ TTF-PATH the path to a ttf file
             ((string-equal "OTTO" sfnt-ver)
              (fontsloth:info
               fontsloth-log
-              "Fontsloth-otf: cannot yet fully handle OpenType CFF"))
+              "Fontsloth-otf: cannot yet fully handle OpenType CFF")
+             (put-table "CFF " (unpack-table "CFF " fontsloth-otf-cff--spec)))
             (t (fontsloth:error "Fontsloth-otf: Unknown sfnt-ver %s" sfnt-ver)))
       (when (gethash "kern" props)
         (put-table "kern" (unpack-table "kern" fontsloth-otf-kern-spec)))
