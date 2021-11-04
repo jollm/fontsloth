@@ -71,7 +71,7 @@ Fontsloth consists of four primary components:
 + Glyph outliner
   Entry points:
   + file:fontsloth-otf.el: generics
-  + [[file:fontsloth-otf--outline-glyf.el::;; Version: 0.12.2][file:fontsloth-otf--outline-glyf.el]]: base implementation
+  + [[file:fontsloth-otf-glyf.el][file:fontsloth-otf-glyf.el]]: base implementation
   + file:fontsloth-geometry.el: dispatch type and method implementations
 
   This is modeled after Rust ttf-parser and should be extensible for multiple
