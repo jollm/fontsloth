@@ -73,9 +73,9 @@
      (:copier nil))
   "Describes the geometry of a glyph outline.
 To be handed to `fontsloth-otf-outline-glyph'"
-  (v-lines nil :type 'vector
+  (v-lines nil :type 'sequence
            :documentation "lines which vary in y but not in x")
-  (m-lines nil :type 'vector :documentation "lines which are not v-lines")
+  (m-lines nil :type 'sequence :documentation "lines which are not v-lines")
   (effective-bounds (fontsloth-bbox-create) :type 'fontsloth-bbox
                     :documentation "the calculated glyph bounds")
   (start-point (fontsloth-point-create) :type 'fontsloth-point
@@ -178,12 +178,10 @@ END the line end point"
              (* (- (fontsloth-point-y end) (fontsloth-point-y start))
                 (+ (fontsloth-point-x end) (fontsloth-point-x start)))))
     (if (eql (fontsloth-point-x start) (fontsloth-point-x end))
-        (setf (fontsloth-geometry-v-lines geom)
-              (vconcat (fontsloth-geometry-v-lines geom)
-                       `(,(fontsloth-line-create start end))))
-      (setf (fontsloth-geometry-m-lines geom)
-            (vconcat (fontsloth-geometry-m-lines geom)
-                     `(,(fontsloth-line-create start end)))))
+        (push (fontsloth-line-create start end)
+              (fontsloth-geometry-v-lines geom))
+      (push (fontsloth-line-create start end)
+            (fontsloth-geometry-m-lines geom)))
     (fontsloth-bbox-extend-by (fontsloth-geometry-effective-bounds geom)
                               (fontsloth-point-x start)
                               (fontsloth-point-y start))
@@ -204,7 +202,7 @@ ADVANCE-HEIGHT glyph's advance height"
                    (fontsloth-bbox-create
                     :xmin 0.0 :ymin 0.0 :xmax 0.0 :ymax 0.0))))
     (cl-flet ((reposition-lines (lines)
-                (cl-loop for ln across lines
+                (cl-loop for ln in lines
                          collect
                          (fontsloth-line-reposition
                           ln ebounds
@@ -212,14 +210,16 @@ ADVANCE-HEIGHT glyph's advance height"
       (setf (fontsloth-geometry-reverse-points geom)
             (< 0 (fontsloth-geometry-area geom)))
       (setf (fontsloth-geometry-v-lines geom)
-            (apply #'vector
-              (reposition-lines (fontsloth-geometry-v-lines geom)))
+            (nreverse (fontsloth-geometry-v-lines geom))
             (fontsloth-geometry-m-lines geom)
-            (apply #'vector
-                   (reposition-lines (fontsloth-geometry-m-lines geom))))
+            (nreverse (fontsloth-geometry-m-lines geom))
+            (fontsloth-geometry-v-lines geom)
+            (reposition-lines (fontsloth-geometry-v-lines geom))
+            (fontsloth-geometry-m-lines geom)
+            (reposition-lines (fontsloth-geometry-m-lines geom)))
       (record 'fontsloth-glyph
-              (fontsloth-geometry-v-lines geom)
-              (fontsloth-geometry-m-lines geom)
+              (apply #'vector (fontsloth-geometry-v-lines geom))
+              (apply #'vector (fontsloth-geometry-m-lines geom))
               advance-width
               advance-height
               (fontsloth-glyph-outline-bounds-create
