@@ -143,12 +143,15 @@ LINE-GAP the line gap"
          (units-per-em (fontsloth-otf-units-per-em))
          (glyph-count (fontsloth-otf-num-glyphs))
          (glyphs (let ((glyphs (make-vector glyph-count nil)))
-                   (pcase-dolist (`(_ . ,glyph-id) char-to-glyph)
-                     (aset glyphs glyph-id
-                           (fontsloth-glyph-create
-                            glyph-id
-                            (fontsloth-font-settings-scale font-settings)
-                            units-per-em)))
+                   (cl-loop for glyph-id being the hash-values of char-to-glyph
+                            collect
+                            (unless (aref glyphs glyph-id)
+                              (aset glyphs glyph-id
+                                    (fontsloth-glyph-create
+                                     glyph-id
+                                     (fontsloth-font-settings-scale
+                                      font-settings)
+                                     units-per-em))))
                    glyphs))
          (horizontal-line-metrics (fontsloth-line-metrics-create
                                    (fontsloth-otf-ascender)

@@ -54,6 +54,7 @@
 
 (require 'fontsloth-log)
 (require 'fontsloth-otf--mac-names)
+(require 'fontsloth-otf-)
 (require 'fontsloth-otf-cff)
 (require 'fontsloth-otf-glyf)
 (require 'fontsloth-otf-kern)
@@ -523,6 +524,7 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-12
 
 (defvar fontsloth-otf--cmap-spec
   (bindat-type
+    (start unit bindat-idx)
     (version uint 16)
     (num-tables uint 16)
     (encodings vec num-tables
@@ -532,13 +534,23 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-12
                       (offset uint 32)))
     (sub-tables
      vec num-tables
-     type (bindat-type
-            (format uint 16)
-            (fmt-table type
-                       (cond ((= 4 format) fontsloth-otf--format4-spec)
-                             ((= 0 format) fontsloth-otf--format0-spec)
-                             ;; TODO fill with appropriate length
-                             (t (bindat-type (unknown-format fill 0))))))))
+     type (let* ((te (elt encodings bindat--i))
+                 (offset (+ start (alist-get 'offset te)))
+                 (dup? (seq-find (lambda (e) (= (alist-get 'offset te)
+                                                (alist-get 'offset e)))
+                                 (seq-subseq encodings 0 bindat--i))))
+            (if dup? (bindat-type (duplicate unit dup?))
+              (fontsloth-otf--with-offset
+               offset nil
+               (bindat-type
+                 (format uint 16)
+                 (_ type
+                    (cl-case format
+                      (4 fontsloth-otf--format4-spec)
+                      (0 fontsloth-otf--format0-spec)
+                      (6 fontsloth-otf--format6-spec)
+                      (12 fontsloth-otf--format12-spec)
+                      (t (bindat-type (unknown-format fill 0)))))))))))
   "Bindat spec for the OTF/TTF cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap")
 
@@ -654,13 +666,29 @@ TTF-PATH the path to a ttf file
 
 (defun fontsloth-otf-char-to-glyph-map ()
   "Get the font's code-point -> glyph id mapping."
-  ;; TODO handle other formats
-  ;; TODO hold somewhere a reference to the format 4 table after first lookup
-  (cl-flet ((format4? (table) (= 4 (alist-get 'format table))))
-    (when-let* ((cmap (gethash "cmap" fontsloth-otf--current-tables))
-                (sub-tables (bindat-get-field cmap 'sub-tables))
-                (format4-table (cadar (seq-filter #'format4? sub-tables))))
-      (alist-get 'glyph-index-map format4-table))))
+  (when-let* ((cmap (gethash "cmap" fontsloth-otf--current-tables))
+              (sub-tables (alist-get 'sub-tables cmap))
+              (map (make-hash-table :size (ash (fontsloth-otf-num-glyphs) 1)
+                                    :test 'eq)))
+    (cl-loop for tbl across sub-tables do
+             (cl-case (alist-get 'format tbl)
+               (4 (cl-loop for (c . g) in (alist-get 'glyph-index-map tbl) do
+                           (puthash c g map)))
+               (0 (cl-loop for c from 0
+                           for g across (alist-get 'data tbl) do
+                           (puthash c g map)))
+               (6 (let ((first-c (alist-get 'first-code tbl)))
+                    (cl-loop for c from first-c
+                             for g across (alist-get 'data tbl) do
+                             (puthash c g map))))
+               (12 (cl-loop for ((_ . sc) (_ . ec) (_ . sg)) across
+                            (alist-get 'groups tbl) do
+                            (cl-loop for c from sc
+                                     for g from sg
+                                     while (<= c ec) do
+                                     (puthash c g map))))
+               (_))
+             finally return map)))
 
 (defun fontsloth-otf-glyph-id-for-code-point (code-point)
   "Return the font's glyph index for a given code point or nil if not found.
