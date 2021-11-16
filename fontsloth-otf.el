@@ -427,12 +427,11 @@ RANGE length in bytes from loca for data, excluding header size"
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/glyf")
 
 (defvar fontsloth-otf--format0-spec
-  (let ((header-size 8))                ; includes format uint 16
+  (let ((header-size 6))                ; includes format uint 16
     (bindat-type
       (length uint 16)
-      (version uint 16)
       (language uint 16)
-      (data fill (- length header-size))))
+      (data vec (max 0 (- length header-size)) uint 8)))
   "Bindat spec for the Format 0 section of the cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-0-byte-encoding-table")
 
