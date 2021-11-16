@@ -784,8 +784,11 @@ Y y coord of curve end"
   (fontsloth:verbose fontsloth-log "Noop outline quad-to %s %s %s %s"
                      x1 y1 x y))
 
-(cl-defgeneric fontsloth-otf-curve-to (outliner)
-  "Append a curve-to segment to OUTLINER's contour.")
+(cl-defgeneric fontsloth-otf-curve-to (outliner x1 y1 x2 y2 x y)
+  "Append a curve-to segment to OUTLINER's contour."
+  (ignore outliner)
+  (fontsloth:verbose fontsloth-log "Noop outline curve-to %s %s %s %s %s %s"
+                     x1 y1 x2 y2 x y))
 
 (cl-defgeneric fontsloth-otf-close-contour (outliner)
   "End OUTLINER's contour."
