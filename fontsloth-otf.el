@@ -435,6 +435,16 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/glyf")
   "Bindat spec for the Format 0 section of the cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-0-byte-encoding-table")
 
+(defvar fontsloth-otf--format6-spec
+  (bindat-type
+    (length uint 16)
+    (language uint 16)
+    (first-code uint 16)
+    (entry-count uint 16)
+    (data vec entry-count uint 16))
+  "Bindat spec for the Format 6 section of the cmap table.
+see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-6-trimmed-table-mapping")
+
 (defun fontsloth-otf--calc-glyph-id-offset (char-code segment start id-range-offset-start offset)
   "Calculate the format 4 glyphid index for the given `char-code'.
 CHAR-CODE a format 4 char code
@@ -497,6 +507,19 @@ ID-RANGE-OFFSET sequence of id range offsets from cmap"
                                           id-range-offset)))
   "Bindat spec for the Format 4 section of the cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-segment-mapping-to-delta-values")
+
+(defvar fontsloth-otf--format12-spec
+  (bindat-type
+    (reserved uint 16)
+    (length uint 32)
+    (lang uint 32)
+    (count uint 32)
+    (groups vec count type (bindat-type
+                             (start-char-code uint 32)
+                             (end-char-code uint 32)
+                             (start-glyph-id uint 32))))
+  "Bindat spec for the Format 12 section of the cmap table.
+see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-12-segmented-coverage")
 
 (defvar fontsloth-otf--cmap-spec
   (bindat-type
