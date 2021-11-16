@@ -808,9 +808,11 @@ generics to dispatch on their outliner type:
 `fontsloth-otf-close-contour'
 GLYPH-ID the id of the glyph to outline
 OUTLINER the caller's outliner implementation"
-  ;; TODO gvar and cff
-  (when-let ((glyf (gethash "glyf" fontsloth-otf--current-tables)))
-    (fontsloth-otf-glyf-outline (alist-get 'glyphs glyf) glyph-id outliner)))
+  ;; TODO gvar
+  (if-let ((glyf (gethash "glyf" fontsloth-otf--current-tables)))
+      (fontsloth-otf-glyf-outline (alist-get 'glyphs glyf) glyph-id outliner)
+    (when-let ((cff (gethash "CFF " fontsloth-otf--current-tables)))
+      (fontsloth-otf-cff-outline cff glyph-id outliner))))
 
 (provide 'fontsloth-otf)
 ;;; fontsloth-otf.el ends here
