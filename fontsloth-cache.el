@@ -47,7 +47,7 @@
 (require 'eieio)
 (require 'pcache)
 
-(defconst fontsloth-cache-internal-version-constant 0)
+(defconst fontsloth-cache-internal-version-constant 1)
 (defconst fontsloth-cache-version-constant
   (format "%s/fontsloth-%s"
           pcache-version-constant fontsloth-cache-internal-version-constant)

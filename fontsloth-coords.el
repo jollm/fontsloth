@@ -51,10 +51,15 @@
 
 (defun fontsloth-coords-reverse (coords)
   "Reverse a `fontsloth-coords' COORDS."
-  (fontsloth-coords-create :x0 (fontsloth-coords-x1 coords)
-                           :y0 (fontsloth-coords-y1 coords)
-                           :x1 (fontsloth-coords-x0 coords)
-                           :y1 (fontsloth-coords-y0 coords)))
+  (let ((x0 (fontsloth-coords-x1 coords))
+        (y0 (fontsloth-coords-y1 coords))
+        (x1 (fontsloth-coords-x0 coords))
+        (y1 (fontsloth-coords-y0 coords)))
+    (setf (fontsloth-coords-x0 coords) x0
+          (fontsloth-coords-y0 coords) y0
+          (fontsloth-coords-x1 coords) x1
+          (fontsloth-coords-y1 coords) y1))
+  coords)
 
 (provide 'fontsloth-coords)
 ;;; fontsloth-coords.el ends here

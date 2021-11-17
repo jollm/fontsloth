@@ -202,8 +202,7 @@ ADVANCE-HEIGHT glyph's advance height"
                    (fontsloth-bbox-create
                     :xmin 0.0 :ymin 0.0 :xmax 0.0 :ymax 0.0))))
     (cl-flet ((reposition-lines (lines)
-                (cl-loop for ln in lines
-                         collect
+                (cl-loop for ln in lines do
                          (fontsloth-line-reposition
                           ln ebounds
                           (fontsloth-geometry-reverse-points geom)))))
@@ -212,11 +211,9 @@ ADVANCE-HEIGHT glyph's advance height"
       (setf (fontsloth-geometry-v-lines geom)
             (nreverse (fontsloth-geometry-v-lines geom))
             (fontsloth-geometry-m-lines geom)
-            (nreverse (fontsloth-geometry-m-lines geom))
-            (fontsloth-geometry-v-lines geom)
-            (reposition-lines (fontsloth-geometry-v-lines geom))
-            (fontsloth-geometry-m-lines geom)
-            (reposition-lines (fontsloth-geometry-m-lines geom)))
+            (nreverse (fontsloth-geometry-m-lines geom)))
+      (reposition-lines (fontsloth-geometry-v-lines geom))
+      (reposition-lines (fontsloth-geometry-m-lines geom))
       (record 'fontsloth-glyph
               (apply #'vector (fontsloth-geometry-v-lines geom))
               (apply #'vector (fontsloth-geometry-m-lines geom))

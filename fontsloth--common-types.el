@@ -51,28 +51,28 @@
     (fontsloth-coords
      (:constructor fontsloth-coords-create)
      (:copier nil)
-     (:type list))
+     (:type vector))
   x0 y0 x1 y1)
 
 (cl-defstruct
     (fontsloth-nudge
      (:constructor fontsloth-nudge-create)
      (:copier nil)
-     (:type list))
+     (:type vector))
   start-x-nudge start-y-nudge end-x-nudge end-y-nudge)
 
 (cl-defstruct
     (fontsloth-adj
      (:constructor fontsloth-adj-create)
      (:copier nil)
-     (:type list))
+     (:type vector))
   x-first-adj y-first-adj)
 
 (cl-defstruct
     (fontsloth-params
      (:constructor fontsloth-params-create)
      (:copier nil)
-     (:type list))
+     (:type vector))
   tdx tdy dx dy)
 
 (cl-defstruct
