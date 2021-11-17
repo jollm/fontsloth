@@ -55,10 +55,10 @@
         (y0 (fontsloth-coords-y1 coords))
         (x1 (fontsloth-coords-x0 coords))
         (y1 (fontsloth-coords-y0 coords)))
-    (setf (fontsloth-coords-x0 coords) x0
-          (fontsloth-coords-y0 coords) y0
-          (fontsloth-coords-x1 coords) x1
-          (fontsloth-coords-y1 coords) y1))
+    (aset coords 0 x0)
+    (aset coords 1 y0)
+    (aset coords 2 x1)
+    (aset coords 3 y1))
   coords)
 
 (provide 'fontsloth-coords)
