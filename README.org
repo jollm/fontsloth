@@ -15,7 +15,7 @@ Mostly it is modeled after the aforementioned fontdue and the outliner in
 
 Current version: *0.15.3*
 
-*Note: at present this requires Emacs 28.1*
+*Note: at present this requires Emacs 28*
 
 To make it work on Emacs 27.1 would involved backporting the latest bindat.el
 which itself involves backporting the latest subr-x.el. If you would like this
@@ -40,6 +40,7 @@ to happen, please let me know.
   - [[#layout-some-text][Layout some text]]
 - [[#attribution][Attribution]]
 - [[#performance][Performance]]
+- [[#future-plans][Future plans]]
 - [[#fonts-tested-so-far-working-for-simple-and-composite-glyphs][Fonts tested so far (working for simple and composite glyphs)]]
 
 * Synopsis of work in progress
@@ -53,8 +54,10 @@ to happen, please let me know.
   doesn’t fully handle OTF font tables.
 + Layouts for lines of horizontal text
 + kerning (as of 0.15.1)
++ OTF font outlining and rasterization (as of 0.16.0)
+  It can now outline OpenType fonts with CFF version 1 tables.
 ** Not currently supported (but planned)
-+ OTF font outlining and rasterization (this is the first priority at present)
++ OTF CFF version 2
 + Font variation indices
 + Vertical metrics tables (and vertical text layout)
 + more cmap tables than just format4 for char-code to glyph-id mappings
@@ -77,7 +80,8 @@ Fontsloth consists of four primary components:
 + Glyph outliner
   Entry points:
   + file:fontsloth-otf.el: generics
-  + [[file:fontsloth-otf-glyf.el][file:fontsloth-otf-glyf.el]]: base implementation
+  + [[file:fontsloth-otf-glyf.el][file:fontsloth-otf-glyf.el]]: base implementation for TTF outlines
+  + [[file:fontsloth-otf-cff.el][file:fontsloth-otf-cff.el]]: base implementation for OTF outlines
   + file:fontsloth-geometry.el: dispatch type and method implementations
 
   This is modeled after Rust ttf-parser and should be extensible for multiple
@@ -216,6 +220,12 @@ See [[*Usage caveats][Usage caveats]] for how to load fonts without caching them
 Fontsloth at this stage wouldn’t at all be possible without [[https://github.com/mooman219/fontdue][fontdue]] and
 [[https://github.com/RazrFalcon/ttf-parser][ttf-parser]]. In addition I began learning about TTF from [[https://tchayen.github.io/posts/ttf-file-parsing][TTF file parsing]].
 * Performance
+Update 11/18/21: Some initial profiling indicates unsurprisingly that the
+slowest aspects of this are loading and particularly outlining all glyphs and
+that time spent in garbage collection is ~50%. It may be possible to mitigate
+this by adding an option for lazy outlining. As for loading, I plan to try out
+having bindat work with streams.
+
 How slow is it really? The short answer is I don’t know yet as benchmarking is
 still a TODO.
 
@@ -225,12 +235,28 @@ Anecdotally, on Thinkpad t440 with Emacs 28 native:
   (e.g. ~320 milliseconds on the same machine for AppleGaramond TTF), hence the
   font cache
 - Layout for short text strings takes sub 1 millisecond with the same setup
+* Future plans
+I would like for this to be robust enough to handle everything that Emacs
+currently delegates to FreeType/Harfbuzz/Cairo, not necessarily for actual
+inclusion in Emacs proper, but as a good acid test if it could accomplish that
+without any loss of functionality.
 
+Assuming feature parity with FreeType, I would like to port this to Guile 3 so
+that it could be an option for handling fonts in Guile Emacs. The Guile version
+would be a rewrite with requirements for being idiomatic and thread-safe.
 * Fonts tested so far (working for simple and composite glyphs)
 In order of most to least tested:
 + free version of FontAwesome 5
-+ IBMPlex series, the TTF versions
++ IBMPlex series, the TTF and OTF versions
++ Bookerly TTF
 + all-the-icons TTF
 + AppleGaramond TTF
 + Roboto series, the TTF versions
 + DejaVu series, the TTF versions
++ Charter OTF (for some reason line height metrics are off for this specific
+  font)
++ SF-Pro (apple’s flagship afaict) OTF (this is an enormous font that takes
+  about 20 seconds to load the first time but it does work)
++ Hermit OTF
++ Fantasque series OTF
++ Cascadia series OTF
