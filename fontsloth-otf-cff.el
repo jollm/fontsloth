@@ -398,17 +398,23 @@ REWIND is t if bindat-idx should be positioned back to start"
   (outliner nil)
   (bbox (fontsloth-bbox-create) :type 'fontsloth-bbox))
 
+(declare-function fontsloth-otf-move-to "fontsloth-otf" (outliner x y))
+
 (defun fontsloth-otf-cff-builder-move-to (builder x y)
   "Move outline BUILDER to X Y."
   (pcase-let (((cl-struct fontsloth-otf-cff-builder outliner bbox) builder))
     (fontsloth-bbox-extend-by bbox x y)
     (fontsloth-otf-move-to outliner x y)))
 
+(declare-function fontsloth-otf-line-to "fontsloth-otf" (outliner x y))
+
 (defun fontsloth-otf-cff-builder-line-to (builder x y)
   "Line outline BUILDER at X Y."
   (pcase-let (((cl-struct fontsloth-otf-cff-builder outliner bbox) builder))
     (fontsloth-bbox-extend-by bbox x y)
     (fontsloth-otf-line-to outliner x y)))
+
+(declare-function fontsloth-otf-curve-to "fontsloth-otf" (outliner x1 y1 x y))
 
 (defun fontsloth-otf-cff-builder-curve-to (builder x1 y1 x2 y2 x y)
   "Curve outline BUILDER at X Y with controls X1 Y1 and X2 Y2."
@@ -417,6 +423,8 @@ REWIND is t if bindat-idx should be positioned back to start"
     (fontsloth-bbox-extend-by bbox x2 y2)
     (fontsloth-bbox-extend-by bbox x y)
     (fontsloth-otf-curve-to outliner x1 y1 x2 y2 x y)))
+
+(declare-function fontsloth-otf-close-contour "fontsloth-otf" (outliner))
 
 (defun fontsloth-otf-cff-builder-close (builder)
   "Close outline BUILDER contour."
