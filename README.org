@@ -48,11 +48,9 @@ to happen, please let me know.
 ** Now supported
 + Load simple and composite glyphs and character mappings in TTF fonts
 
-  These must contain loca/glyf tables for glyphs and cmap format4 for mappings.
-+ Outline and rasterize glyphs that use quadratic bezier curves
-
-  Notably cube curves used in OTF fonts are not yet supported since the loader
-  doesn’t fully handle OTF font tables.
+  These must contain loca/glyf or CFF1 tables for glyphs and cmap format4,
+  format0, format6, and/or format12 for mappings.
++ Outline and rasterize glyphs that use quadratic or cubit bezier curves
 + Layouts for lines of horizontal text
 + kerning (as of 0.15.1)
 + OTF font outlining and rasterization (as of 0.16.0)
