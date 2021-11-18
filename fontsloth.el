@@ -5,7 +5,7 @@
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.15.3
 ;; Homepage: https://github.com/jollm/fontsloth
-;; Package-Requires: ((f "0.20.0") (logito "0.1") (pcache "0.5") (emacs "28.1"))
+;; Package-Requires: ((f "0.20.0") (logito "0.1") (pcache "0.5") (stream "2.2.5") (emacs "28.0"))
 ;; Keywords: data, font, rasterization, ttf, otf
 
 ;; This program is free software: you can redistribute it and/or modify it
@@ -143,12 +143,15 @@ LINE-GAP the line gap"
          (units-per-em (fontsloth-otf-units-per-em))
          (glyph-count (fontsloth-otf-num-glyphs))
          (glyphs (let ((glyphs (make-vector glyph-count nil)))
-                   (pcase-dolist (`(_ . ,glyph-id) char-to-glyph)
-                     (aset glyphs glyph-id
-                           (fontsloth-glyph-create
-                            glyph-id
-                            (fontsloth-font-settings-scale font-settings)
-                            units-per-em)))
+                   (cl-loop for glyph-id being the hash-values of char-to-glyph
+                            collect
+                            (unless (aref glyphs glyph-id)
+                              (aset glyphs glyph-id
+                                    (fontsloth-glyph-create
+                                     glyph-id
+                                     (fontsloth-font-settings-scale
+                                      font-settings)
+                                     units-per-em))))
                    glyphs))
          (horizontal-line-metrics (fontsloth-line-metrics-create
                                    (fontsloth-otf-ascender)

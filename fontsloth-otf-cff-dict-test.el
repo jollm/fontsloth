@@ -1,11 +1,11 @@
-;;; fontsloth-coords.el --- Fns for fontsloth-coords type -*- lexical-binding: t -*-
+;;; fontsloth-otf-cff-dict-test.el --- Test a CFF dictionary parser -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.15.3
 ;; Homepage: https://github.com/jollm/fontsloth
-;; Keywords: data, font, ttf, otf
+;; Keywords: data, font, glyph, glyf, ttf, otf
 
 ;; This program is free software: you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by the Free
@@ -39,30 +39,28 @@
 
 ;; Part of fontsloth
 
-;; fontsloth-coords.el (this file): Fns for fontsloth-coords type
+;; fontsloth-otf-cff-dict-test (this file): Tests for a CFF dictionary parser
 
 ;;; Code:
 
-(require 'cl-lib)
+(require 'ert)
+(require 'fontsloth-otf-cff-dict)
 
-(cl-defstruct
-    (fontsloth-coords
-     (:constructor fontsloth-coords-create)
-     (:copier nil)
-     (:type vector))
-  x0 y0 x1 y1)
+(ert-deftest fontsloth-otf-cff-dict-test-parse-number ()
+  (should (equal (fontsloth-otf-cff-dict-parse-number #xfa [#xfa #x7c] 0)
+                 '(1000 1)))
+  (should (equal (fontsloth-otf-cff-dict-parse-number #xfe [#xfe #x7c] 0)
+                 '(-1000 1)))
+  (should (equal (fontsloth-otf-cff-dict-parse-number #x1c [#x1c #x27 #x10] 0)
+                 '(10000 2)))
+  (should (equal (fontsloth-otf-cff-dict-parse-number #x1c [#x1c #xd8 #xf0] 0)
+                 '(-10000 2)))
+  (should (equal (fontsloth-otf-cff-dict-parse-number
+                  #x1d [#x1d #x00 #x01 #x86 #xa0] 0)
+                 '(100000 4)))
+  (should (equal (fontsloth-otf-cff-dict-parse-number
+                       #x1d [#x1d #xff #xfe #x79 #x60] 0)
+                 '(-100000 4))))
 
-(defun fontsloth-coords-reverse (coords)
-  "Reverse a `fontsloth-coords' COORDS."
-  (let ((x0 (fontsloth-coords-x1 coords))
-        (y0 (fontsloth-coords-y1 coords))
-        (x1 (fontsloth-coords-x0 coords))
-        (y1 (fontsloth-coords-y0 coords)))
-    (aset coords 0 x0)
-    (aset coords 1 y0)
-    (aset coords 2 x1)
-    (aset coords 3 y1))
-  coords)
-
-(provide 'fontsloth-coords)
-;;; fontsloth-coords.el ends here
+(provide 'fontsloth-otf-cff-dict-test)
+;;; fontsloth-otf-cff-dict-test.el ends here

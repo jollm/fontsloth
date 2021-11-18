@@ -1,11 +1,11 @@
-;;; fontsloth-coords.el --- Fns for fontsloth-coords type -*- lexical-binding: t -*-
+;;; fontsloth-otf-.el --- Common utilities for an Elisp otf/ttf bindat parser -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
 ;; Version: 0.15.3
 ;; Homepage: https://github.com/jollm/fontsloth
-;; Keywords: data, font, ttf, otf
+;; Keywords: data, font, bindat, ttf, otf, parsing
 
 ;; This program is free software: you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by the Free
@@ -37,32 +37,30 @@
 
 ;;; Commentary:
 
-;; Part of fontsloth
+;; Part of fontsloth: the slowest font renderer in the world written in pure
+;; elisp.  inspired by fontdue
 
-;; fontsloth-coords.el (this file): Fns for fontsloth-coords type
+;; fontsloth-otf- (this file): common utilities for an Elisp otf/ttf bindat
+;; parser
 
 ;;; Code:
 
 (require 'cl-lib)
 
-(cl-defstruct
-    (fontsloth-coords
-     (:constructor fontsloth-coords-create)
-     (:copier nil)
-     (:type vector))
-  x0 y0 x1 y1)
+(defun fontsloth-otf--with-offset-fn (o rewind s)
+  "Offset spec S by O and go back to start if REWIND is t (the fn version).
 
-(defun fontsloth-coords-reverse (coords)
-  "Reverse a `fontsloth-coords' COORDS."
-  (let ((x0 (fontsloth-coords-x1 coords))
-        (y0 (fontsloth-coords-y1 coords))
-        (x1 (fontsloth-coords-x0 coords))
-        (y1 (fontsloth-coords-y0 coords)))
-    (aset coords 0 x0)
-    (aset coords 1 y0)
-    (aset coords 2 x1)
-    (aset coords 3 y1))
-  coords)
+This function is intended to be used within macros."
+  (let ((start (cl-gensym "start")))
+    `(let ((,start))
+       (bindat-type
+         (_ unit (progn (setq ,start bindat-idx bindat-idx ,o) nil))
+         (_ type  ,s)
+         (_ unit (progn (when ,rewind (setq bindat-idx ,start)) nil))))))
 
-(provide 'fontsloth-coords)
-;;; fontsloth-coords.el ends here
+(defmacro fontsloth-otf--with-offset (o rewind s)
+  "Offset spec S by O and go back to start if REWIND is t (the macro version)."
+  (fontsloth-otf--with-offset-fn o rewind s))
+
+(provide 'fontsloth-otf-)
+;;; fontsloth-otf-.el ends here

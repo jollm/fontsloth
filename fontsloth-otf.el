@@ -54,6 +54,8 @@
 
 (require 'fontsloth-log)
 (require 'fontsloth-otf--mac-names)
+(require 'fontsloth-otf-)
+(require 'fontsloth-otf-cff)
 (require 'fontsloth-otf-glyf)
 (require 'fontsloth-otf-kern)
 (require 'fontsloth-otf-typo)
@@ -426,14 +428,23 @@ RANGE length in bytes from loca for data, excluding header size"
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/glyf")
 
 (defvar fontsloth-otf--format0-spec
-  (let ((header-size 8))                ; includes format uint 16
+  (let ((header-size 6))                ; includes format uint 16
     (bindat-type
       (length uint 16)
-      (version uint 16)
       (language uint 16)
-      (data fill (- length header-size))))
+      (data vec (max 0 (- length header-size)) uint 8)))
   "Bindat spec for the Format 0 section of the cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-0-byte-encoding-table")
+
+(defvar fontsloth-otf--format6-spec
+  (bindat-type
+    (length uint 16)
+    (language uint 16)
+    (first-code uint 16)
+    (entry-count uint 16)
+    (data vec entry-count uint 16))
+  "Bindat spec for the Format 6 section of the cmap table.
+see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-6-trimmed-table-mapping")
 
 (defun fontsloth-otf--calc-glyph-id-offset (char-code segment start id-range-offset-start offset)
   "Calculate the format 4 glyphid index for the given `char-code'.
@@ -498,8 +509,22 @@ ID-RANGE-OFFSET sequence of id range offsets from cmap"
   "Bindat spec for the Format 4 section of the cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-segment-mapping-to-delta-values")
 
+(defvar fontsloth-otf--format12-spec
+  (bindat-type
+    (reserved uint 16)
+    (length uint 32)
+    (lang uint 32)
+    (count uint 32)
+    (groups vec count type (bindat-type
+                             (start-char-code uint 32)
+                             (end-char-code uint 32)
+                             (start-glyph-id uint 32))))
+  "Bindat spec for the Format 12 section of the cmap table.
+see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-12-segmented-coverage")
+
 (defvar fontsloth-otf--cmap-spec
   (bindat-type
+    (start unit bindat-idx)
     (version uint 16)
     (num-tables uint 16)
     (encodings vec num-tables
@@ -509,13 +534,23 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-
                       (offset uint 32)))
     (sub-tables
      vec num-tables
-     type (bindat-type
-            (format uint 16)
-            (fmt-table type
-                       (cond ((= 4 format) fontsloth-otf--format4-spec)
-                             ((= 0 format) fontsloth-otf--format0-spec)
-                             ;; TODO fill with appropriate length
-                             (t (bindat-type (unknown-format fill 0))))))))
+     type (let* ((te (elt encodings bindat--i))
+                 (offset (+ start (alist-get 'offset te)))
+                 (dup? (seq-find (lambda (e) (= (alist-get 'offset te)
+                                                (alist-get 'offset e)))
+                                 (seq-subseq encodings 0 bindat--i))))
+            (if dup? (bindat-type (duplicate unit dup?))
+              (fontsloth-otf--with-offset
+               offset nil
+               (bindat-type
+                 (format uint 16)
+                 (_ type
+                    (cl-case format
+                      (4 fontsloth-otf--format4-spec)
+                      (0 fontsloth-otf--format0-spec)
+                      (6 fontsloth-otf--format6-spec)
+                      (12 fontsloth-otf--format12-spec)
+                      (t (bindat-type (unknown-format fill 0)))))))))))
   "Bindat spec for the OTF/TTF cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap")
 
@@ -604,7 +639,8 @@ TTF-PATH the path to a ttf file
             ((string-equal "OTTO" sfnt-ver)
              (fontsloth:info
               fontsloth-log
-              "Fontsloth-otf: cannot yet fully handle OpenType CFF"))
+              "Fontsloth-otf: cannot yet fully handle OpenType CFF")
+             (put-table "CFF " (unpack-table "CFF " fontsloth-otf-cff--spec)))
             (t (fontsloth:error "Fontsloth-otf: Unknown sfnt-ver %s" sfnt-ver)))
       (when (gethash "kern" props)
         (put-table "kern" (unpack-table "kern" fontsloth-otf-kern-spec)))
@@ -630,13 +666,29 @@ TTF-PATH the path to a ttf file
 
 (defun fontsloth-otf-char-to-glyph-map ()
   "Get the font's code-point -> glyph id mapping."
-  ;; TODO handle other formats
-  ;; TODO hold somewhere a reference to the format 4 table after first lookup
-  (cl-flet ((format4? (table) (= 4 (alist-get 'format table))))
-    (when-let* ((cmap (gethash "cmap" fontsloth-otf--current-tables))
-                (sub-tables (bindat-get-field cmap 'sub-tables))
-                (format4-table (cadar (seq-filter #'format4? sub-tables))))
-      (alist-get 'glyph-index-map format4-table))))
+  (when-let* ((cmap (gethash "cmap" fontsloth-otf--current-tables))
+              (sub-tables (alist-get 'sub-tables cmap))
+              (map (make-hash-table :size (ash (fontsloth-otf-num-glyphs) 1)
+                                    :test 'eq)))
+    (cl-loop for tbl across sub-tables do
+             (cl-case (alist-get 'format tbl)
+               (4 (cl-loop for (c . g) in (alist-get 'glyph-index-map tbl) do
+                           (puthash c g map)))
+               (0 (cl-loop for c from 0
+                           for g across (alist-get 'data tbl) do
+                           (puthash c g map)))
+               (6 (let ((first-c (alist-get 'first-code tbl)))
+                    (cl-loop for c from first-c
+                             for g across (alist-get 'data tbl) do
+                             (puthash c g map))))
+               (12 (cl-loop for ((_ . sc) (_ . ec) (_ . sg)) across
+                            (alist-get 'groups tbl) do
+                            (cl-loop for c from sc
+                                     for g from sg
+                                     while (<= c ec) do
+                                     (puthash c g map))))
+               (_))
+             finally return map)))
 
 (defun fontsloth-otf-glyph-id-for-code-point (code-point)
   "Return the font's glyph index for a given code point or nil if not found.
@@ -732,8 +784,11 @@ Y y coord of curve end"
   (fontsloth:verbose fontsloth-log "Noop outline quad-to %s %s %s %s"
                      x1 y1 x y))
 
-(cl-defgeneric fontsloth-otf-curve-to (outliner)
-  "Append a curve-to segment to OUTLINER's contour.")
+(cl-defgeneric fontsloth-otf-curve-to (outliner x1 y1 x2 y2 x y)
+  "Append a curve-to segment to OUTLINER's contour."
+  (ignore outliner)
+  (fontsloth:verbose fontsloth-log "Noop outline curve-to %s %s %s %s %s %s"
+                     x1 y1 x2 y2 x y))
 
 (cl-defgeneric fontsloth-otf-close-contour (outliner)
   "End OUTLINER's contour."
@@ -753,9 +808,11 @@ generics to dispatch on their outliner type:
 `fontsloth-otf-close-contour'
 GLYPH-ID the id of the glyph to outline
 OUTLINER the caller's outliner implementation"
-  ;; TODO gvar and cff
-  (when-let ((glyf (gethash "glyf" fontsloth-otf--current-tables)))
-    (fontsloth-otf-glyf-outline (alist-get 'glyphs glyf) glyph-id outliner)))
+  ;; TODO gvar
+  (if-let ((glyf (gethash "glyf" fontsloth-otf--current-tables)))
+      (fontsloth-otf-glyf-outline (alist-get 'glyphs glyf) glyph-id outliner)
+    (when-let ((cff (gethash "CFF " fontsloth-otf--current-tables)))
+      (fontsloth-otf-cff-outline cff glyph-id outliner))))
 
 (provide 'fontsloth-otf)
 ;;; fontsloth-otf.el ends here

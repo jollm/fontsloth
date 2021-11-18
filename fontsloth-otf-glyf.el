@@ -245,7 +245,11 @@ BUILDER a `fontsloth-otf-glyf-builder'"
               (glyph-data (alist-get 'data glyph)))
     (if (< 0 num-contours)
         (when-let ((num-points (alist-get 'num-points glyph-data))
-                   (end-pts (alist-get 'end-pts glyph-data))
+                   (end-pts
+                    (let ((pset (make-hash-table :test 'eq)))
+                      (cl-loop for ep across (alist-get 'end-pts glyph-data) do
+                               (puthash ep t pset))
+                      pset))
                    (flags (alist-get 'flags glyph-data))
                    (x-coords (alist-get 'x-coords glyph-data))
                    (y-coords (alist-get 'y-coords glyph-data)))
@@ -254,9 +258,7 @@ BUILDER a `fontsloth-otf-glyf-builder'"
               (fontsloth-otf-glyf-push-point builder
                                              (elt x-coords i) (elt y-coords i)
                                              (alist-get 'on-curve-point flags)
-                                             ;; TODO do less work here
-                                             (seq-some (lambda (p) (= i p))
-                                                       end-pts))))
+                                             (map-elt end-pts i))))
           (fontsloth-otf-glyf-builder-bbox builder))
       (let ((comps
              (cons glyph-data

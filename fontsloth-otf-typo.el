@@ -615,6 +615,9 @@ Return a x-advance adjustment or 0."
 
 (declare-function fontsloth-otf-num-glyphs "fontsloth-otf")
 
+(defvar fontsloth-otf-typo--max-expected-kern-pairs 1800000
+  "Try to choose a reasonable number for most expected pair pos pairs.")
+
 (defun fontsloth-otf-typo-gpos-build-kern-mappings ()
   "Try to index all active default lang kerning pairs into a flat map.
 This is very expensive, but the result can be cached along with the font."
@@ -626,7 +629,8 @@ This is very expensive, but the result can be cached along with the font."
   ;; map-class-kerns binary searches each left for its class
   (when-let* ((kerning (fontsloth-otf-typo-gpos-kerning-tables nil "DFLT"))
               (num-glyphs (fontsloth-otf-num-glyphs))
-              (size-estimate (fontsloth-otf-typo--n-choose-k num-glyphs 2))
+              (size-estimate (min (fontsloth-otf-typo--n-choose-k num-glyphs 2)
+                                  fontsloth-otf-typo--max-expected-kern-pairs))
               (mappings (make-hash-table :test 'eq :size size-estimate)))
     (dolist (k kerning)
       (cl-loop for st across (alist-get 'subtables k)
@@ -651,6 +655,9 @@ This is very expensive, but the result can be cached along with the font."
                      mappings left-is st)))))
     ;; there will be many zeros because of the way GPOS pair pos works
     ;; zeroes effectively mask later pairs that would otherwise be active
+    (fontsloth:info* fontsloth-log
+                        "GPOS PairPos map size before compacting %s"
+                        (hash-table-count mappings))
     (cl-loop for k being the hash-keys of mappings do
              (when (= 0 (gethash k mappings))
                (remhash k mappings)))

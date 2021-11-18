@@ -58,14 +58,24 @@
   (c nil :type 'fontsloth-point :documentation "point b"))
 
 (cl-defstruct
+    (fontsloth-cube-curve
+     (:constructor fontsloth-cube-curve-create)
+     (:copier nil))
+  "Describes a bezier curve with two control points."
+  (a nil :type 'fontsloth-point :documentation "point 1")
+  (b nil :type 'fontsloth-point :documentation "control point")
+  (c nil :type 'fontsloth-point :documentation "control point")
+  (d nil :type 'fontsloth-point :documentation "point 2"))
+
+(cl-defstruct
     (fontsloth-geometry
      (:constructor fontsloth-make-geometry)
      (:copier nil))
   "Describes the geometry of a glyph outline.
 To be handed to `fontsloth-otf-outline-glyph'"
-  (v-lines nil :type 'vector
+  (v-lines nil :type 'sequence
            :documentation "lines which vary in y but not in x")
-  (m-lines nil :type 'vector :documentation "lines which are not v-lines")
+  (m-lines nil :type 'sequence :documentation "lines which are not v-lines")
   (effective-bounds (fontsloth-bbox-create) :type 'fontsloth-bbox
                     :documentation "the calculated glyph bounds")
   (start-point (fontsloth-point-create) :type 'fontsloth-point
@@ -130,6 +140,25 @@ TIME the time"
                (* c (fontsloth-point-y (fontsloth-quad-curve-c qc))))))
     (fontsloth-point-create :x x :y y)))
 
+(defun fontsloth-geometry--cube-curve-point (cc time)
+  "Determine the point along a curve at a given time.
+CC the curve
+TIME the time"
+  (let* ((tm (- 1.0 time))
+         (a (* tm tm tm))
+         (b (* 3.0 (* tm tm) time))
+         (c (* 3.0 tm (* time time)))
+         (d (* time time time))
+         (x (+ (* a (fontsloth-point-x (fontsloth-cube-curve-a cc)))
+               (* b (fontsloth-point-x (fontsloth-cube-curve-b cc)))
+               (* c (fontsloth-point-x (fontsloth-cube-curve-c cc)))
+               (* d (fontsloth-point-x (fontsloth-cube-curve-d cc)))))
+         (y (+ (* a (fontsloth-point-y (fontsloth-cube-curve-a cc)))
+               (* b (fontsloth-point-y (fontsloth-cube-curve-b cc)))
+               (* c (fontsloth-point-y (fontsloth-cube-curve-c cc)))
+               (* d (fontsloth-point-y (fontsloth-cube-curve-d cc))))))
+    (fontsloth-point-create :x x :y y)))
+
 (defun fontsloth-geometry-create (scale units-per-em)
   "Construct a new geometry given `scale' and `units-per-em'.
 SCALE a number indicating the font scale for drawing
@@ -149,12 +178,10 @@ END the line end point"
              (* (- (fontsloth-point-y end) (fontsloth-point-y start))
                 (+ (fontsloth-point-x end) (fontsloth-point-x start)))))
     (if (eql (fontsloth-point-x start) (fontsloth-point-x end))
-        (setf (fontsloth-geometry-v-lines geom)
-              (vconcat (fontsloth-geometry-v-lines geom)
-                       `(,(fontsloth-line-create start end))))
-      (setf (fontsloth-geometry-m-lines geom)
-            (vconcat (fontsloth-geometry-m-lines geom)
-                     `(,(fontsloth-line-create start end)))))
+        (push (fontsloth-line-create start end)
+              (fontsloth-geometry-v-lines geom))
+      (push (fontsloth-line-create start end)
+            (fontsloth-geometry-m-lines geom)))
     (fontsloth-bbox-extend-by (fontsloth-geometry-effective-bounds geom)
                               (fontsloth-point-x start)
                               (fontsloth-point-y start))
@@ -175,22 +202,21 @@ ADVANCE-HEIGHT glyph's advance height"
                    (fontsloth-bbox-create
                     :xmin 0.0 :ymin 0.0 :xmax 0.0 :ymax 0.0))))
     (cl-flet ((reposition-lines (lines)
-                (cl-loop for ln across lines
-                         collect
+                (cl-loop for ln in lines do
                          (fontsloth-line-reposition
                           ln ebounds
                           (fontsloth-geometry-reverse-points geom)))))
       (setf (fontsloth-geometry-reverse-points geom)
             (< 0 (fontsloth-geometry-area geom)))
       (setf (fontsloth-geometry-v-lines geom)
-            (apply #'vector
-              (reposition-lines (fontsloth-geometry-v-lines geom)))
+            (nreverse (fontsloth-geometry-v-lines geom))
             (fontsloth-geometry-m-lines geom)
-            (apply #'vector
-                   (reposition-lines (fontsloth-geometry-m-lines geom))))
+            (nreverse (fontsloth-geometry-m-lines geom)))
+      (reposition-lines (fontsloth-geometry-v-lines geom))
+      (reposition-lines (fontsloth-geometry-m-lines geom))
       (record 'fontsloth-glyph
-              (fontsloth-geometry-v-lines geom)
-              (fontsloth-geometry-m-lines geom)
+              (apply #'vector (fontsloth-geometry-v-lines geom))
+              (apply #'vector (fontsloth-geometry-m-lines geom))
               advance-width
               advance-height
               (fontsloth-glyph-outline-bounds-create
@@ -243,6 +269,61 @@ Y1 y coord of the next curve point"
              (let* ((bt (* 0.5 (+ (fontsloth-segment-at seg)
                                   (fontsloth-segment-ct seg))))
                     (b (fontsloth-geometry--quad-curve-point curve bt))
+                    (area (- (* (- (fontsloth-point-x b)
+                                   (fontsloth-point-x
+                                    (fontsloth-segment-a seg)))
+                                (- (fontsloth-point-y (fontsloth-segment-c seg))
+                                   (fontsloth-point-y
+                                    (fontsloth-segment-a seg))))
+                             (* (- (fontsloth-point-x (fontsloth-segment-c seg))
+                                   (fontsloth-point-x
+                                    (fontsloth-segment-a seg)))
+                                (- (fontsloth-point-y b)
+                                   (fontsloth-point-y
+                                    (fontsloth-segment-a seg)))))))
+               (if (> (abs area) (fontsloth-geometry-max-area outliner))
+                   (progn (push (fontsloth-segment-create
+                                 :a (fontsloth-segment-a seg)
+                                 :at (fontsloth-segment-at seg)
+                                 :c b
+                                 :ct bt) stack)
+                          (push (fontsloth-segment-create
+                                 :a b
+                                 :at bt
+                                 :c (fontsloth-segment-c seg)
+                                 :ct (fontsloth-segment-ct seg)) stack))
+                 (fontsloth-geometry-push
+                  outliner
+                  (fontsloth-segment-a seg)
+                  (fontsloth-segment-c seg)))))
+    (setf (fontsloth-geometry-previous-point outliner) next-point)))
+
+(cl-defmethod fontsloth-otf-curve-to
+  ((outliner fontsloth-geometry) x0 y0 x1 y1 x2 y2)
+  "Implement curve-to on fontsloth-geometry.
+OUTLINER geometry struct
+X0 x coord of the first control point
+Y0 y coord of the first control point
+X1 x coord of the second control point
+Y1 y coord of the second control point
+X2 x coord of the next curve point
+Y2 y coord of the next curve point"
+  (let* ((first-control (fontsloth-point-create :x x0 :y y0))
+         (second-control (fontsloth-point-create :x x1 :y y1))
+         (next-point (fontsloth-point-create :x x2 :y y2))
+         (curve (fontsloth-cube-curve-create
+                 :a (fontsloth-geometry-previous-point outliner)
+                 :b first-control
+                 :c second-control
+                 :d next-point))
+         (stack `(,(fontsloth-segment-create
+                    :a (fontsloth-geometry-previous-point outliner) :at 0.0
+                    :c next-point :ct 1.0))))
+    (cl-loop for seg = (pop stack) then (pop stack)
+             while seg do
+             (let* ((bt (* 0.5 (+ (fontsloth-segment-at seg)
+                                  (fontsloth-segment-ct seg))))
+                    (b (fontsloth-geometry--cube-curve-point curve bt))
                     (area (- (* (- (fontsloth-point-x b)
                                    (fontsloth-point-x
                                     (fontsloth-segment-a seg)))
