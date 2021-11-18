@@ -3,7 +3,7 @@
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
-;; Version: 0.15.3
+;; Version: 0.16.0
 ;; Homepage: https://github.com/jollm/fontsloth
 ;; Keywords: data, font, bindat, ttf, otf, parsing
 
