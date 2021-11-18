@@ -43,11 +43,14 @@
 
 ;;; Code:
 
-(declare-function fontsloth-coords-create "fontsloth--common-types")
-(declare-function fontsloth-coords-x0 "fontsloth--common-types")
-(declare-function fontsloth-coords-y0 "fontsloth--common-types")
-(declare-function fontsloth-coords-x1 "fontsloth--common-types")
-(declare-function fontsloth-coords-y1 "fontsloth--common-types")
+(require 'cl-lib)
+
+(cl-defstruct
+    (fontsloth-coords
+     (:constructor fontsloth-coords-create)
+     (:copier nil)
+     (:type vector))
+  x0 y0 x1 y1)
 
 (defun fontsloth-coords-reverse (coords)
   "Reverse a `fontsloth-coords' COORDS."

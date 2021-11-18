@@ -47,43 +47,6 @@
 
 (cl-float-limits)
 
-(cl-defstruct
-    (fontsloth-coords
-     (:constructor fontsloth-coords-create)
-     (:copier nil)
-     (:type vector))
-  x0 y0 x1 y1)
-
-(cl-defstruct
-    (fontsloth-nudge
-     (:constructor fontsloth-nudge-create)
-     (:copier nil)
-     (:type vector))
-  start-x-nudge start-y-nudge end-x-nudge end-y-nudge)
-
-(cl-defstruct
-    (fontsloth-adj
-     (:constructor fontsloth-adj-create)
-     (:copier nil)
-     (:type vector))
-  x-first-adj y-first-adj)
-
-(cl-defstruct
-    (fontsloth-params
-     (:constructor fontsloth-params-create)
-     (:copier nil)
-     (:type vector))
-  tdx tdy dx dy)
-
-(cl-defstruct
-    (fontsloth-line
-     (:constructor fontsloth-make-line)
-     (:copier nil))
-  (coords nil :type 'fontsloth-coords)
-  (nudge nil :type 'fontsloth-nudge)
-  (adjustment nil :type 'fontsloth-adj)
-  (params nil :type 'fontsloth-params))
-
 (require 'fontsloth-bbox)
 (require 'fontsloth-point)
 (require 'fontsloth-line)

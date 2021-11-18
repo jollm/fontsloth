@@ -45,27 +45,39 @@
 
 (require 'cl-lib)
 
+(require 'fontsloth-bbox)
 (require 'fontsloth-coords)
+(require 'fontsloth-point)
 
-(declare-function fontsloth-point-create "fontsloth--common-types")
-(declare-function fontsloth-point-x "fontsloth--common-types")
-(declare-function fontsloth-point-y "fontsloth--common-types")
+(cl-defstruct
+    (fontsloth-nudge
+     (:constructor fontsloth-nudge-create)
+     (:copier nil)
+     (:type vector))
+  start-x-nudge start-y-nudge end-x-nudge end-y-nudge)
 
-(declare-function fontsloth-make-line "fontsloth--common-types")
-(declare-function fontsloth-line-coords "fontsloth--common-types")
+(cl-defstruct
+    (fontsloth-adj
+     (:constructor fontsloth-adj-create)
+     (:copier nil)
+     (:type vector))
+  x-first-adj y-first-adj)
 
-(declare-function fontsloth-nudge-create "fontsloth--common-types")
-(declare-function fontsloth-adj-create "fontsloth--common-types")
-(declare-function fontsloth-params-create "fontsloth--common-types")
+(cl-defstruct
+    (fontsloth-params
+     (:constructor fontsloth-params-create)
+     (:copier nil)
+     (:type vector))
+  tdx tdy dx dy)
 
-(declare-function fontsloth-bbox-xmin "fontsloth--common-types")
-(declare-function fontsloth-bbox-ymax "fontsloth--common-types")
-
-(declare-function fontsloth-coords-create "fontsloth--common-types")
-(declare-function fontsloth-coords-x0 "fontsloth--common-types")
-(declare-function fontsloth-coords-y0 "fontsloth--common-types")
-(declare-function fontsloth-coords-x1 "fontsloth--common-types")
-(declare-function fontsloth-coords-y1 "fontsloth--common-types")
+(cl-defstruct
+    (fontsloth-line
+     (:constructor fontsloth-make-line)
+     (:copier nil))
+  (coords nil :type 'fontsloth-coords)
+  (nudge nil :type 'fontsloth-nudge)
+  (adjustment nil :type 'fontsloth-adj)
+  (params nil :type 'fontsloth-params))
 
 (defun fontsloth-line--create (start end)
   (let* ((floor-nudge 0) (ceil-nudge 0.0000000000001))
