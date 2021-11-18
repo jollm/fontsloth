@@ -46,7 +46,7 @@ to happen, please let me know.
 
 * Synopsis of work in progress
 ** Now supported
-+ Load simple and composite glyphs and character mappings in TTF fonts
++ Load simple and composite glyphs and character mappings in TTF and OTF fonts
 
   These must contain loca/glyf or CFF1 tables for glyphs and cmap format4,
   format0, format6, and/or format12 for mappings.
