@@ -414,7 +414,8 @@ REWIND is t if bindat-idx should be positioned back to start"
     (fontsloth-bbox-extend-by bbox x y)
     (fontsloth-otf-line-to outliner x y)))
 
-(declare-function fontsloth-otf-curve-to "fontsloth-otf" (outliner x1 y1 x y))
+(declare-function fontsloth-otf-curve-to "fontsloth-otf"
+                  (outliner x1 y1 x2 y2 x y))
 
 (defun fontsloth-otf-cff-builder-curve-to (builder x1 y1 x2 y2 x y)
   "Curve outline BUILDER at X Y with controls X1 Y1 and X2 Y2."
