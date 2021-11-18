@@ -59,7 +59,8 @@ to happen, please let me know.
 + OTF CFF version 2
 + Font variation indices
 + Vertical metrics tables (and vertical text layout)
-+ more cmap tables than just format4 for char-code to glyph-id mappings
++ All possible cmap tables for char-code to glyph-id mappings
++ All of GPOS and GSUB for every script/lang
 + Font collections
 + Allow custom per font family sets of additional char-code -> glyph mappings
   that derive new glyph outlines not in a font from those already
