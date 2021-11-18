@@ -13,7 +13,8 @@ It is currently pre version 1.0 and the API is not yet stable.
 Mostly it is modeled after the aforementioned fontdue and the outliner in
 [[https://github.com/RazrFalcon/ttf-parser][Rust ttf-parser]]. The only novel bit is using Emacs bindat.el to unpack OTF/TTF.
 
-Current version: *0.16.0*
+Current semantic version: *0.16.0*
+Melpa: [[https://melpa.org/#/fontsloth][file:https://melpa.org/packages/fontsloth-badge.svg]]
 
 *Note: at present this requires Emacs 28*
 
@@ -32,9 +33,8 @@ to happen, please let me know.
   - [[#invalidate-a-cache-entry][Invalidate a cache entry]]
   - [[#clear-the-cache][Clear the cache]]
 - [[#installation][Installation]]
-  - [[#install-directly][Install directly]]
-  - [[#install-with-use-package][Install with use-package]]
-  - [[#update-to-the-latest-git-commit][Update to the latest git commit]]
+  - [[#melpa][MELPA]]
+  - [[#manual-installation-using-quelpa][Manual installation (using Quelpa)]]
 - [[#usage][Usage]]
   - [[#load-and-rasterize][Load and rasterize]]
   - [[#layout-some-text][Layout some text]]
@@ -141,14 +141,19 @@ the seconds if you load more than 10 or so fonts at a time*.
 (pcache-clear fontsloth-cache)
 #+end_src
 * Installation
-At present there is a pull request open for MELPA. Until then, install using
-[[https://github.com/quelpa/quelpa][quelpa]].
+** MELPA
+Install from [[https://melpa.org][MELPA]] using the builtin package manager assuming MELPA is in your
+~package-archives~ list.
+
+Alternatively install using [[https://github.com/quelpa/quelpa][quelpa]] (see below) or [[https://github.com/raxod502/straight.el][straight.el]].
+
+** Manual installation (using Quelpa)
 
 Quelpa allows an installation directly from this repo that is then managed the
 usual way via package.el. Quelpa can be installed from MELPA or bootstrapped
 directly from source if desired.
 
-** Install directly
+*** Install directly
 #+BEGIN_SRC emacs-lisp
   ;;; after installing quelpa
 
@@ -156,7 +161,7 @@ directly from source if desired.
   (quelpa '(fontsloth :fetcher github :repo "jollm/fontsloth"))
 #+END_SRC
 
-** Install with use-package
+*** Install with use-package
 First install [[https://github.com/quelpa/quelpa-use-package][quelpa-use-package]] (either with quelpa or from MELPA).
 
 #+BEGIN_SRC emacs-lisp
@@ -169,7 +174,7 @@ First install [[https://github.com/quelpa/quelpa-use-package][quelpa-use-package
     :quelpa ((fontsloth :fetcher github :repo "jollm/fontsloth") :upgrade t))
 #+END_SRC
 
-** Update to the latest git commit
+*** Update to the latest git commit
 After installation:
 ~M-x: quelpa-upgrade~
 
