@@ -50,7 +50,7 @@ to happen, please let me know.
 
   These must contain loca/glyf or CFF1 tables for glyphs and cmap format4,
   format0, format6, and/or format12 for mappings.
-+ Outline and rasterize glyphs that use quadratic or cubit bezier curves
++ Outline and rasterize glyphs that use quadratic or cubic bezier curves
 + Layouts for lines of horizontal text
 + kerning (as of 0.15.1)
 + OTF font outlining and rasterization (as of 0.16.0)
