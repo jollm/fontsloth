@@ -51,6 +51,7 @@
 (defvar bindat--v)
 (require 'bindat)
 (require 'cl-lib)
+(require 'f)
 
 (require 'fontsloth-log)
 (require 'fontsloth-otf--mac-names)
@@ -59,6 +60,7 @@
 (require 'fontsloth-otf-glyf)
 (require 'fontsloth-otf-kern)
 (require 'fontsloth-otf-typo)
+(require 'fontsloth-woff)
 
 (defvar fontsloth-otf--header-spec
   '((sfnt-version str 4)
@@ -446,8 +448,10 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-0-
   "Bindat spec for the Format 6 section of the cmap table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-6-trimmed-table-mapping")
 
-(defun fontsloth-otf--calc-glyph-id-offset (char-code segment start id-range-offset-start offset)
+(defun fontsloth-otf--calc-glyph-id-offset
+    (bytes char-code segment start id-range-offset-start offset)
   "Calculate the format 4 glyphid index for the given `char-code'.
+BYTES font with uncompressed cmap table
 CHAR-CODE a format 4 char code
 SEGMENT the format 4 segment
 START the start char code of the current `segment'
@@ -462,7 +466,7 @@ OFFSET the current id range offset for `segment'"
                offset
                (* 2 (- char-code start))))
            (glyph-id (bindat-unpack
-                      '((glyph-index u16)) fontsloth-otf--current-font-bytes glyphid-offset)))
+                      '((glyph-index u16)) bytes glyphid-offset)))
       (alist-get 'glyph-index glyph-id))))
 
 (defun fontsloth-otf--glyph-index-map (end-code
@@ -479,12 +483,16 @@ ID-RANGE-OFFSET sequence of id range offsets from cmap"
            for delta across id-delta
            for offset across id-range-offset
            for i from 0
+           for bytes = (fontsloth-woff--maybe-decompress-table
+                        (gethash "cmap"
+                                 (gethash "table-directory" fontsloth-otf--current-tables))
+                        fontsloth-otf--current-font-bytes)
            append
            (cl-loop for c from start to end
                     collect
                     `(,c . ,(let ((glyph-id-offset
                                    (fontsloth-otf--calc-glyph-id-offset
-                                    c i start id-range-offset-start offset)))
+                                    bytes c i start id-range-offset-start offset)))
                               (mod (+ glyph-id-offset delta) #x10000))))))
 
 (defvar fontsloth-otf--format4-spec
@@ -614,19 +622,24 @@ TTF-PATH the path to a ttf file
                               (set-buffer-multibyte nil)
                               (insert-file-contents-literally ttf-path)
                               (buffer-string)))
-  (let* ((header+table-props (bindat-unpack fontsloth-otf--tables-spec
+  (let* ((woff? (equal (f-ext ttf-path) "woff"))
+         (header+table-props (bindat-unpack (if woff?
+                                                fontsloth-woff--tables-spec
+                                              fontsloth-otf--tables-spec)
                                             fontsloth-otf--current-font-bytes))
          ;; sfnt-ver to check if there is either TrueType or CFF data
          (sfnt-ver (bindat-get-field header+table-props 'header 'sfnt-version))
          (props (fontsloth-otf--index-table-props
                  (bindat-get-field header+table-props 'table-props))))
     (cl-flet ((unpack-table (tag spec &optional local-offset)
-                (bindat-unpack spec fontsloth-otf--current-font-bytes
-                               (+ (or local-offset 0)
-                                  (alist-get 'offset (gethash tag props)))))
+                (let ((props (gethash tag props)))
+                  (bindat-unpack spec (fontsloth-woff--maybe-decompress-table
+                                       props fontsloth-otf--current-font-bytes)
+                                 (+ (or local-offset 0)
+                                    (alist-get 'offset props)))))
               (put-table (tag data)
                 (puthash tag data fontsloth-otf--current-tables)))
-      (put-table "table-directory" header+table-props)
+      (put-table "table-directory" props)
       (put-table "head" (unpack-table "head" fontsloth-otf--head-spec))
       (put-table "maxp" (unpack-table "maxp" fontsloth-otf--maxp-spec))
       (put-table "hhea" (unpack-table "hhea" fontsloth-otf--hhea-spec))
