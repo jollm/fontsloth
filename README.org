@@ -13,7 +13,7 @@ It is currently pre version 1.0 and the API is not yet stable.
 Mostly it is modeled after the aforementioned fontdue and the outliner in
 [[https://github.com/RazrFalcon/ttf-parser][Rust ttf-parser]]. The only novel bit is using Emacs bindat.el to unpack OTF/TTF.
 
-Current semantic version: *0.16.0*
+Current semantic version: *0.17.0*
 
 Melpa: [[https://melpa.org/#/fontsloth][file:https://melpa.org/packages/fontsloth-badge.svg]]
 
@@ -55,6 +55,8 @@ to happen, please let me know.
 + kerning (as of 0.15.1)
 + OTF font outlining and rasterization (as of 0.16.0)
   It can now outline OpenType fonts with CFF version 1 tables.
++ Web Open Font Format (WOFF) (as of 0.17.0) Note: since WOFF is a meta
+  format, the underlying format must also be supported.
 ** Not currently supported (but planned)
 + OTF CFF version 2
 + Font variation indices
