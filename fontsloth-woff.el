@@ -77,8 +77,13 @@ see URL https://www.w3.org/TR/WOFF/#WOFFHeader")
   "Bindat spec for a single entry in the WOFF table directory.
 see URL https://www.w3.org/TR/WOFF/#TableDirectory")
 
+(declare-function zlib-available-p "decompress.c")
+(declare-function zlib-decompress-region "decompress.c")
+
 (defun fontsloth-woff--maybe-decompress-table (table-props bytes)
   "Return font BYTES with table referenced by TABLE-PROPS decompressed."
+  (unless (zlib-available-p)
+    (error "woff requires an Emacs with zlib"))
   (if-let* ((comp-length (alist-get 'comp-length table-props))
             (orig-length (alist-get 'orig-length table-props))
             (offset (alist-get 'offset table-props))
