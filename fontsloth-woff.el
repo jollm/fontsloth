@@ -82,7 +82,7 @@ see URL https://www.w3.org/TR/WOFF/#TableDirectory")
   (if-let* ((comp-length (alist-get 'comp-length table-props))
             (orig-length (alist-get 'orig-length table-props))
             (offset (alist-get 'offset table-props))
-            (_ (/= comp-length orig-length)))
+            (compressed? (/= comp-length orig-length)))
       (with-temp-buffer
         (set-buffer-multibyte nil)
         (insert bytes)
