@@ -637,7 +637,6 @@ TTF-PATH the path to a ttf file
                               (buffer-string)))
   (let* ((header+table-props
           (bindat-unpack fontsloth-otf--tables-spec fontsloth-otf--current-font-bytes))
-         (woff? (equal "wOFF" (alist-get 'signature (alist-get 'header header+table-props))))
          ;; sfnt-ver to check if there is either TrueType or CFF data
          (sfnt-ver (bindat-get-field header+table-props 'header 'sfnt-version))
          (props (fontsloth-otf--index-table-props
