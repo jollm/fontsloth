@@ -51,7 +51,6 @@
 (defvar bindat--v)
 (require 'bindat)
 (require 'cl-lib)
-(require 'f)
 
 (require 'fontsloth-log)
 (require 'fontsloth-otf--mac-names)
@@ -63,26 +62,40 @@
 (require 'fontsloth-woff)
 
 (defvar fontsloth-otf--header-spec
-  '((sfnt-version str 4)
-    (num-tables u16)
-    (search-range u16)
-    (entry-selector u16)
-    (range-shift u16))
+  (bindat-type
+    (sfnt-version str 4)
+    (num-tables uint 16)
+    (search-range uint 16)
+    (entry-selector uint 16)
+    (range-shift uint 16))
   "Bindat spec for the OTF/TTF table directory header.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledirectory")
 
+(defvar fontsloth-otf--maybe-woff-header-spec
+  (bindat-type
+    (--sig str 4)
+    (_ unit (progn (setq bindat-idx 0) nil))
+    (_ type
+       (if (equal "wOFF" --sig)
+           fontsloth-woff--header-spec
+         fontsloth-otf--header-spec))))
+
 (defvar fontsloth-otf--table-props-spec
-  '((tag str 4)
-    (checksum u32)
-    (offset u32)
-    (length u32))
+  (bindat-type
+    (tag str 4)
+    (checksum uint 32)
+    (offset uint 32)
+    (length uint 32))
   "Bindat spec for a single entry in the OTF/TTF table directory.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledirectory")
 
 (defvar fontsloth-otf--tables-spec
-  '((header struct fontsloth-otf--header-spec)
-    (table-props repeat (header num-tables)
-                 (struct fontsloth-otf--table-props-spec)))
+  (bindat-type
+    (header type fontsloth-otf--maybe-woff-header-spec)
+    (table-props repeat (alist-get 'num-tables header)
+                 type (if (equal "wOFF" (alist-get 'signature header))
+                          fontsloth-woff--table-props-spec
+                        fontsloth-otf--table-props-spec)))
   "Bindat spec for the OTF/TTF table directory, including the header.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledirectory")
 
@@ -622,11 +635,9 @@ TTF-PATH the path to a ttf file
                               (set-buffer-multibyte nil)
                               (insert-file-contents-literally ttf-path)
                               (buffer-string)))
-  (let* ((woff? (equal (f-ext ttf-path) "woff"))
-         (header+table-props (bindat-unpack (if woff?
-                                                fontsloth-woff--tables-spec
-                                              fontsloth-otf--tables-spec)
-                                            fontsloth-otf--current-font-bytes))
+  (let* ((header+table-props
+          (bindat-unpack fontsloth-otf--tables-spec fontsloth-otf--current-font-bytes))
+         (woff? (equal "wOFF" (alist-get 'signature (alist-get 'header header+table-props))))
          ;; sfnt-ver to check if there is either TrueType or CFF data
          (sfnt-ver (bindat-get-field header+table-props 'header 'sfnt-version))
          (props (fontsloth-otf--index-table-props

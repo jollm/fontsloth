@@ -51,7 +51,7 @@
 
 (defvar fontsloth-woff--header-spec
   (bindat-type
-    (signature uint 32)
+    (signature str 4)
     (sfnt-version str 4)
     (length uint 32)
     (num-tables uint 16)
@@ -68,19 +68,13 @@
 see URL https://www.w3.org/TR/WOFF/#WOFFHeader")
 
 (defvar fontsloth-woff--table-props-spec
-  '((tag str 4)
-    (offset u32)
-    (comp-length u32)
-    (orig-length u32)
-    (orig-checksum u32))
+  (bindat-type
+    (tag str 4)
+    (offset uint 32)
+    (comp-length uint 32)
+    (orig-length uint 32)
+    (orig-checksum uint 32))
   "Bindat spec for a single entry in the WOFF table directory.
-see URL https://www.w3.org/TR/WOFF/#TableDirectory")
-
-(defvar fontsloth-woff--tables-spec
-  '((header struct fontsloth-woff--header-spec)
-    (table-props repeat (header num-tables)
-                 (struct fontsloth-woff--table-props-spec)))
-  "Bindat spec for the WOFF table directory, including the header.
 see URL https://www.w3.org/TR/WOFF/#TableDirectory")
 
 (defun fontsloth-woff--maybe-decompress-table (table-props bytes)
