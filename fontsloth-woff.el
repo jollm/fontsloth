@@ -82,13 +82,13 @@ see URL https://www.w3.org/TR/WOFF/#TableDirectory")
 
 (defun fontsloth-woff--maybe-decompress-table (table-props bytes)
   "Return font BYTES with table referenced by TABLE-PROPS decompressed."
-  (unless (zlib-available-p)
-    (error "woff requires an Emacs with zlib"))
   (if-let* ((comp-length (alist-get 'comp-length table-props))
             (orig-length (alist-get 'orig-length table-props))
             (offset (alist-get 'offset table-props))
             (compressed? (/= comp-length orig-length)))
       (with-temp-buffer
+        (unless (zlib-available-p)
+          (error "woff requires an Emacs with zlib"))
         (set-buffer-multibyte nil)
         (insert bytes)
         (if (zlib-decompress-region (1+ offset) (+ (1+ offset) comp-length))
