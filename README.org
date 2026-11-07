@@ -81,6 +81,13 @@ Fontsloth consists of four primary components:
 
   This uses [[info:elisp#Byte Packing][elisp#Byte Packing]] (i.e. bindat.el) to unpack TTF and OTF fonts.
 
+  =fontsloth-otf-load-font-data= returns an explicit =fontsloth-otf-font,=
+  a struct, its accessors accept that object as an optional final
+  argument, and =fontsloth-otf-with-font= binds it as the dynamic
+  context for the bindat specs.  The older =fontsloth-otf-load-font=
+  remains as a compatibility wrapper that returns the table map and
+  sets the dynamic context.
+
   Packing is not currently supported but planned for after version 1.0
 + Glyph outliner
   Entry points:
@@ -251,6 +258,18 @@ maak compile
 maak lint
 maak clean
 #+end_src
+
+** Coverage
+#+begin_src shell
+# per-file coverage report; testcover cannot instrument every file yet
+maak coverage
+#+end_src
+
+One Emacs process is used per source file so that a file testcover
+cannot instrument does not abort the whole report. Those files print
+=SKIP=.
+
+Forgejo CI runs =maak compile= and =maak test= from =.forgejo/workflows/ci.yml=.
 
 * Attribution
 Fontsloth at this stage wouldn’t at all be possible without [[https://github.com/mooman219/fontdue][fontdue]] and

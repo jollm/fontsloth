@@ -199,12 +199,49 @@ see URL https://docs.microsoft.com/en-us/typography/opentype/spec/hhea")
 
 (defvar fontsloth-otf--current-font-bytes nil)
 (defvar fontsloth-otf--current-tables nil)
+(defvar fontsloth-otf--current-font nil
+  "The explicitly current `fontsloth-otf-font', if any.
+Bind this with `fontsloth-otf-with-font' rather than setting it directly.")
 
-(defun fontsloth-otf--get-table-value (field tag)
-  "Get a value from the named table in the current context.
+(cl-defstruct
+    (fontsloth-otf-font
+     (:constructor fontsloth-otf-font-create)
+     (:copier nil))
+  "A loaded OTF/TTF font's parsed tables and source bytes."
+  (tables nil :type hash-table
+          :documentation "tag -> parsed table data")
+  (bytes nil :type string
+         :documentation "raw font file bytes, kept for WOFF and hashing"))
+
+(defsubst fontsloth-otf--font-tables (font)
+  "Return FONT's table map, or the dynamically current map when FONT is nil."
+  (if font (fontsloth-otf-font-tables font) fontsloth-otf--current-tables))
+
+(defsubst fontsloth-otf--font-bytes (font)
+  "Return FONT's raw bytes, or the dynamically current bytes when FONT is nil."
+  (if font (fontsloth-otf-font-bytes font) fontsloth-otf--current-font-bytes))
+
+(defmacro fontsloth-otf-with-font (font &rest body)
+  "Evaluate BODY with FONT as the current font.
+When FONT is nil, keep the existing dynamic font context."
+  (declare (indent 1) (debug (form body)))
+  (let ((f (make-symbol "font")))
+    `(let* ((,f ,font)
+            (fontsloth-otf--current-font (or ,f fontsloth-otf--current-font))
+            (fontsloth-otf--current-tables
+             (if ,f (fontsloth-otf-font-tables ,f)
+               fontsloth-otf--current-tables))
+            (fontsloth-otf--current-font-bytes
+             (if ,f (fontsloth-otf-font-bytes ,f)
+               fontsloth-otf--current-font-bytes)))
+       ,@body)))
+
+(defun fontsloth-otf--get-table-value (field tag &optional font)
+  "Get FIELD from TAG in FONT's tables, or the current tables when FONT is nil.
 FIELD the table field
-TAG the table tag"
-  (alist-get field (gethash tag fontsloth-otf--current-tables)))
+TAG the table tag
+FONT an optional `fontsloth-otf-font'"
+  (alist-get field (gethash tag (fontsloth-otf--font-tables font))))
 
 (defvar fontsloth-otf--hmtx-spec
   (cl-flet ((num-hor-metrics ()
@@ -626,15 +663,17 @@ TABLE-PROPS-LIST the list of table props to index"
       (insert-file-contents-literally path)
       (buffer-string))))
 
-(cl-defun fontsloth-otf-load-font (ttf-path &key (coll-index 0))
-  "Read `ttf-path' into an abstract representation suitable for rendering.
-TTF-PATH the path to a ttf file
-:COLL-INDEX the collection index if this file is a collection, default 0"
+(defun fontsloth-otf--parse-tables (bytes coll-index)
+  "Parse font BYTES into a tag -> table map.
+COLL-INDEX is currently ignored (font collections are not supported)."
   (ignore coll-index)
-  (setq fontsloth-otf--current-tables (make-hash-table :test 'equal))
-  (setq fontsloth-otf--current-font-bytes (fontsloth-otf--read-font-bytes ttf-path))
-  (let* ((header+table-props
-          (bindat-unpack fontsloth-otf--tables-spec fontsloth-otf--current-font-bytes))
+  (let* ((fontsloth-otf--current-tables (make-hash-table :test 'equal))
+         (fontsloth-otf--current-font-bytes bytes)
+         (fontsloth-otf--current-font
+          (fontsloth-otf-font-create :tables fontsloth-otf--current-tables
+                                     :bytes bytes))
+         (header+table-props
+          (bindat-unpack fontsloth-otf--tables-spec bytes))
          ;; sfnt-ver to check if there is either TrueType or CFF data
          (sfnt-ver (bindat-get-field header+table-props 'header 'sfnt-version))
          (props (fontsloth-otf--index-table-props
@@ -655,8 +694,8 @@ TTF-PATH the path to a ttf file
       (put-table "cmap" (unpack-table "cmap" fontsloth-otf--cmap-spec))
       (put-table "post" (unpack-table "post" fontsloth-otf--post-spec))
       (cond ((string-equal "   " sfnt-ver)
-              (put-table "loca" (unpack-table "loca" fontsloth-otf--loca-spec))
-              (put-table "glyf" (unpack-table "glyf" fontsloth-otf--glyf-spec)))
+             (put-table "loca" (unpack-table "loca" fontsloth-otf--loca-spec))
+             (put-table "glyf" (unpack-table "glyf" fontsloth-otf--glyf-spec)))
             ((string-equal "OTTO" sfnt-ver)
              (fontsloth:info
               fontsloth-log
@@ -675,22 +714,47 @@ TTF-PATH the path to a ttf file
                (gethash "GPOS" fontsloth-otf--current-tables))))
       fontsloth-otf--current-tables)))
 
-(defun fontsloth-otf-num-glyphs ()
-  "If a font is loaded, find its specified number of glyphs."
-  (when-let ((maxp (gethash "maxp" fontsloth-otf--current-tables)))
+(cl-defun fontsloth-otf-load-font-data (ttf-path &key (coll-index 0))
+  "Read `ttf-path' into a `fontsloth-otf-font' suitable for rendering.
+TTF-PATH the path to a ttf file
+:COLL-INDEX the collection index if this file is a collection, default 0"
+  (let* ((bytes (fontsloth-otf--read-font-bytes ttf-path))
+         (tables (fontsloth-otf--parse-tables bytes coll-index)))
+    (fontsloth-otf-font-create :tables tables :bytes bytes)))
+
+(cl-defun fontsloth-otf-load-font (ttf-path &key (coll-index 0))
+  "Read `ttf-path' into an abstract representation suitable for rendering.
+Returns the table map and makes it the current dynamic font context.
+Use `fontsloth-otf-load-font-data' to get an explicit
+`fontsloth-otf-font' instead.
+TTF-PATH the path to a ttf file
+:COLL-INDEX the collection index if this file is a collection, default 0"
+  (let ((font (fontsloth-otf-load-font-data ttf-path :coll-index coll-index)))
+    (setq fontsloth-otf--current-font font
+          fontsloth-otf--current-tables (fontsloth-otf-font-tables font)
+          fontsloth-otf--current-font-bytes (fontsloth-otf-font-bytes font))
+    fontsloth-otf--current-tables))
+
+(defun fontsloth-otf-num-glyphs (&optional font)
+  "If a font is loaded, find its specified number of glyphs.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
+  (when-let ((maxp (gethash "maxp" (fontsloth-otf--font-tables font))))
     (alist-get 'num-glyphs maxp)))
 
-(defun fontsloth-otf-units-per-em ()
-  "If a font is loaded, find its units-per-em."
-  (when-let ((head (gethash "head" fontsloth-otf--current-tables)))
+(defun fontsloth-otf-units-per-em (&optional font)
+  "If a font is loaded, find its units-per-em.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
+  (when-let ((head (gethash "head" (fontsloth-otf--font-tables font))))
     (alist-get 'units-per-em head)))
 
-(defun fontsloth-otf-char-to-glyph-map ()
-  "Get the font's code-point -> glyph id mapping."
-  (when-let* ((cmap (gethash "cmap" fontsloth-otf--current-tables))
+(defun fontsloth-otf-char-to-glyph-map (&optional font)
+  "Get the font's code-point -> glyph id mapping.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
+  (when-let* ((cmap (gethash "cmap" (fontsloth-otf--font-tables font)))
               (sub-tables (alist-get 'sub-tables cmap))
-              (map (make-hash-table :size (ash (fontsloth-otf-num-glyphs) 1)
-                                    :test 'eq)))
+              (map (make-hash-table
+                    :size (ash (fontsloth-otf-num-glyphs font) 1)
+                    :test 'eq)))
     (cl-loop for tbl across sub-tables do
              (cl-case (alist-get 'format tbl)
                (4 (cl-loop for (c . g) in (alist-get 'glyph-index-map tbl) do
@@ -711,16 +775,18 @@ TTF-PATH the path to a ttf file
                (_))
              finally return map)))
 
-(defun fontsloth-otf-glyph-id-for-code-point (code-point)
+(defun fontsloth-otf-glyph-id-for-code-point (code-point &optional font)
   "Return the font's glyph index for a given code point or nil if not found.
-CODE-POINT a character code point"
-  (when-let ((glyph-index-map (fontsloth-otf-char-to-glyph-map)))
-    (alist-get code-point glyph-index-map)))
+CODE-POINT a character code point
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
+  (when-let ((glyph-index-map (fontsloth-otf-char-to-glyph-map font)))
+    (gethash code-point glyph-index-map)))
 
-(defun fontsloth-otf-glyph-name (glyph-id)
+(defun fontsloth-otf-glyph-name (glyph-id &optional font)
   "Return the name the font specifies for the glyph or nil if none is given.
-GLYPH-ID the glyph-id"
-  (when-let* ((post (gethash "post" fontsloth-otf--current-tables))
+GLYPH-ID the glyph-id
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
+  (when-let* ((post (gethash "post" (fontsloth-otf--font-tables font)))
               (name-map (alist-get 'name-mapping post)))
     (when (vectorp name-map)
       (let ((idx (elt name-map glyph-id)))
@@ -728,35 +794,40 @@ GLYPH-ID the glyph-id"
             (elt (alist-get 'names post) (cdr idx))
           (elt fontsloth-otf--mac-names idx))))))
 
-(defun fontsloth-otf-ascender ()
-  "Return the font's horizontal face ascender."
+(defun fontsloth-otf-ascender (&optional font)
+  "Return the font's horizontal face ascender.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
   ;; TODO: parse OS/2 table
   ;; TODO: support variation axes
-  (when-let ((hhea (gethash "hhea" fontsloth-otf--current-tables)))
+  (when-let ((hhea (gethash "hhea" (fontsloth-otf--font-tables font))))
     (alist-get 'ascent hhea)))
 
-(defun fontsloth-otf-descender ()
-  "Return the font's horizontal face descender."
+(defun fontsloth-otf-descender (&optional font)
+  "Return the font's horizontal face descender.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
   ;; TODO: parse OS/2 table
   ;; TODO: support variation axes
-  (when-let ((hhea (gethash "hhea" fontsloth-otf--current-tables)))
+  (when-let ((hhea (gethash "hhea" (fontsloth-otf--font-tables font))))
     (alist-get 'descent hhea)))
 
-(defun fontsloth-otf-line-gap ()
-  "Return the font's horizontal face line gap."
+(defun fontsloth-otf-line-gap (&optional font)
+  "Return the font's horizontal face line gap.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
   ;; TODO: parse OS/2 table
   ;; TODO: support variation axes
-  (when-let ((hhea (gethash "hhea" fontsloth-otf--current-tables)))
+  (when-let ((hhea (gethash "hhea" (fontsloth-otf--font-tables font))))
     (alist-get 'line-gap hhea)))
 
-(defun fontsloth-otf-glyph-hor-advance (glyph-id)
-  "Return the horizontal advance for GLYPH-ID."
+(defun fontsloth-otf-glyph-hor-advance (glyph-id &optional font)
+  "Return the horizontal advance for GLYPH-ID.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
   ;; Todo: support font variations
-  (when-let* ((hmtx (gethash "hmtx" fontsloth-otf--current-tables))
+  (when-let* ((hmtx (gethash "hmtx" (fontsloth-otf--font-tables font)))
               (metrics (alist-get 'hmetrics hmtx))
-              (num-glyphs (fontsloth-otf-num-glyphs)))
+              (num-glyphs (fontsloth-otf-num-glyphs font)))
     (let ((num-metrics
-           (fontsloth-otf--get-table-value 'num-of-long-hor-metrics "hhea")))
+           (fontsloth-otf--get-table-value 'num-of-long-hor-metrics "hhea"
+                                           font)))
       (unless (<= num-glyphs glyph-id)
         ;; 'As an optimization, the number of records can be less than the
         ;; number of glyphs, in which case the advance width value of the last
@@ -765,17 +836,19 @@ GLYPH-ID the glyph-id"
             (alist-get 'advance-width (elt metrics glyph-id))
           (alist-get 'advance-width (elt metrics (1- num-metrics))))))))
 
-(defun fontsloth-otf-glyph-ver-advance (glyph-id)
-  "Return the vertical advance for a GLYPH-ID."
-  (ignore glyph-id)
+(defun fontsloth-otf-glyph-ver-advance (glyph-id &optional font)
+  "Return the vertical advance for a GLYPH-ID.
+FONT is ignored; vertical metrics are not implemented yet."
+  (ignore glyph-id font)
   ;; TODO: parse vmtx
   ;; TODO: support font variations
   (error "Glyph-ver-advance not yet implemented"))
 
-(defun fontsloth-otf-find-hkern-mappings ()
-  "Try to find indexed horizontal pair kern mappings for the current font."
-  (when-let ((table (or (gethash "kern" fontsloth-otf--current-tables)
-                        (gethash "GPOS" fontsloth-otf--current-tables))))
+(defun fontsloth-otf-find-hkern-mappings (&optional font)
+  "Try to find indexed horizontal pair kern mappings for the current font.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
+  (when-let ((table (or (gethash "kern" (fontsloth-otf--font-tables font))
+                        (gethash "GPOS" (fontsloth-otf--font-tables font)))))
     (alist-get 'mappings table)))
 
 ;;; generics for glyph outline construction (not table specific):
@@ -824,7 +897,7 @@ Y y coord of curve end"
 
 ;;; glyph outlining fns
 
-(defun fontsloth-otf-outline-glyph (glyph-id outliner)
+(defun fontsloth-otf-outline-glyph (glyph-id outliner &optional font)
   "Outline a glyph using a caller provided outliner.
 The caller is expected to define methods for the following
 generics to dispatch on their outliner type:
@@ -834,12 +907,14 @@ generics to dispatch on their outliner type:
 `fontsloth-otf-curve-to'
 `fontsloth-otf-close-contour'
 GLYPH-ID the id of the glyph to outline
-OUTLINER the caller's outliner implementation"
+OUTLINER the caller's outliner implementation
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
   ;; TODO gvar
-  (if-let ((glyf (gethash "glyf" fontsloth-otf--current-tables)))
-      (fontsloth-otf-glyf-outline (alist-get 'glyphs glyf) glyph-id outliner)
-    (when-let ((cff (gethash "CFF " fontsloth-otf--current-tables)))
-      (fontsloth-otf-cff-outline cff glyph-id outliner))))
+  (fontsloth-otf-with-font font
+    (if-let ((glyf (gethash "glyf" (fontsloth-otf--font-tables font))))
+        (fontsloth-otf-glyf-outline (alist-get 'glyphs glyf) glyph-id outliner)
+      (when-let ((cff (gethash "CFF " (fontsloth-otf--font-tables font))))
+        (fontsloth-otf-cff-outline cff glyph-id outliner)))))
 
 (provide 'fontsloth-otf)
 ;;; fontsloth-otf.el ends here

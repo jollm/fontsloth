@@ -15,8 +15,8 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (maak maak)
-  #:export (default all compile test test-file lint checkdoc package-lint
-            clean))
+  #:export (default all compile test test-file coverage lint checkdoc
+            package-lint clean))
 
 (define emacs (or (getenv "EMACS") "emacs"))
 
@@ -72,6 +72,15 @@
   "Run one ERT test file, e.g. `maak test-file -- fontsloth-test.el'."
   ($ (list (format #f "~a --batch -L . -l ert -l ~a --eval '(ert-run-tests-batch-and-exit)'"
                    emacs file))))
+
+(define (coverage)
+  "Report per-file test coverage, one Emacs process per source file."
+  (let ((tests (string-join (test-files) " ")))
+    (for-each
+     (lambda (source)
+       ($ (list (format #f "~a --batch -L . -l scripts/coverage.el -- ~a ~a"
+                        emacs source tests))))
+     source-files)))
 
 (define (checkdoc)
   "Run checkdoc over the fontsloth sources."

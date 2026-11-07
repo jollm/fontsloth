@@ -83,6 +83,7 @@
                                       nibble2)))
                         return (- ni i))))
     ((247 248 249 250 251 253 254) 1)
+    (255 4)
     (t 0)))
 
 (defun fontsloth-otf-cff-dict-parser-next (parser)
@@ -193,7 +194,10 @@
         ((and (<= 251 b) (>= 254 b))
          `(,(let ((b1 (elt data (1+ i))))
               (- (* -256 (- b 251))
-                 b1 108)) 1))))
+                 b1 108)) 1))
+        ((= 255 b)
+         `(,(/ (fontsloth-otf-cff-dict--read-sint 32 data (1+ i)) 65536.0)
+           4))))
 
 (provide 'fontsloth-otf-cff-dict)
 ;;; fontsloth-otf-cff-dict.el ends here

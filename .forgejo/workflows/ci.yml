@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: docker
+    container:
+      image: debian:trixie-slim
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Install Emacs, Guile, and test dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates \
+            emacs-nox \
+            elpa-async \
+            elpa-f \
+            elpa-logito \
+            elpa-pcache \
+            elpa-stream \
+            git \
+            guile-3.0 \
+            util-linux
+
+      - name: Install maak
+        run: |
+          git clone --depth 1 --branch v0.8.17 \
+            https://codeberg.org/jjba23/maak.git /tmp/maak
+          install -d /tmp/maak-install/share/guile/site/3.0 \
+            /tmp/maak-install/share/resources \
+            /tmp/maak-install/bin
+          cp -r /tmp/maak/src/maak /tmp/maak-install/share/guile/site/3.0/
+          cp -r /tmp/maak/resources/. /tmp/maak-install/share/resources/
+          install -m 755 /tmp/maak/scripts/maak /tmp/maak-install/bin/maak
+
+      - name: Byte-compile
+        run: /tmp/maak-install/bin/maak compile
+
+      - name: Test
+        run: /tmp/maak-install/bin/maak test

@@ -66,15 +66,16 @@ SCALE the scale factor"
    :width (* scale (fontsloth-glyph-outline-bounds-width bounds))
    :height (* scale (fontsloth-glyph-outline-bounds-height bounds))))
 
-(defun fontsloth-glyph-create (glyph-id scale units-per-em)
+(defun fontsloth-glyph-create (glyph-id scale units-per-em &optional font)
   "Construct a glyph given its id and desired units-per-em.
 GLYPH-ID the id
 SCALE the geometry scale
-UNITS-PER-EM the units per em"
+UNITS-PER-EM the units per em
+FONT an optional `fontsloth-otf-font'; defaults to the current context"
   (let ((geom (fontsloth-geometry-create scale units-per-em)))
-    (fontsloth-otf-outline-glyph glyph-id geom)
+    (fontsloth-otf-outline-glyph glyph-id geom font)
     (fontsloth-geometry-finalize
-     geom (fontsloth-otf-glyph-hor-advance glyph-id) 0.0)))
+     geom (fontsloth-otf-glyph-hor-advance glyph-id font) 0.0)))
 
 (provide 'fontsloth-glyph)
 ;;; fontsloth-glyph.el ends here

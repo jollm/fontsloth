@@ -418,33 +418,38 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos'")
 
 (declare-function fontsloth-otf--get-table-value "fontsloth-otf" (key tag))
 
-(defun fontsloth-otf-typo-gpos-get-script-table (script)
+(defun fontsloth-otf-typo-gpos-get-script-table (script &optional font)
   "Given SCRIPT try to find the corresponding GPOS script table.
-If SCRIPT is nil it will be the default script."
+If SCRIPT is nil it will be the default script.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
   (when-let* ((script (or script "DFLT"))
-              (script-list (fontsloth-otf--get-table-value 'script-list "GPOS"))
+              (script-list (fontsloth-otf--get-table-value
+                            'script-list "GPOS" font))
               (scripts (alist-get 'scripts script-list)))
     (seq-find (lambda (l) (equal script (alist-get 'tag l))) scripts)))
 
-(defun fontsloth-otf-typo-gpos-get-lang-sys-table (script lang)
+(defun fontsloth-otf-typo-gpos-get-lang-sys-table (script lang &optional font)
   "Given SCRIPT and LANG try to find the corresponding GPOS lang sys table.
 If SCRIPT is nil it will be the default script.
-If LANG is nil it will be the default lang sys."
-  (when-let ((script (fontsloth-otf-typo-gpos-get-script-table script))
+If LANG is nil it will be the default lang sys.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
+  (when-let ((script (fontsloth-otf-typo-gpos-get-script-table script font))
              (lang (or lang "DFLT")))
     (if (equal "DFLT" lang)
         (alist-get 'default-lang-sys script)
       (when-let ((langs (alist-get 'langs script)))
         (seq-find (lambda (l) (equal lang (alist-get 'tag l))) langs)))))
 
-(defun fontsloth-otf-typo-gpos-get-feature-table (script lang feature)
+(defun fontsloth-otf-typo-gpos-get-feature-table (script lang feature &optional font)
   "Given SCRIPT, LANG, and FEATURE try to find a GPOS feature table.
 If SCRIPT is nil it will be the default script.
-If LANG is nil it will be the default lang sys."
+If LANG is nil it will be the default lang sys.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
   (when-let* ((lang-sys (fontsloth-otf-typo-gpos-get-lang-sys-table
-                         script lang))
+                         script lang font))
               (feature-indices (alist-get 'feature-indices lang-sys))
-              (feature-list (fontsloth-otf--get-table-value 'feature-list "GPOS"))
+              (feature-list (fontsloth-otf--get-table-value
+                             'feature-list "GPOS" font))
               (features (alist-get 'features feature-list))
               (feature-idx (seq-find (lambda (i)
                                        (when-let ((f (elt features i)))
@@ -452,14 +457,17 @@ If LANG is nil it will be the default lang sys."
                                      feature-indices)))
     (elt features feature-idx)))
 
-(defun fontsloth-otf-typo-gpos-get-lookup-tables (script lang feature type)
+(defun fontsloth-otf-typo-gpos-get-lookup-tables
+    (script lang feature type &optional font)
   "Given SCRIPT and LANG find all FEATURE's GPOS lookup tables of TYPE.
 If SCRIPT is nil it will be the default script.
-If LANG is nil it will be the default lang sys."
+If LANG is nil it will be the default lang sys.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
   (when-let* ((feature (fontsloth-otf-typo-gpos-get-feature-table
-                        script lang feature))
+                        script lang feature font))
               (lookup-indices (alist-get 'lookup-indices feature))
-              (lookup-list (fontsloth-otf--get-table-value 'lookup-list "GPOS"))
+              (lookup-list (fontsloth-otf--get-table-value
+                            'lookup-list "GPOS" font))
               (lookups (alist-get 'lookups lookup-list)))
     (cl-loop for i in (seq-filter (lambda (i)
                                     (when-let ((l (elt lookups i)))
@@ -467,12 +475,13 @@ If LANG is nil it will be the default lang sys."
                                   lookup-indices)
              collect (elt lookups i))))
 
-(defsubst fontsloth-otf-typo-gpos-kerning-tables (script lang)
+(defsubst fontsloth-otf-typo-gpos-kerning-tables (script lang &optional font)
   "Find all GPOS \"kern\" feature lookup tables for SCRIPT and LANG.
 If SCRIPT is nil it will be the default script.
-If LANG is nil it will be the default lang sys."
+If LANG is nil it will be the default lang sys.
+FONT an optional `fontsloth-otf-font'; defaults to the current context."
   ;; TODO: enumerate the lookup type enumeration
-  (fontsloth-otf-typo-gpos-get-lookup-tables script lang "kern" 2))
+  (fontsloth-otf-typo-gpos-get-lookup-tables script lang "kern" 2 font))
 
 (defun fontsloth-otf-typo--bin-search (arr value)
   "Binary search (presumably ascendingly sorted) array ARR for VALUE.
@@ -533,14 +542,17 @@ Return class 0 if not found."
              (alist-get 'index range))))
       0))
 
-(defun fontsloth-otf-typo-gpos-hkern (left-glyph-id right-glyph-id)
+(defun fontsloth-otf-typo-gpos-hkern (left-glyph-id right-glyph-id
+                                      &optional font)
   "Try to kern a pair LEFT-GLYPH-ID/RIGHT-GLYPH-ID using default lang kerning.
 Return a x-advance adjustment or 0.
+FONT an optional `fontsloth-otf-font'; defaults to the current context.
 
 A matched pair whose x-advance is 0 is skipped rather than returned:
 GPOS lookups are cumulative, and the kern map builder keeps the first
 non-zero adjustment, so zero adjustments must not mask later lookups."
-  (or (when-let* ((kerning (fontsloth-otf-typo-gpos-kerning-tables nil "DFLT")))
+  (or (when-let* ((kerning (fontsloth-otf-typo-gpos-kerning-tables
+                            nil "DFLT" font)))
         (seq-some
          (lambda (k)
            (cl-loop
@@ -622,8 +634,9 @@ non-zero adjustment, so zero adjustments must not mask later lookups."
 (defvar fontsloth-otf-typo--max-expected-kern-pairs 1800000
   "Try to choose a reasonable number for most expected pair pos pairs.")
 
-(defun fontsloth-otf-typo-gpos-build-kern-mappings ()
+(defun fontsloth-otf-typo-gpos-build-kern-mappings (&optional font)
   "Try to index all active default lang kerning pairs into a flat map.
+FONT an optional `fontsloth-otf-font'; defaults to the current context.
 This is very expensive, but the result can be cached along with the font."
   ;; TODO: improve efficiency
   ;; the slowest portion is map-class-kerns
@@ -631,8 +644,9 @@ This is very expensive, but the result can be cached along with the font."
   ;; (and possibly then reverse index the covered glyphs by class)
   ;; map-pair-kerns should be O(num-pairs) which is the best given the task
   ;; map-class-kerns binary searches each left for its class
-  (when-let* ((kerning (fontsloth-otf-typo-gpos-kerning-tables nil "DFLT"))
-              (num-glyphs (fontsloth-otf-num-glyphs))
+  (when-let* ((kerning (fontsloth-otf-typo-gpos-kerning-tables
+                        nil "DFLT" font))
+              (num-glyphs (fontsloth-otf-num-glyphs font))
               (size-estimate (min (fontsloth-otf-typo--n-choose-k num-glyphs 2)
                                   fontsloth-otf-typo--max-expected-kern-pairs))
               (mappings (make-hash-table :test 'eq :size size-estimate)))

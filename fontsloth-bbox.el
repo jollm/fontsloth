@@ -44,6 +44,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(cl-float-limits)
 
 (cl-defstruct
     (fontsloth-bbox

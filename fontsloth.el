@@ -145,33 +145,35 @@ LINE-GAP the line gap"
 
 (defun fontsloth--load-font (path font-settings)
   "Load a font given file path PATH and settings FONT-SETTINGS."
-  (fontsloth-otf-load-font path)
-  (let* ((name (f-base path))
-         (char-to-glyph (fontsloth-otf-char-to-glyph-map))
-         (units-per-em (fontsloth-otf-units-per-em))
-         (glyph-count (fontsloth-otf-num-glyphs))
-         (glyphs (let ((glyphs (make-vector glyph-count nil)))
-                   (cl-loop for glyph-id being the hash-values of char-to-glyph
-                            do
-                            (unless (aref glyphs glyph-id)
-                              (aset glyphs glyph-id
-                                    (fontsloth-glyph-create
-                                     glyph-id
-                                     (fontsloth-font-settings-scale
-                                      font-settings)
-                                     units-per-em))))
-                   glyphs))
-         (horizontal-line-metrics (fontsloth-line-metrics-create
-                                   (fontsloth-otf-ascender)
-                                   (fontsloth-otf-descender)
-                                   (fontsloth-otf-line-gap)))
-         (horizontal-kern (fontsloth-otf-find-hkern-mappings))
-         (vertical-line-metrics nil) ; TODO: vertical line metrics
-         )
-    (record 'fontsloth-font fontsloth--font-data-version name units-per-em
-            glyphs char-to-glyph horizontal-line-metrics horizontal-kern
-            vertical-line-metrics font-settings
-            (secure-hash 'sha1 fontsloth-otf--current-font-bytes))))
+  (let ((font (fontsloth-otf-load-font-data path)))
+    (fontsloth-otf-with-font font
+      (let* ((name (f-base path))
+             (char-to-glyph (fontsloth-otf-char-to-glyph-map font))
+             (units-per-em (fontsloth-otf-units-per-em font))
+             (glyph-count (fontsloth-otf-num-glyphs font))
+             (glyphs (let ((glyphs (make-vector glyph-count nil)))
+                       (cl-loop for glyph-id being the hash-values of char-to-glyph
+                                do
+                                (unless (aref glyphs glyph-id)
+                                  (aset glyphs glyph-id
+                                        (fontsloth-glyph-create
+                                         glyph-id
+                                         (fontsloth-font-settings-scale
+                                          font-settings)
+                                         units-per-em
+                                         font))))
+                       glyphs))
+             (horizontal-line-metrics
+              (fontsloth-line-metrics-create
+               (fontsloth-otf-ascender font)
+               (fontsloth-otf-descender font)
+               (fontsloth-otf-line-gap font)))
+             (horizontal-kern (fontsloth-otf-find-hkern-mappings font))
+             (vertical-line-metrics nil)) ; TODO: vertical line metrics
+        (record 'fontsloth-font fontsloth--font-data-version name units-per-em
+                glyphs char-to-glyph horizontal-line-metrics horizontal-kern
+                vertical-line-metrics font-settings
+                (secure-hash 'sha1 (fontsloth-otf-font-bytes font)))))))
 
 (defun fontsloth--load-font-cached (path font-settings)
   "Retrieve a font from cache and if not load it with PATH and FONT-SETTINGS."
