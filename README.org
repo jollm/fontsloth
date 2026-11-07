@@ -289,14 +289,18 @@ maak benchmark
 maak benchmark -- test/fonts/fontsloth-test.ttf /path/to/font.ttf
 #+end_src
 
-The benchmark reports wall time, approximate bytes allocated, and retained
-heap for parsing, high-level loading/outlining, and two raster passes.
-=maak test= remains the correctness gate; the benchmark is for before/after
-measurements.  The captured eager baseline is in
+=maak benchmark= byte-compiles the sources first, then reports wall
+time, approximate bytes allocated, and retained heap for parsing,
+high-level loading/outlining, and two raster passes. Byte-compilation
+matters: interpreted closures can dominate outline measurements.
+=maak test= is for correctness. The benchmark is for before/after
+measurements. The captured eager baseline is in
 [[file:benchmarks/baseline.org][benchmarks/baseline.org]], the first lazy-outline results are in
 [[file:benchmarks/lazy-outline.org][benchmarks/lazy-outline.org]], the glyf bindat allocation results are
 in [[file:benchmarks/bindat-glyf.org][benchmarks/bindat-glyf.org]], and the GPOS/CFF results are in
-[[file:benchmarks/gpos-cff.org][benchmarks/gpos-cff.org]].
+[[file:benchmarks/gpos-cff.org][benchmarks/gpos-cff.org]].  Byte-compiled results are in
+[[file:benchmarks/compiled.org][benchmarks/compiled.org]]. Earlier files were captured from interpreted
+source.
 
 ** Compile and lint
 #+begin_src shell
@@ -307,7 +311,7 @@ maak clean
 
 ** Coverage
 #+begin_src shell
-# per-file coverage report; testcover cannot instrument every file yet
+# per-file coverage report, testcover cannot instrument every file yet
 maak coverage
 #+end_src
 

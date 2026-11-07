@@ -1,4 +1,7 @@
 #+TITLE: glyf bindat allocation results (2026-11-07)
+
+Note: these numbers were captured from interpreted source See
+=benchmarks/compiled.org= for byte-compiled results.
 #+OPTIONS: toc:nil ^:{} \n:t
 
 Replaced the per-glyph dynamically constructed bindat specs for the
@@ -48,3 +51,18 @@ numbers are unchanged within noise.
 
 The remaining parse allocation is now a target for the next pass:
 GPOS/CFF dynamic specs and the glyph/table alist construction itself.
+
+
+* Byte-compiled repeat (2026-11-07)
+
+Measured with byte-compiled sources at =a53197d= (before) and
+=f18cca7= (after), parse only, lazy mode.
+
+| Font | Stage | Parse time | Parse alloc | Parse retained |
+|------+-------+------------+-------------+----------------|
+| SF-Pro.ttf | before | 0.834s | 151.13 MB | 59.02 MB |
+| SF-Pro.ttf | after | **0.685s** | **82.26 MB** | 59.02 MB |
+
+Compiled parse is ~18% faster and allocates ~46% less. The interpreted
+table above was dominated by interpreted closures and overstates the
+absolute cost.

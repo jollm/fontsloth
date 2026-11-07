@@ -45,7 +45,6 @@
 ;;; Code:
 
 (require 'ert)
-(require 'stream)
 (require 'fontsloth-geometry)
 (require 'fontsloth-otf)
 (require 'fontsloth-otf-cff)
@@ -63,7 +62,7 @@
   "Run the charstring VALUES through a geometry outliner and return it."
   (let ((geom (fontsloth-geometry-create 1.0 1000)))
     (fontsloth-otf-cff-parse-char-string
-     (stream (apply #'fontsloth-otf-cff-test--bytes values))
+     (apply #'fontsloth-otf-cff-test--bytes values)
      nil 0 geom)
     geom))
 
@@ -202,27 +201,27 @@
   "Check that drawing before a move-to is rejected."
   (should-error
    (fontsloth-otf-cff-parse-char-string
-    (stream (fontsloth-otf-cff-test--bytes
+    (fontsloth-otf-cff-test--bytes
              (fontsloth-otf-cff-test--int 10)
              (fontsloth-otf-cff-test--int 10)
-             5 14))
+             5 14)
     nil 0 (fontsloth-geometry-create 1.0 1000))))
 
 (ert-deftest fontsloth-otf-cff-test-missing-endchar ()
   "Check that a charstring without endchar is rejected."
   (should-error
    (fontsloth-otf-cff-parse-char-string
-    (stream (fontsloth-otf-cff-test--bytes
+    (fontsloth-otf-cff-test--bytes
              (fontsloth-otf-cff-test--int 10)
              (fontsloth-otf-cff-test--int 10)
-             21))
+             21)
     nil 0 (fontsloth-geometry-create 1.0 1000))))
 
 (defun fontsloth-otf-cff-test--outline-with-metadata (metadata &rest values)
   "Run charstring VALUES with METADATA through a geometry outliner."
   (let ((geom (fontsloth-geometry-create 1.0 1000)))
     (fontsloth-otf-cff-parse-char-string
-     (stream (apply #'fontsloth-otf-cff-test--bytes values))
+     (apply #'fontsloth-otf-cff-test--bytes values)
      metadata 0 geom)
     geom))
 

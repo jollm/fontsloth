@@ -92,11 +92,18 @@ are re-run for every source file."
      source-files)))
 
 (define (benchmark . fonts)
-  "Run the load/outline/raster benchmark on FONTS.
-With no fonts, use the checked-in fixtures plus FONTSLOTH_BENCH_FONT."
-  (let ((args (if (null? fonts) "" (string-join fonts " "))))
-    ($ (list (format #f "~a --batch -L . -l scripts/benchmark.el -- ~a"
-                     emacs args)))))
+  "Byte-compile, then run the load/outline/raster benchmark on FONTS.
+With no fonts, use the checked-in fixtures plus FONTSLOTH_BENCH_FONT.
+Byte-compiling is important: interpreted closures dominate the
+outlining measurements and are not representative of installed use."
+  (compile)
+  (dynamic-wind
+    (lambda () #f)
+    (lambda ()
+      (let ((args (if (null? fonts) "" (string-join fonts " "))))
+        ($ (list (format #f "~a --batch -L . -l scripts/benchmark.el -- ~a"
+                         emacs args)))))
+    (lambda () (clean))))
 
 (define (checkdoc)
   "Run checkdoc over the fontsloth sources."

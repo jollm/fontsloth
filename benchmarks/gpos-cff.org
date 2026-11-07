@@ -1,5 +1,8 @@
 #+TITLE: GPOS/CFF allocation results (2026-11-07)
 
+Note: these numbers were captured from interpreted source. See
+=benchmarks/compiled.org= for byte-compiled results.
+
 Optimized the CFF char-string parser and GPOS spec construction, then
 made the GPOS kern map lazy. Measured with
 =SF-Pro-Text-Regular.otf= (4.3 MB, 27,250 glyphs, CFF outlines).
@@ -56,3 +59,19 @@ The full suite passes, including the GPOS zero-precedence regression,
 the lazily-built kern-map test, golden outlines, layout kerning, and the
 parser-vs-high-level outline comparison. The lazy kern map test checks
 that it is absent after load and present after the first lookup.
+
+
+* Byte-compiled repeat (2026-11-07)
+
+Measured with byte-compiled sources at =f18cca7= (before CFF/GPOS
+changes) and =ba99c42= (after), parse only, lazy mode.
+
+| Font | Stage | Parse time | Parse alloc | Parse retained |
+|------+-------+------------+-------------+----------------|
+| SF-Pro-Text-Regular.otf | before | 1.214s | 252.66 MB | 60.33 MB |
+| SF-Pro-Text-Regular.otf | after | **0.101s** | **39.01 MB** | **14.54 MB** |
+
+Compiled parse is ~12× faster, allocates ~85% less, and retains ~76%
+less.  The later CFF reader change is reflected in
+=benchmarks/compiled.org=. It mainly improves compiled outlining
+allocation (1,002 MB → 806 MB for all glyphs).

@@ -1,4 +1,7 @@
 #+TITLE: Lazy outlining results (2026-11-07)
+
+Note: these numbers were captured from interpreted source. See
+=benchmarks/compiled.org= for byte-compiled results.
 #+OPTIONS: toc:nil ^:{} \n:t
 
 First lazy-outlining implementation, measured against
@@ -47,7 +50,7 @@ the glyphs it actually renders.
 - Rasterization itself is unchanged (~0.17s / 37 MB for 200 SF Pro
   glyphs) and remains cheap relative to parsing/outlining.
 - The parser data (tables + raw bytes) is now retained per live font in
-  a weak registry.  SF Pro lazy load retains ~78 MB, which is roughly
+  a weak registry. SF Pro lazy load retains ~78 MB, which is roughly
   the parsed-table footprint. Dropping raw bytes after parsing is the
   next likely reduction.
 
@@ -72,3 +75,21 @@ SF Pro lazy retained heap drops from 77.89 MB to 59.02 MB, matching the
 19.8 MB source file size. Parsing time and allocation are unchanged,
 and the full-outline retained figure remains dominated by the glyph
 data (~314 MB).
+
+
+* Byte-compiled repeat (2026-11-07)
+
+Measured at commit =f5796ea= with byte-compiled sources.  Both modes use
+the same benchmark binary. =BENCH_LAZY=0= selects eager settings and
+=BENCH_LAZY=1= selects lazy settings.
+
+| Font | Mode | Parse | Load | Force all | Load retained | Force retained |
+|------+------+-------+------+-----------+---------------+----------------|
+| SF-Pro.ttf | eager | 0.820s / 151.13 MB | 8.126s / 879.79 MB | — | 314.75 MB | — |
+| SF-Pro.ttf | lazy | 0.923s / 151.13 MB | 0.791s / 151.33 MB | 7.152s / 728.45 MB | 78.10 MB | 314.34 MB |
+| Plex subset | eager | 0.005s / 3.75 MB | 0.094s / 9.89 MB | — | 1.91 MB | — |
+| Plex subset | lazy | 0.005s / 3.75 MB | 0.005s / 3.74 MB | 0.060s / 6.15 MB | 0.77 MB | 1.91 MB |
+
+Compiled lazy load is ~10× faster and retains ~4× less than compiled
+eager load. Full outlining via =force-all= brings the cumulative cost
+back near the eager level.

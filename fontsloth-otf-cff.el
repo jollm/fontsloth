@@ -47,7 +47,6 @@
 (require 'bindat)
 (require 'cl-lib)
 (require 'map)
-(require 'stream)
 
 (require 'fontsloth-bbox)
 (require 'fontsloth-otf-)
@@ -174,7 +173,7 @@ Defined in Adobe Technical Note #5176 Appendix C.")
   (when (< 0 size)
     `(,(cl-loop for b from (1- size) downto 0 while (<= 0 b)
                    for ash = (ash b 3) then (- ash 8)
-                   for part = (stream-pop s)
+                   for part = (fontsloth-otf-cff-reader-pop s)
                    for val = (if (numberp part) (ash part ash)
                                (error "Premature end of stream"))
                    sum val) ,s)))
@@ -187,12 +186,30 @@ Defined in Adobe Technical Note #5176 Appendix C.")
         (- n wrap)
       n)))
 
-(cl-defun fontsloth-otf-cff--stream-slice
-    (seq start &optional (end (length seq)))
-  "Stream from SEQ starting at START and ending at END."
-  (when (<= start end)
-    (stream-cons (when (< start end) (elt seq start))
-                 (fontsloth-otf-cff--stream-slice seq (1+ start) end))))
+(cl-defstruct
+    (fontsloth-otf-cff-reader
+     (:constructor fontsloth-otf-cff--reader-create))
+  "A simple index cursor over a byte string or vector."
+  (data nil)
+  (index 0))
+
+(defun fontsloth-otf-cff-reader (data)
+  "Return DATA as a `fontsloth-otf-cff-reader'.
+If DATA is already a reader, return it unchanged."
+  (if (fontsloth-otf-cff-reader-p data)
+      data
+    (fontsloth-otf-cff--reader-create :data data :index 0)))
+
+(defsubst fontsloth-otf-cff-reader-empty-p (reader)
+  "Return t if READER has no bytes left."
+  (>= (fontsloth-otf-cff-reader-index reader)
+      (length (fontsloth-otf-cff-reader-data reader))))
+
+(defsubst fontsloth-otf-cff-reader-pop (reader)
+  "Return the next byte from READER and advance it."
+  (let ((index (fontsloth-otf-cff-reader-index reader)))
+    (prog1 (aref (fontsloth-otf-cff-reader-data reader) index)
+      (setf (fontsloth-otf-cff-reader-index reader) (1+ index)))))
 
 (cl-defmacro fontsloth-otf-cff--make-dict-spec (s &optional rewind)
   "Let S read dictionary data in a lexical context of the dict index.
@@ -1004,7 +1021,7 @@ Using strings avoids constructing a bindat type for every char string."
 
 (defsubst fontsloth-otf-cff--parse-int2 (p op s)
   "Parse postscript int2 OP with parser P and stream S."
-  (let* ((b1 (stream-pop s))
+  (let* ((b1 (fontsloth-otf-cff-reader-pop s))
          (n (+ (* 256 (- op 247)) b1 108)))
     (cl-assert (and (>= 1131 n) (<= 108 n)))
     (fontsloth:debug* fontsloth-log "Pushing int2 %s" n)
@@ -1015,7 +1032,7 @@ Using strings avoids constructing a bindat type for every char string."
 
 (defsubst fontsloth-otf-cff--parse-int3 (p op s)
   "Parse postscript int3 OP with parser P and stream S."
-  (let* ((b1 (stream-pop s))
+  (let* ((b1 (fontsloth-otf-cff-reader-pop s))
          (n (- (* -256 (- op 251)) b1 108)))
     (cl-assert (and (<= -1131 n) (>= -108 n)))
     (fontsloth:debug* fontsloth-log "Pushing int3 %s" n)
@@ -1065,12 +1082,12 @@ Using strings avoids constructing a bindat type for every char string."
               (stack-pop s)
               (setf (fontsloth-otf-cff-parse-context-width-parsed ctx) t))
             (setf (fontsloth-otf-cff-parse-context-has-seac ctx) t)
-            (let ((base-char-string (stream (elt char-strings base-char))))
+            (let ((base-char-string (fontsloth-otf-cff-reader (elt char-strings base-char))))
               (-parse-char-string ctx base-char-string (1+ depth) p)
               (setf (fontsloth-otf-cff-char-string-parser-x p) dx
                     (fontsloth-otf-cff-char-string-parser-y p) dy))
             (let ((accent-char-string
-                   (stream (elt char-strings accent-char))))
+                   (fontsloth-otf-cff-reader (elt char-strings accent-char))))
               (-parse-char-string ctx accent-char-string (1+ depth) p)))
         (when (and (= 1 s-len) (not width-parsed))
           (stack-pop s)
@@ -1085,8 +1102,8 @@ Using strings avoids constructing a bindat type for every char string."
   "Parse a postscript CHAR-STRING in CTX at DEPTH with parser P."
   (fontsloth:debug* fontsloth-log "Parse-char-string, depth %s" depth)
   (cl-loop
-   until (stream-empty-p char-string)
-   for op = (stream-pop char-string)
+   until (fontsloth-otf-cff-reader-empty-p char-string)
+   for op = (fontsloth-otf-cff-reader-pop char-string)
    with s = (fontsloth-otf-cff-char-string-parser-stack p)
    with metadata = (fontsloth-otf-cff-parse-context-metadata ctx)
    with width-parsed = (fontsloth-otf-cff-parse-context-width-parsed ctx) do
@@ -1145,14 +1162,14 @@ Using strings avoids constructing a bindat type for every char string."
                            (length lsubrs)))
                     (index (fontsloth-otf-cff--conv-subr-index
                             (fontsloth-otf-cff-arguments-stack-pop s) bias))
-                    (char-string (stream (aref lsubrs index))))
+                    (char-string (fontsloth-otf-cff-reader (aref lsubrs index))))
             (fontsloth-otf-cff--parse-char-string ctx char-string (1+ depth) p)
           (error "No local subroutines"))
         (when (and (fontsloth-otf-cff-parse-context-has-endchar
                     ctx)
                    (not (fontsloth-otf-cff-parse-context-has-seac
                          ctx)))
-          (unless (stream-empty-p char-string)
+          (unless (fontsloth-otf-cff-reader-empty-p char-string)
             (error "Data after endchar"))
           (cl-return-from loop)))
        ((pred (eq fontsloth-otf-cff-return))
@@ -1160,7 +1177,7 @@ Using strings avoids constructing a bindat type for every char string."
         (cl-return-from loop))
        ((pred (eq fontsloth-otf-cff-dict-parser-two-byte-op-mark))
         (fontsloth:debug* fontsloth-log "Two-byte op %s" op)
-        (let ((op2 (stream-pop char-string)))
+        (let ((op2 (fontsloth-otf-cff-reader-pop char-string)))
           (pcase op2
             ((pred (eq fontsloth-otf-cff-hflex))
              (fontsloth:debug* fontsloth-log "Hflex %s %s" op op2)
@@ -1178,7 +1195,7 @@ Using strings avoids constructing a bindat type for every char string."
        ((pred (eq fontsloth-otf-cff-endchar))
         (fontsloth:debug* fontsloth-log "End-char %s" op)
         (fontsloth-otf-cff--char-string-endchar ctx depth p)
-        (unless (stream-empty-p char-string)
+        (unless (fontsloth-otf-cff-reader-empty-p char-string)
           (error "Data after endchar")))
        ((or (pred (eq fontsloth-otf-cff-hint-mask))
             (pred (eq fontsloth-otf-cff-counter-mask)))
@@ -1197,7 +1214,7 @@ Using strings avoids constructing a bindat type for every char string."
                  (s-advance (ash (+ 7 stem-len) -3)))
             (fontsloth:debug* fontsloth-log "Hint/counter-mask s-advance %s"
                               s-advance)
-            (cl-loop repeat s-advance do (stream-pop char-string)))))
+            (cl-loop repeat s-advance do (fontsloth-otf-cff-reader-pop char-string)))))
        ((pred (eq fontsloth-otf-cff-move-to))
         (fontsloth:debug* fontsloth-log "Move-to %s" op)
         (let ((i 0)
@@ -1245,13 +1262,13 @@ Using strings avoids constructing a bindat type for every char string."
                            (map-nested-elt global-subrs '(index count))))
                (index (fontsloth-otf-cff--conv-subr-index
                        (fontsloth-otf-cff-arguments-stack-pop s) subr-bias))
-               (char-string (stream (aref (alist-get 'data global-subrs) index))))
+               (char-string (fontsloth-otf-cff-reader (aref (alist-get 'data global-subrs) index))))
           (fontsloth-otf-cff--parse-char-string ctx char-string (1+ depth) p))
         (when (and (fontsloth-otf-cff-parse-context-has-endchar
                     ctx)
                    (not (fontsloth-otf-cff-parse-context-has-seac
                          ctx)))
-          (unless (stream-empty-p char-string)
+          (unless (fontsloth-otf-cff-reader-empty-p char-string)
             (error "Data after endchar"))
           (cl-return-from loop)))
        ((pred (eq fontsloth-otf-cff-vh-curve-to))
@@ -1275,7 +1292,8 @@ Using strings avoids constructing a bindat type for every char string."
 
 (defun fontsloth-otf-cff-parse-char-string (data metadata glyph-id outliner)
   "Interpret GLYPH-ID's postscript DATA with METADATA into OUTLINER."
-  (let* ((ctx (fontsloth-otf-cff-parse-context-create
+  (let* ((data (fontsloth-otf-cff-reader data))
+         (ctx (fontsloth-otf-cff-parse-context-create
                :metadata metadata
                :local-subrs (map-nested-elt metadata '(local-subrs data) nil)
                :glyph-id glyph-id))
@@ -1298,10 +1316,9 @@ Using strings avoids constructing a bindat type for every char string."
   "Outline GLYPH-ID given CFF table into OUTLINER."
   (fontsloth:verbose* fontsloth-log "Cff: outlining glyph %s" glyph-id)
   (when-let* ((char-strings (map-nested-elt cff '(char-strings data)))
-              (char-string (aref char-strings glyph-id))
-              (stream (stream char-string)))
+              (char-string (aref char-strings glyph-id)))
     (fontsloth:debug* fontsloth-log "Outlining char-string %s" char-string)
-    (fontsloth-otf-cff-parse-char-string stream cff glyph-id outliner)))
+    (fontsloth-otf-cff-parse-char-string char-string cff glyph-id outliner)))
 
 (provide 'fontsloth-otf-cff)
 ;; Local Variables:

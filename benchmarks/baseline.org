@@ -1,4 +1,7 @@
 #+TITLE: Phase 2 baseline (2026-11-07)
+
+Note: these numbers were captured from interpreted source. See
+=benchmarks/compiled.org= for byte-compiled results.
 #+OPTIONS: toc:nil ^:{} \n:t
 
 Baseline captured before any Phase 2 memory work, using
@@ -19,6 +22,7 @@ baseline. See =benchmarks/lazy-outline.org= for the first lazy results.
 * Command
 
 #+begin_src shell
+FONTSLOTH_BENCH_LAZY=0 \
 FONTSLOTH_BENCH_FONT=/gnu/store/zqrwsqs1lfk1ag3ni1zhv04skc4q36hc-font-apple-sf-pro-20.0d8e1/share/fonts/truetype/SF-Pro.ttf \
 FONTSLOTH_BENCH_RASTER_LIMIT=200 \
 maak benchmark
@@ -35,7 +39,7 @@ maak benchmark
 - =load+outline= is `fontsloth-load-font` with `:cache 'bypass`, which
   currently parses the font and eagerly outlines every cmap-reachable
   glyph.
-- =raster-first= and =raster-second= rasterize the same code points twice;
+- =raster-first= and =raster-second= rasterize the same code points twice.
   there is no raster cache, so both passes do equivalent work.
 
 These numbers are for before/after comparison, not absolute benchmarks.
@@ -51,7 +55,7 @@ Allocation counts include Emacs internals and vary between runs.
 | IBMPlexSerif-Regular-subset.otf | 29,560 | 0.582s | 186.73 MB | 0.77 MB | 1.908s | 561.05 MB | 1.90 MB | 159 | 158 | 0.130s / 25.72 MB |
 | SF-Pro.ttf | 19,783,640 | 17.507s | 6,326.36 MB | 77.89 MB | 63.331s | 14,627.57 MB | 314.53 MB | 27,262 | 7,925 | 0.166s / 37.37 MB |
 
-The raster pass column is the first pass; the second pass matched it
+The raster pass column is the first pass The second pass matched it
 within measurement noise. SF Pro rasterization was capped at 200 code
 points. The full 7,925 were not rasterized in this baseline.
 
@@ -67,3 +71,25 @@ points. The full 7,925 were not rasterized in this baseline.
 - The raw font bytes are retained by `fontsloth-otf-font` but not by the
   high-level `fontsloth-font`. The high-level retained figure is still
   large because of the fully outlined glyph vector.
+
+
+* Byte-compiled repeat (2026-11-07)
+
+Measured at commit =d4498f8= (pre-Phase-2) with byte-compiled sources.
+The identical run is available with =maak benchmark= (which compiles
+first) or directly via =scripts/benchmark.el= after =maak compile=.
+
+#+begin_src shell
+FONTSLOTH_BENCH_LAZY=0 \
+FONTSLOTH_BENCH_FONT=/gnu/store/zqrwsqs1lfk1ag3ni1zhv04skc4q36hc-font-apple-sf-pro-20.0d8e1/share/fonts/truetype/SF-Pro.ttf \
+FONTSLOTH_BENCH_RASTER_LIMIT=200 \
+maak benchmark
+#+end_src
+
+| Font | Parse | Load+outline | Load retained | Raster pass |
+|------+-------+--------------+---------------+-------------|
+| IBMPlexSerif-Regular-subset.otf | 0.005s / 3.75 MB | 0.081s / 9.89 MB | 1.91 MB | 0.024s / 5.19 MB |
+| SF-Pro.ttf | 0.835s / 151.13 MB | 8.127s / 879.79 MB | 314.75 MB | 0.037s / 7.62 MB |
+
+For SF Pro, the interpreted run in the main table was ~21× slower and
+allocated ~42× more for parse, and ~7.8× slower for load+outline.

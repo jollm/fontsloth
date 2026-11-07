@@ -1,0 +1,54 @@
+#+TITLE: Byte-compiled CFF outlining results (2026-11-07)
+
+The earlier benchmark files measured loaded =.el= source.  Interpreted
+closures dominate allocating loops, especially in the CFF outliner, so
+those numbers are not representative of installed use.  =maak
+benchmark= now byte-compiles first (and cleans up afterward).
+
+* Environment
+
+Same machine and Emacs as the other benchmark files.  Lazy outlining on,
+SF-Pro-Text-Regular.otf, raster limited to 50 code points.
+
+#+begin_src shell
+FONTSLOTH_BENCH_LAZY=1 \
+FONTSLOTH_BENCH_FONT=/home/jo/.guix-home/profile/share/fonts/opentype/SF-Pro-Text-Regular.otf \
+FONTSLOTH_BENCH_RASTER_LIMIT=50 \
+maak benchmark
+#+end_src
+
+* Results
+
+| Build | Phase | Time | Alloc | Retained |
+|-------+-------+------+-------+----------|
+| HEAD (before CFF/GPOS changes) | parse | 0.107s | 39.00 MB | 14.53 MB |
+| HEAD | force-all outline | 9.964s | 1,001.72 MB | 312.42 MB |
+| Current | parse | 0.103s | 39.00 MB | 14.53 MB |
+| Current | force-all outline | **9.312s** | **806.33 MB** | 312.42 MB |
+
+The CFF/GPOS changes reduce compiled full outlining allocation by
+~19% and time by ~6.5%.  Parsing is already negligible after
+compilation.
+
+Individual outline cost: rasterizing 50 SF Pro Text glyphs (which
+forces their outlines) takes 0.008s / 1.77 MB in compiled mode.  The
+same sample took 0.039s / 8.71 MB interpreted.
+
+* Why the earlier numbers were so large
+
+The interpreted `fontsloth-otf-cff--parse-char-string`/geometry loops
+create interpreted closures (`cconv-make-interpreted-closure`) on every
+iteration.  That was the source of the ~47 GB allocation and ~157s
+full-outline measurement.  The byte-compiled equivalent allocates
+~806 MB and takes ~9.3s for the same 27,250 glyphs.
+
+The remaining compiled outlining cost is mostly geometry: flattening
+cubic curves into lines and constructing the line objects.  CFF
+charstring parsing is no longer a dominant part of parse or outline
+time.
+
+* Correctness
+
+`maak test` passes both interpreted and with byte-compiled sources
+(CI compiles before testing).  Golden outlines and rasters are
+unchanged.
