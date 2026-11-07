@@ -122,9 +122,11 @@ LINE-GAP the line gap"
                (:copier nil))
   "Settings for a `fontsloth-font'."
   (collection-index 0 :type 'fixed)
-  (scale 40.0 :type 'number))
+  (scale 40.0 :type 'number)
+  (lazy-outline? t :type 'boolean
+                 :documentation "Outline glyphs on first use."))
 
-(defconst fontsloth--font-data-version 1
+(defconst fontsloth--font-data-version 2
   "For cache invalidation if fontsloth-font changes.")
 
 (cl-defstruct (fontsloth-font
@@ -133,8 +135,11 @@ LINE-GAP the line gap"
   "Describe a font."
   (-data-version fontsloth--font-data-version :type 'integer :read-only t)
   (name nil :type 'string :read-only t)
+  (source nil :type 'string :read-only t
+          :documentation "Path used to reload parser data for lazy outlines")
   (units-per-em 1000 :type 'number :read-only t)
-  (glyphs nil :type 'vector :read-only t)
+  (glyphs nil :type 'vector
+          :documentation "Glyph vector; nil entries are outlined on demand")
   (char-to-glyph nil :type 'hash-table :read-only t)
   (horizontal-line-metrics nil :type 'fontsloth-line-metrics :read-only t)
   (horizontal-kern nil :type 'hash-table :read-only t)
@@ -143,37 +148,91 @@ LINE-GAP the line gap"
             :read-only t)
   (hash 0 :type 'fixed :read-only t))
 
+(defvar fontsloth--lazy-fonts (make-hash-table :test 'eq :weakness 'key)
+  "Weak map from `fontsloth-font' to its transient `fontsloth-otf-font'.
+Keeping the parser data here rather than in the cached font avoids
+serializing tables and bytes into pcache.")
+
+(defun fontsloth--font-data (font)
+  "Return FONT's parser data, reloading it from FONT's source if needed."
+  (or (gethash font fontsloth--lazy-fonts)
+      (let ((source (fontsloth-font-source font)))
+        (unless source
+          (error "Cannot outline font %s lazily: no source path"
+                 (fontsloth-font-name font)))
+        (let ((data (fontsloth-otf-load-font-data source)))
+          (puthash font data fontsloth--lazy-fonts)
+          data))))
+
+(defun fontsloth-font-glyph (font glyph-id)
+  "Return FONT's GLYPH-ID, outlining it on first use.
+Returns nil when GLYPH-ID is out of range or nil."
+  (when (and glyph-id
+             (integerp glyph-id)
+             (<= 0 glyph-id)
+             (< glyph-id (length (fontsloth-font-glyphs font))))
+    (let ((glyphs (fontsloth-font-glyphs font)))
+      (if (not (fontsloth-font-settings-lazy-outline?
+                (fontsloth-font-settings font)))
+          (aref glyphs glyph-id)
+        (or (aref glyphs glyph-id)
+            (let ((glyph (fontsloth-glyph-create
+                          glyph-id
+                          (fontsloth-font-settings-scale
+                           (fontsloth-font-settings font))
+                          (fontsloth-font-units-per-em font)
+                          (fontsloth--font-data font))))
+              (aset glyphs glyph-id glyph)
+              glyph))))))
+
+(defun fontsloth-font-all-glyphs (font)
+  "Outline every mapped glyph in FONT and return its glyph vector.
+Useful for tests and benchmarks that need the eager representation."
+  (let ((seen (make-hash-table :test 'eq)))
+    (maphash (lambda (_code-point glyph-id)
+               (unless (gethash glyph-id seen)
+                 (puthash glyph-id t seen)
+                 (fontsloth-font-glyph font glyph-id)))
+             (fontsloth-font-char-to-glyph font)))
+  (fontsloth-font-glyphs font))
+
 (defun fontsloth--load-font (path font-settings)
   "Load a font given file path PATH and settings FONT-SETTINGS."
-  (let ((font (fontsloth-otf-load-font-data path)))
-    (fontsloth-otf-with-font font
+  (let* ((data (fontsloth-otf-load-font-data path))
+         (source (expand-file-name path)))
+    (fontsloth-otf-with-font data
       (let* ((name (f-base path))
-             (char-to-glyph (fontsloth-otf-char-to-glyph-map font))
-             (units-per-em (fontsloth-otf-units-per-em font))
-             (glyph-count (fontsloth-otf-num-glyphs font))
-             (glyphs (let ((glyphs (make-vector glyph-count nil)))
-                       (cl-loop for glyph-id being the hash-values of char-to-glyph
-                                do
-                                (unless (aref glyphs glyph-id)
-                                  (aset glyphs glyph-id
-                                        (fontsloth-glyph-create
-                                         glyph-id
-                                         (fontsloth-font-settings-scale
-                                          font-settings)
-                                         units-per-em
-                                         font))))
-                       glyphs))
+             (char-to-glyph (fontsloth-otf-char-to-glyph-map data))
+             (units-per-em (fontsloth-otf-units-per-em data))
+             (glyph-count (fontsloth-otf-num-glyphs data))
+             (glyphs (make-vector glyph-count nil))
              (horizontal-line-metrics
               (fontsloth-line-metrics-create
-               (fontsloth-otf-ascender font)
-               (fontsloth-otf-descender font)
-               (fontsloth-otf-line-gap font)))
-             (horizontal-kern (fontsloth-otf-find-hkern-mappings font))
+               (fontsloth-otf-ascender data)
+               (fontsloth-otf-descender data)
+               (fontsloth-otf-line-gap data)))
+             (horizontal-kern (fontsloth-otf-find-hkern-mappings data))
              (vertical-line-metrics nil)) ; TODO: vertical line metrics
-        (record 'fontsloth-font fontsloth--font-data-version name units-per-em
-                glyphs char-to-glyph horizontal-line-metrics horizontal-kern
-                vertical-line-metrics font-settings
-                (secure-hash 'sha1 (fontsloth-otf-font-bytes font)))))))
+        (let ((font (record 'fontsloth-font
+                            fontsloth--font-data-version name source
+                            units-per-em glyphs char-to-glyph
+                            horizontal-line-metrics horizontal-kern
+                            vertical-line-metrics font-settings
+                            (secure-hash 'sha1
+                                         (fontsloth-otf-font-bytes data)))))
+          (if (fontsloth-font-settings-lazy-outline? font-settings)
+              (puthash font data fontsloth--lazy-fonts)
+            (let ((seen (make-hash-table :test 'eq))
+                  (scale (fontsloth-font-settings-scale font-settings)))
+              (maphash
+               (lambda (_code-point glyph-id)
+                 (unless (gethash glyph-id seen)
+                   (puthash glyph-id t seen)
+                   (aset glyphs glyph-id
+                         (fontsloth-glyph-create glyph-id scale
+                                                 units-per-em data))))
+               char-to-glyph)))
+          font)))))
 
 (defun fontsloth--load-font-cached (path font-settings)
   "Retrieve a font from cache and if not load it with PATH and FONT-SETTINGS."
@@ -182,10 +241,14 @@ LINE-GAP the line gap"
                 (fontsloth-cache-put path font)
                 font)))
     (if-let ((cached-font (fontsloth-cache-get path)))
-        (if (eq (aref cached-font 1) fontsloth--font-data-version)
+        (if (and (eq (aref cached-font 1) fontsloth--font-data-version)
+                 (eq (fontsloth-font-settings-lazy-outline?
+                      (fontsloth-font-settings cached-font))
+                     (fontsloth-font-settings-lazy-outline? font-settings)))
             cached-font
           (message
-           "fontsloth: mismatched version, invalidating cache for %s" path)
+           "fontsloth: mismatched version or settings, invalidating cache for %s"
+           path)
           (fontsloth-cache-invalidate path)
           (load-font))
       (load-font))))
@@ -384,16 +447,16 @@ RIGHT-CODE-POINT the char code point for the right hand side"
 
 (defun fontsloth-font-metrics (font glyph-id px)
   "Return FONT's `fontsloth-metrics' for GLYPH-ID at PX pixel size."
-  (let ((glyph (aref (fontsloth-font-glyphs font) glyph-id))
-        (scale (fontsloth-font-scale-factor font px)))
-    (fontsloth-font-metrics-raw scale glyph 0.0)))
+  (when-let ((glyph (fontsloth-font-glyph font glyph-id)))
+    (fontsloth-font-metrics-raw (fontsloth-font-scale-factor font px)
+                                glyph 0.0)))
 
 (cl-defun fontsloth-font-rasterize (font glyph-id px &optional (subpixel? nil))
   "Rasterize FONT's glyph at GLYPH-ID in PX pixel size.
 Produces a greyscale pixmap suitable for PGM.  Returns
 `fontsloth-metrics+pixmap'.
 SUBPIXEL? optional t to produce a subpixel render suitable for PPM"
-  (when-let ((glyph (elt (fontsloth-font-glyphs font) glyph-id)))
+  (when-let ((glyph (fontsloth-font-glyph font glyph-id)))
     (pcase-let* ((scale (fontsloth-font-scale-factor font px))
                  (metrics (fontsloth-font-metrics-raw scale glyph 0.0))
                  ((cl-struct fontsloth-metrics

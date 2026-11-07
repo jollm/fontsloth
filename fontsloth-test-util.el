@@ -112,7 +112,7 @@ Tests should skip when the returned path does not exist."
 
 (defun fontsloth-test--outline-signatures (font)
   "Return an alist of glyph id to outline signature for FONT."
-  (let ((glyphs (fontsloth-font-glyphs font)))
+  (let ((glyphs (fontsloth-font-all-glyphs font)))
     (cl-loop for glyph-id in (fontsloth-test--glyph-ids
                               (fontsloth-font-char-to-glyph font))
              for glyph = (aref glyphs glyph-id)

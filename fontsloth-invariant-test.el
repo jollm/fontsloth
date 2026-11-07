@@ -100,7 +100,7 @@
                              nil nil #'equal)))
       (skip-unless (and (file-exists-p path) golden))
       (let* ((font (fontsloth-load-font path :cache 'bypass))
-             (glyphs (fontsloth-font-glyphs font)))
+             (glyphs (fontsloth-font-all-glyphs font)))
         (should (= (length golden)
                    (length (fontsloth-test--outline-signatures font))))
         (dolist (pair golden)
@@ -115,7 +115,7 @@
     (let ((path (fontsloth-test--fixture-font name)))
       (skip-unless (file-exists-p path))
       (let* ((font (fontsloth-load-font path :cache 'bypass))
-             (glyphs (fontsloth-font-glyphs font)))
+             (glyphs (fontsloth-font-all-glyphs font)))
         (dolist (glyph-id (fontsloth-test--glyph-ids
                            (fontsloth-font-char-to-glyph font)))
           (let* ((glyph (aref glyphs glyph-id))
@@ -144,7 +144,7 @@
     (let ((path (fontsloth-test--fixture-font name)))
       (skip-unless (file-exists-p path))
       (let* ((font (fontsloth-load-font path :cache 'bypass))
-             (glyphs (fontsloth-font-glyphs font)))
+             (glyphs (fontsloth-font-all-glyphs font)))
         (dolist (glyph-id (fontsloth-test--glyph-ids
                            (fontsloth-font-char-to-glyph font)))
           (let ((glyph (aref glyphs glyph-id)))
@@ -183,6 +183,12 @@
              (cached nil))
          (setq cached (fontsloth-cache-get path))
          (should cached)
+         (should (fontsloth-font-source cached))
+         ;; Drop the transient parser data so forcing outlines must
+         ;; reparse via the cached font's source path.
+         (remhash cached fontsloth--lazy-fonts)
+         (should (equal (fontsloth-test--outline-signatures cached)
+                        (fontsloth-test--outline-signatures-from-data path)))
          (should (equal (fontsloth-test--outline-signatures cached)
                         (fontsloth-test--outline-signatures font))))))))
 

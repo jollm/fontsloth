@@ -2,7 +2,8 @@
 #+OPTIONS: toc:nil ^:{} \n:t
 
 Baseline captured before any Phase 2 memory work, using
-=`scripts/benchmark.el`= via =maak benchmark=.
+=`scripts/benchmark.el`= via =maak benchmark=.  This is the eager
+baseline. See =benchmarks/lazy-outline.org= for the first lazy results.
 
 * Environment
 

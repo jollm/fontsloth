@@ -197,6 +197,16 @@ After installation:
 See [[*Usage caveats][Usage caveats]] for how to load fonts without caching them in pcache.
 
 ** Load and rasterize
+
+By default glyph outlines are produced lazily on the first metrics or
+raster request. To outline every mapped glyph during loading instead:
+
+#+begin_src emacs-lisp
+(fontsloth-load-font path
+                     :font-settings
+                     (fontsloth-font-settings-create :lazy-outline? nil))
+#+end_src
+
 #+begin_src emacs-lisp
   (require 'fontsloth)
   ;; Rasterize the fontawesome wifi icon and put it in a preview buffer
@@ -239,7 +249,7 @@ See [[*Usage caveats][Usage caveats]] for how to load fonts without caching them
 * Development
 Test fonts are checked in under =test/fonts/=, so the suite runs in
 batch without a window system and without relying on fonts installed on
-the machine.  Set =FONTSLOTH_TEST_FONT_DIR= to use a different directory.
+the machine. Set =FONTSLOTH_TEST_FONT_DIR= to use a different directory.
 
 ** Tests
 #+begin_src shell
@@ -282,8 +292,9 @@ maak benchmark -- test/fonts/fontsloth-test.ttf /path/to/font.ttf
 The benchmark reports wall time, approximate bytes allocated, and retained
 heap for parsing, high-level loading/outlining, and two raster passes.
 =maak test= remains the correctness gate; the benchmark is for before/after
-measurements.  The captured Phase 2 baseline is in
-[[file:benchmarks/baseline.org][benchmarks/baseline.org]].
+measurements.  The captured eager baseline is in
+[[file:benchmarks/baseline.org][benchmarks/baseline.org]] and the first lazy-outline results are in
+[[file:benchmarks/lazy-outline.org][benchmarks/lazy-outline.org]].
 
 ** Compile and lint
 #+begin_src shell

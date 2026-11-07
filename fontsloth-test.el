@@ -167,5 +167,36 @@
                   '((35 78) (79 82)) '((36 77) (78 344)))
                  '((78 79) (82 344)))))
 
+(ert-deftest fontsloth-test-lazy-outline ()
+  "Check lazy outlining matches eager outlining for a glyph and raster."
+  (skip-unless (f-exists-p fontsloth-test--font))
+  (let* ((lazy-settings (fontsloth-font-settings-create :lazy-outline? t))
+         (eager-settings (fontsloth-font-settings-create :lazy-outline? nil))
+         (lazy (fontsloth-load-font fontsloth-test--font
+                                    :font-settings lazy-settings
+                                    :cache 'bypass))
+         (eager (fontsloth-load-font fontsloth-test--font
+                                     :font-settings eager-settings
+                                     :cache 'bypass))
+         (glyph-id (fontsloth-font-glyph-id lazy fontsloth-test--glyph-code-point))
+         (glyphs (fontsloth-font-glyphs lazy)))
+    (should (fontsloth-font-settings-lazy-outline? lazy-settings))
+    (should (fontsloth-font-source lazy))
+    ;; The mapped glyph starts unoutlined, then is filled on first access.
+    (should-not (aref glyphs glyph-id))
+    (should (fontsloth-font-glyph lazy glyph-id))
+    (should (aref glyphs glyph-id))
+    ;; Eager mode fills mapped glyphs at load time.
+    (should (aref (fontsloth-font-glyphs eager) glyph-id))
+    (should (equal (fontsloth-test--outline-signatures lazy)
+                   (fontsloth-test--outline-signatures eager)))
+    (should (equal (fontsloth-test--raster-signature lazy glyph-id 24.0)
+                   (fontsloth-test--raster-signature eager glyph-id 24.0)))
+    ;; Forcing all glyphs fills the vector without changing outlines.
+    (should (fontsloth-font-all-glyphs lazy))
+    (should (equal (fontsloth-test--outline-signatures lazy)
+                   (fontsloth-test--outline-signatures eager)))))
+
 (provide 'fontsloth-test)
+
 ;;; fontsloth-test.el ends here

@@ -41,7 +41,7 @@
     (dolist (name generate-outline-golden--fixtures)
       (let* ((path (fontsloth-test--fixture-font name))
              (font (fontsloth-load-font path :cache 'bypass))
-             (glyphs (fontsloth-font-glyphs font))
+             (glyphs (fontsloth-font-all-glyphs font))
              (pairs (cl-loop
                      for (glyph-id . _signature)
                      in (fontsloth-test--outline-signatures font)

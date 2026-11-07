@@ -98,11 +98,21 @@ Emacs; the retained-heap figure comes from `garbage-collect' directly.")
     (princ (format "  parsed glyphs=%s\n"
                    (fontsloth-otf-num-glyphs parsed)))
     (setq parsed nil))
-  (let ((font nil))
-    (benchmark--print "load+outline"
+  (let* ((lazy? (not (= 0 (benchmark--env-number "FONTSLOTH_BENCH_LAZY" 1))))
+         (settings (fontsloth-font-settings-create :lazy-outline? lazy?))
+         (font nil))
+    (princ (format "  outline-mode=%s
+" (if lazy? "lazy" "eager")))
+    (benchmark--print (if lazy? "load(lazy)" "load+outline")
                       (benchmark--measure
                        (lambda ()
-                         (setq font (fontsloth-load-font path :cache 'bypass)))))
+                         (setq font (fontsloth-load-font
+                                     path :cache 'bypass
+                                     :font-settings settings)))))
+    (benchmark--print "force-all"
+                      (benchmark--measure
+                       (lambda ()
+                         (fontsloth-font-all-glyphs font))))
     (let* ((all-code-points (fontsloth-font-code-points font))
            (limit (benchmark--env-number "FONTSLOTH_BENCH_RASTER_LIMIT"
                                          (length all-code-points)))
