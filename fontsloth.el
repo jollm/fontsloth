@@ -126,7 +126,7 @@ LINE-GAP the line gap"
   (lazy-outline? t :type 'boolean
                  :documentation "Outline glyphs on first use."))
 
-(defconst fontsloth--font-data-version 2
+(defconst fontsloth--font-data-version 3
   "For cache invalidation if fontsloth-font changes.")
 
 (cl-defstruct (fontsloth-font
@@ -142,7 +142,8 @@ LINE-GAP the line gap"
           :documentation "Glyph vector; nil entries are outlined on demand")
   (char-to-glyph nil :type 'hash-table :read-only t)
   (horizontal-line-metrics nil :type 'fontsloth-line-metrics :read-only t)
-  (horizontal-kern nil :type 'hash-table :read-only t)
+  (horizontal-kern nil :type 'hash-table)
+  (horizontal-kern-loaded? nil :type 'boolean)
   (vertical-line-metrics nil :type 'fontsloth-line-metrics :read-only t)
   (settings (fontsloth-font-settings-create) :type 'fontsloth-font-settings
             :read-only t)
@@ -185,6 +186,14 @@ Returns nil when GLYPH-ID is out of range or nil."
               (aset glyphs glyph-id glyph)
               glyph))))))
 
+(defun fontsloth-font-kern-map (font)
+  "Return FONT's horizontal kern mapping, building it on first use."
+  (unless (fontsloth-font-horizontal-kern-loaded? font)
+    (setf (fontsloth-font-horizontal-kern font)
+          (fontsloth-otf-find-hkern-mappings (fontsloth--font-data font))
+          (fontsloth-font-horizontal-kern-loaded? font) t))
+  (fontsloth-font-horizontal-kern font))
+
 (defun fontsloth-font-all-glyphs (font)
   "Outline every mapped glyph in FONT and return its glyph vector.
 Useful for tests and benchmarks that need the eager representation."
@@ -211,12 +220,13 @@ Useful for tests and benchmarks that need the eager representation."
                (fontsloth-otf-ascender data)
                (fontsloth-otf-descender data)
                (fontsloth-otf-line-gap data)))
-             (horizontal-kern (fontsloth-otf-find-hkern-mappings data))
+             (horizontal-kern nil)
              (vertical-line-metrics nil)) ; TODO: vertical line metrics
         (let ((font (record 'fontsloth-font
                             fontsloth--font-data-version name source
                             units-per-em glyphs char-to-glyph
                             horizontal-line-metrics horizontal-kern
+                            nil ; horizontal-kern-loaded?
                             vertical-line-metrics font-settings
                             (fontsloth-otf-font-hash data))))
           (if (fontsloth-font-settings-lazy-outline? font-settings)
@@ -403,7 +413,7 @@ See `fontsloth-font-code-point-ranges' to get code point ranges for a font."
 (defun fontsloth-font-horizontal-kern-by-id (font left right px)
   "Return FONT's horizontal kern value for LEFT/RIGHT scaled to PX or 0."
   (let ((scale (fontsloth-font-scale-factor font px)))
-    (* (or (when-let ((mappings (fontsloth-font-horizontal-kern font)))
+    (* (or (when-let ((mappings (fontsloth-font-kern-map font)))
              (gethash (logior (ash left 16) right) mappings))
            0)
        scale)))

@@ -226,13 +226,27 @@ REWIND is t if bindat-idx should be positioned back to start"
      (top-dict-end unit bindat-idx)))
   "A CFF top dict spec.")
 
+(defun fontsloth-otf-cff--unpack-char-strings (count offsets)
+  "Slice COUNT char strings from the bytes at `bindat-idx'.
+OFFSETS is the CFF index offset vector.  The data starts at `bindat-idx'.
+Using strings avoids constructing a bindat type for every char string."
+  (let* ((start bindat-idx)
+         (last (elt offsets count))
+         (data (make-vector count nil)))
+    (dotimes (i count)
+      (let ((begin (elt offsets i))
+            (end (elt offsets (1+ i))))
+        ;; CFF INDEX offsets are 1-based relative to the data start.
+        (aset data i (substring bindat-raw (+ start begin -1)
+                                (+ start end -1)))))
+    (setq bindat-idx (+ start last -1))
+    data))
+
 (defvar fontsloth-otf-cff--char-strings-spec
   (fontsloth-otf-cff--make-dict-spec
    (bindat-type
      (_ unit (ignore offset-array-start offset-size offsets-len))
-     (data vec count type
-           (bindat-type repeat (- (elt offsets (1+ bindat--i))
-                               (elt offsets bindat--i)) uint 8))
+     (data unit (fontsloth-otf-cff--unpack-char-strings count offsets))
      (char-strings-end unit bindat-idx)) t)
   "CFF char strings spec.")
 

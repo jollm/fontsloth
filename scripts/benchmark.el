@@ -87,8 +87,9 @@ Emacs; the retained-heap figure comes from `garbage-collect' directly.")
 
 (defun benchmark--font (path)
   "Measure PATH."
-  (princ (format "FONT %s (%d bytes)\n" path (file-attribute-size
-                                             (file-attributes path))))
+  (princ (format "FONT %s (%d bytes)\n" path
+                 (file-attribute-size
+                  (file-attributes (file-truename path)))))
   (let ((parsed nil))
     (benchmark--print "parse"
                       (benchmark--measure
@@ -109,10 +110,11 @@ Emacs; the retained-heap figure comes from `garbage-collect' directly.")
                          (setq font (fontsloth-load-font
                                      path :cache 'bypass
                                      :font-settings settings)))))
-    (benchmark--print "force-all"
-                      (benchmark--measure
-                       (lambda ()
-                         (fontsloth-font-all-glyphs font))))
+    (unless (getenv "FONTSLOTH_BENCH_SKIP_FORCE")
+      (benchmark--print "force-all"
+                        (benchmark--measure
+                         (lambda ()
+                           (fontsloth-font-all-glyphs font)))))
     (let* ((all-code-points (fontsloth-font-code-points font))
            (limit (benchmark--env-number "FONTSLOTH_BENCH_RASTER_LIMIT"
                                          (length all-code-points)))

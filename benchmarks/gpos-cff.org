@@ -1,0 +1,58 @@
+#+TITLE: GPOS/CFF allocation results (2026-11-07)
+
+Optimized the CFF char-string parser and GPOS spec construction, then
+made the GPOS kern map lazy. Measured with
+=SF-Pro-Text-Regular.otf= (4.3 MB, 27,250 glyphs, CFF outlines).
+
+* Environment and command
+
+Same environment as the other benchmarks. Lazy outlining enabled.
+Force-all skipped so the parse comparison is not dominated by CFF
+outlining.
+
+#+begin_src shell
+FONTSLOTH_BENCH_LAZY=1 \
+FONTSLOTH_BENCH_SKIP_FORCE=1 \
+FONTSLOTH_BENCH_FONT=/home/jo/.guix-home/profile/share/fonts/opentype/SF-Pro-Text-Regular.otf \
+FONTSLOTH_BENCH_RASTER_LIMIT=50 \
+maak benchmark
+#+end_src
+
+* Results
+
+| Stage | Parse time | Parse alloc | Parse retained |
+|-------+-----------+-------------+----------------|
+| Before | 9.679s | 3,241.25 MB | 60.32 MB |
+| After CFF char-string slicing | 7.400s | 2,215.60 MB | 14.53 MB |
+| After GPOS spec caching | 5.832s | 1,613.86 MB | 14.53 MB |
+| After lazy GPOS kern map | **3.778s** | **1,402.71 MB** | **14.53 MB** |
+
+Net change: ~2.56× faster parse, ~57% less allocation, and ~76% less
+retained heap. The retained drop comes from storing CFF char strings
+as byte strings rather than byte vectors. The allocation and time drops
+come from removing per-char-string and per-GPOS-subtable spec
+construction and deferring the large kern hash.
+
+Plex subset (CFF, 159 glyphs) also improved slightly:
+parse 0.650s → 0.569s, allocation 186.73 MB → 179.96 MB,
+retained 0.74 MB → 0.59 MB.
+
+* What changed
+
+- CFF char strings are sliced directly from the parsed INDEX instead of
+  constructing a `(bindat-type repeat ...)` per char string.  The CFF
+  INDEX offsets are 1-based, so slicing subtracts one from both ends.
+- GPOS value-record specs are cached by format.
+- GPOS pair-set specs are cached by value-format pair.
+- GPOS lookup subtable specs are cached by lookup type.
+- The GPOS kern mapping is no longer built during parsing. It is built
+  on the first horizontal-kern lookup and cached in the font's
+  `horizontal-kern` slot (`fontsloth-font-kern-map`).
+- The font data version was bumped to 3 so cached fonts are invalidated.
+
+* Correctness
+
+The full suite passes, including the GPOS zero-precedence regression,
+the lazily-built kern-map test, golden outlines, layout kerning, and the
+parser-vs-high-level outline comparison. The lazy kern map test checks
+that it is absent after load and present after the first lookup.

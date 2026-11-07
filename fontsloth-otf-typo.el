@@ -183,29 +183,46 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gdef'")
                        (lookup-indices vec lookup-count uint 16)))))
   "A spec for a GPOS feature list.")
 
+(defvar fontsloth-otf-typo--value-record-specs (make-hash-table :test 'eq)
+  "Cache of GPOS value record specs by format.")
+
 (defun fontsloth-otf-typo--make-value-record-spec (format)
-  "Given FORMAT, make a GPOS value record spec.
+  "Given FORMAT, return a GPOS value record spec.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos
 #valueRecord'
 Currently only format 4 x-advance is supported.
 TODO: support more formats"
-  (cl-case format
-    (0 (bindat-type unit nil))
-    (4 (bindat-type (x-advance sint 16 nil)))
-    (t (bindat-type unit nil))))
+  (or (gethash format fontsloth-otf-typo--value-record-specs)
+      (let ((spec (cl-case format
+                    (0 (bindat-type unit nil))
+                    (4 (bindat-type (x-advance sint 16 nil)))
+                    (t (bindat-type unit nil)))))
+        (puthash format spec fontsloth-otf-typo--value-record-specs)
+        spec)))
+
+(defvar fontsloth-otf-typo--pair-set-specs (make-hash-table :test 'equal)
+  "Cache of GPOS pair set specs by value format pair.")
 
 (defun fontsloth-otf-typo--make-pair-set-spec (value-format-1 value-format-2)
   "Given VALUE-FORMAT-1 and VALUE-FORMAT-2, return a GPOS pair set spec.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable'"
-  (bindat-type
-    (count uint 16)
-    (pair-values vec count type
-                 (bindat-type
-                   (second-glyph-id uint 16)
-                   (value-1 type (fontsloth-otf-typo--make-value-record-spec
-                                  value-format-1))
-                   (value-2 type (fontsloth-otf-typo--make-value-record-spec
-                                  value-format-2))))))
+  (let ((key (cons value-format-1 value-format-2)))
+    (or (gethash key fontsloth-otf-typo--pair-set-specs)
+        (let ((spec
+               (bindat-type
+                 (count uint 16)
+                 (pair-values
+                  vec count type
+                  (bindat-type
+                    (second-glyph-id uint 16)
+                    (value-1 type
+                             (fontsloth-otf-typo--make-value-record-spec
+                              value-format-1))
+                    (value-2 type
+                             (fontsloth-otf-typo--make-value-record-spec
+                              value-format-2)))))))
+          (puthash key spec fontsloth-otf-typo--pair-set-specs)
+          spec))))
 
 (defun fontsloth-otf-typo--make-pair-pos-spec (offset format)
   "Given pair pos table OFFSET and FORMAT, return a GPOS pair pos spec.
@@ -315,6 +332,9 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#anchor-t
   "A spec for a GPOS base array.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#mark-to-base-attachment-positioning-format-1-mark-to-base-attachment-point'")
 
+(defvar fontsloth-otf-typo--lookup-subtable-specs (make-hash-table :test 'eq)
+  "Cache of GPOS lookup subtable specs by lookup type.")
+
 (defun fontsloth-otf-typo--make-lookup-subtable-spec (lookup-type)
   "Given LOOKUP-TYPE, return a spec for a GSUB/GPOS lookup subtable.
 See URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2
@@ -322,9 +342,11 @@ See URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2
 Currently only GPOS type 2 pair positioning adjustment and GPOS type 4
 mark-to-base attachement are supported.
 TODO: support more types"
-  (cl-case lookup-type
-    (2 fontsloth-otf-typo--pair-pos-spec)
-    (4 (bindat-type
+  (or (gethash lookup-type fontsloth-otf-typo--lookup-subtable-specs)
+      (let ((spec
+             (cl-case lookup-type
+               (2 fontsloth-otf-typo--pair-pos-spec)
+               (4 (bindat-type
          (offset-base unit bindat-idx)
          (format uint 16)
          (mark-coverage-offset uint 16)
@@ -344,7 +366,9 @@ TODO: support more types"
          (base-array type (fontsloth-otf-typo--offset-spec
                            (+ offset-base base-array-offset)
                            fontsloth-otf-typo--base-array-spec))))
-    (t (bindat-type unit nil))))
+               (t (bindat-type unit nil)))))
+        (puthash lookup-type spec fontsloth-otf-typo--lookup-subtable-specs)
+        spec)))
 
 (defvar fontsloth-otf-typo--lookup-flag-spec
   (bindat-type

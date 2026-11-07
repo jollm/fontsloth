@@ -294,8 +294,9 @@ heap for parsing, high-level loading/outlining, and two raster passes.
 =maak test= remains the correctness gate; the benchmark is for before/after
 measurements.  The captured eager baseline is in
 [[file:benchmarks/baseline.org][benchmarks/baseline.org]], the first lazy-outline results are in
-[[file:benchmarks/lazy-outline.org][benchmarks/lazy-outline.org]], and the glyf bindat allocation results are
-in [[file:benchmarks/bindat-glyf.org][benchmarks/bindat-glyf.org]].
+[[file:benchmarks/lazy-outline.org][benchmarks/lazy-outline.org]], the glyf bindat allocation results are
+in [[file:benchmarks/bindat-glyf.org][benchmarks/bindat-glyf.org]], and the GPOS/CFF results are in
+[[file:benchmarks/gpos-cff.org][benchmarks/gpos-cff.org]].
 
 ** Compile and lint
 #+begin_src shell

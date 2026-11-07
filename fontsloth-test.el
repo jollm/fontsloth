@@ -197,6 +197,21 @@
     (should (equal (fontsloth-test--outline-signatures lazy)
                    (fontsloth-test--outline-signatures eager)))))
 
+(ert-deftest fontsloth-test-lazy-kern-map ()
+  "Check that the GPOS kern map is built on first use."
+  (let ((path (fontsloth-test--fixture-font
+               "IBMPlexSerif-Regular-subset.otf")))
+    (skip-unless (f-exists-p path))
+    (let ((font (fontsloth-load-font path :cache 'bypass)))
+      (should-not (fontsloth-font-horizontal-kern font))
+      (should-not (fontsloth-font-horizontal-kern-loaded? font))
+      (should (= (fontsloth-font-horizontal-kern-by-code-point
+                  font ?& ?δ 1000.0)
+                 -5.0))
+      (should (fontsloth-font-horizontal-kern-loaded? font))
+      (should (hash-table-p (fontsloth-font-horizontal-kern font))))))
+
 (provide 'fontsloth-test)
+
 
 ;;; fontsloth-test.el ends here

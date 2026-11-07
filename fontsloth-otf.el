@@ -834,11 +834,7 @@ COLL-INDEX is currently ignored (font collections are not supported)."
       ;; (when (gethash "GDEF" props)
       ;;   (put-table "GDEF" (unpack-table "GDEF" fontsloth-otf-typo-gdef-spec)))
       (when (gethash "GPOS" props)
-        (put-table "GPOS" (unpack-table "GPOS" fontsloth-otf-typo-gpos-spec))
-        (put-table
-         "GPOS"
-         (cons `(mappings . , (fontsloth-otf-typo-gpos-build-kern-mappings))
-               (gethash "GPOS" fontsloth-otf--current-tables))))
+        (put-table "GPOS" (unpack-table "GPOS" fontsloth-otf-typo-gpos-spec)))
       fontsloth-otf--current-tables)))
 
 (cl-defun fontsloth-otf-load-font-data (ttf-path &key (coll-index 0))
@@ -979,7 +975,10 @@ FONT is ignored; vertical metrics are not implemented yet."
 FONT an optional `fontsloth-otf-font'; defaults to the current context."
   (when-let ((table (or (gethash "kern" (fontsloth-otf--font-tables font))
                         (gethash "GPOS" (fontsloth-otf--font-tables font)))))
-    (alist-get 'mappings table)))
+    (or (alist-get 'mappings table)
+        (let ((mappings (fontsloth-otf-typo-gpos-build-kern-mappings font)))
+          (setf (alist-get 'mappings table) mappings)
+          mappings))))
 
 ;;; generics for glyph outline construction (not table specific):
 
