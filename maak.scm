@@ -15,8 +15,8 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (maak maak)
-  #:export (default all compile test test-file coverage lint checkdoc
-            package-lint clean))
+  #:export (default all compile test test-file coverage benchmark lint
+            checkdoc package-lint clean))
 
 (define emacs (or (getenv "EMACS") "emacs"))
 
@@ -88,6 +88,13 @@ every source file."
        ($ (list (format #f "~a --batch -L . -l scripts/coverage.el -- ~a ~a"
                         emacs source tests))))
      source-files)))
+
+(define (benchmark . fonts)
+  "Run the load/outline/raster benchmark on FONTS.
+With no fonts, use the checked-in fixtures plus FONTSLOTH_BENCH_FONT."
+  (let ((args (if (null? fonts) "" (string-join fonts " "))))
+    ($ (list (format #f "~a --batch -L . -l scripts/benchmark.el -- ~a"
+                     emacs args)))))
 
 (define (checkdoc)
   "Run checkdoc over the fontsloth sources."

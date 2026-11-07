@@ -1,0 +1,68 @@
+#+TITLE: Phase 2 baseline (2026-11-07)
+#+OPTIONS: toc:nil ^:{} \n:t
+
+Baseline captured before any Phase 2 memory work, using
+=`scripts/benchmark.el`= via =maak benchmark=.
+
+* Environment
+
+| Item        | Value                                        |
+|-------------+----------------------------------------------|
+| Date        | 2026-11-07T07:50:51-0800                     |
+| Emacs       | 31.1                                          |
+| System      | Linux 7.2.14 x86_64                           |
+| CPU         | AMD Ryzen 9 5900X 12-Core                     |
+| Raster size | 32.0 px                                      |
+| SF Pro cap  | 200 code points rasterized per pass           |
+
+* Command
+
+#+begin_src shell
+FONTSLOTH_BENCH_FONT=/gnu/store/zqrwsqs1lfk1ag3ni1zhv04skc4q36hc-font-apple-sf-pro-20.0d8e1/share/fonts/truetype/SF-Pro.ttf \
+FONTSLOTH_BENCH_RASTER_LIMIT=200 \
+maak benchmark
+#+end_src
+
+* Method
+
+- =time= is wall-clock time for the measured call.
+- =alloc= is an approximate byte count derived from the difference in
+  =memory-use-counts= before and after the call.
+- =retained= is the change in approximate used heap reported by
+  =garbage-collect= after forcing a collection.
+- =parse= is `fontsloth-otf-load-font-data`.
+- =load+outline= is `fontsloth-load-font` with `:cache 'bypass`, which
+  currently parses the font and eagerly outlines every cmap-reachable
+  glyph.
+- =raster-first= and =raster-second= rasterize the same code points twice;
+  there is no raster cache, so both passes do equivalent work.
+
+These numbers are for before/after comparison, not absolute benchmarks.
+Allocation counts include Emacs internals and vary between runs.
+
+* Results
+
+| Font | Bytes | Parse | Parse alloc | Parse retained | Load+outline | Load alloc | Load retained | Glyphs | Code points | Raster pass |
+|------+-------+-------+-------------+----------------+--------------+------------+---------------+--------+-------------+-------------|
+| fontsloth-test.ttf | 1,184 | 0.004s | 1.71 MB | 0.01 MB | 0.006s | 2.15 MB | 0.03 MB | 7 | 6 | 0.002s / 0.54 MB |
+| fontsloth-test.otf | 1,188 | 0.004s | 1.90 MB | 0.02 MB | 0.011s | 4.47 MB | 0.02 MB | 7 | 6 | 0.002s / 0.51 MB |
+| fontsloth-test.woff | 888 | 0.004s | 1.73 MB | 0.01 MB | 0.006s | 2.14 MB | 0.02 MB | 7 | 6 | 0.002s / 0.54 MB |
+| IBMPlexSerif-Regular-subset.otf | 29,560 | 0.582s | 186.73 MB | 0.77 MB | 1.908s | 561.05 MB | 1.90 MB | 159 | 158 | 0.130s / 25.72 MB |
+| SF-Pro.ttf | 19,783,640 | 17.507s | 6,326.36 MB | 77.89 MB | 63.331s | 14,627.57 MB | 314.53 MB | 27,262 | 7,925 | 0.166s / 37.37 MB |
+
+The raster pass column is the first pass; the second pass matched it
+within measurement noise. SF Pro rasterization was capped at 200 code
+points. The full 7,925 were not rasterized in this baseline.
+
+* Observations
+
+- SF Pro parse alone allocates ~6.3 GB and retains ~78 MB. Eager
+  load+outline allocates ~14.6 GB and retains ~315 MB. Eager outlining
+  is the dominant cost, as expected.
+- The Plex subset shows the same shape at smaller scale: parse retains
+  ~0.8 MB, while load+outline retains ~1.9 MB and allocates ~561 MB.
+- Rasterization is cheap relative to loading/outlining at these sizes,
+  but the per-glyph allocation is still significant for large fonts.
+- The raw font bytes are retained by `fontsloth-otf-font` but not by the
+  high-level `fontsloth-font`. The high-level retained figure is still
+  large because of the fully outlined glyph vector.
