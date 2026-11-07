@@ -76,17 +76,19 @@ KERNING-VALUES the actual kerning values"
                (elt left-hand-classes left))
               (right-class
                (elt right-hand-classes right)))
-          (unless (and (< left-class
-                          left-hand-classes-count)
-                       (< right-class
-                          right-hand-classes-count))
+          ;; Class 0 means "not kerned"; classes outside the declared
+          ;; ranges are invalid and are skipped as well.
+          (when (and (< 0 left-class)
+                     (< 0 right-class)
+                     (< left-class left-hand-classes-count)
+                     (< right-class right-hand-classes-count))
             (let* ((index (+ right-class
                              (* left-class
                                 right-hand-classes-count)))
                    (index (elt indices index))
-                   (id (logior (ash left 16) right))
-                   (value (elt kerning-values index)))
-              (puthash id value mappings))))))
+                   (id (logior (ash left 16) right)))
+              (when (< index (length kerning-values))
+                (puthash id (elt kerning-values index) mappings)))))))
     mappings))
 
 (defvar fontsloth-otf-kern--format0-spec

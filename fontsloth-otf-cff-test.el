@@ -218,5 +218,105 @@
              21))
     nil 0 (fontsloth-geometry-create 1.0 1000))))
 
+(defun fontsloth-otf-cff-test--outline-with-metadata (metadata &rest values)
+  "Run charstring VALUES with METADATA through a geometry outliner."
+  (let ((geom (fontsloth-geometry-create 1.0 1000)))
+    (fontsloth-otf-cff-parse-char-string
+     (stream (apply #'fontsloth-otf-cff-test--bytes values))
+     metadata 0 geom)
+    geom))
+
+(defun fontsloth-otf-cff-test--curve-case (op operands)
+  "Check a curve operator OP with OPERANDS produces at least one line."
+  (let* ((values (append (list (fontsloth-otf-cff-test--int 0)
+                              (fontsloth-otf-cff-test--int 0)
+                              21)
+                         (mapcar #'fontsloth-otf-cff-test--int operands)
+                         (list op 14)))
+         (geom (apply #'fontsloth-otf-cff-test--outline values))
+         (lines (fontsloth-otf-cff-test--lines geom)))
+    (should (>= (length lines) 1))))
+
+(ert-deftest fontsloth-otf-cff-test-alternating-curves ()
+  "Check hh, vv, hv, and vh curve operators."
+  (fontsloth-otf-cff-test--curve-case 27 '(10 10 10 10)) ; hhcurveto
+  (fontsloth-otf-cff-test--curve-case 26 '(10 10 10 10)) ; vvcurveto
+  (fontsloth-otf-cff-test--curve-case 31 '(10 10 10 10)) ; hvcurveto
+  (fontsloth-otf-cff-test--curve-case 30 '(10 10 10 10))) ; vhcurveto
+
+(ert-deftest fontsloth-otf-cff-test-flex-operators ()
+  "Check flex, hflex, flex1, and hflex1 operators."
+  (let ((prefix (list (fontsloth-otf-cff-test--int 0)
+                      (fontsloth-otf-cff-test--int 0)
+                      21))
+        (suffix '(14)))
+    (dolist (case (list (cons 7 '(12 34))  ; hflex
+                        (cons 13 '(12 35)) ; flex
+                        (cons 9 '(12 36))  ; hflex1
+                        (cons 11 '(12 37)))) ; flex1
+      (let* ((values (append prefix
+                             (make-list (car case)
+                                        (fontsloth-otf-cff-test--int 10))
+                             (cdr case)
+                             suffix))
+             (geom (apply #'fontsloth-otf-cff-test--outline values))
+             (lines (fontsloth-otf-cff-test--lines geom)))
+        (should (> (length lines) 1))))))
+
+(ert-deftest fontsloth-otf-cff-test-hint-masks ()
+  "Check that hint and counter masks are skipped without truncating the stack."
+  (dolist (op '(19 20))
+    (let* ((values (append (list (fontsloth-otf-cff-test--int 0)
+                                 (fontsloth-otf-cff-test--int 0)
+                                 21
+                                 (fontsloth-otf-cff-test--int 10)
+                                 (fontsloth-otf-cff-test--int 20)
+                                 op
+                                 0 ; one mask byte: one stem
+                                 (fontsloth-otf-cff-test--int 50)
+                                 (fontsloth-otf-cff-test--int 10)
+                                 5 ; rlineto
+                                 14)))
+           (geom (apply #'fontsloth-otf-cff-test--outline values)))
+      (should (= (length (fontsloth-otf-cff-test--lines geom)) 2)))))
+
+(ert-deftest fontsloth-otf-cff-test-local-subr ()
+  "Check callsubr with a single local subroutine."
+  (let* ((subr (list (fontsloth-otf-cff-test--int 50)
+                     (fontsloth-otf-cff-test--int 10)
+                     5 11))        ; rlineto, return
+         (metadata `((local-subrs . ((data . ,(vector
+                                               (apply #'fontsloth-otf-cff-test--bytes
+                                                      subr)))))))
+         (values (list (fontsloth-otf-cff-test--int 0)
+                       (fontsloth-otf-cff-test--int 0)
+                       21
+                       (fontsloth-otf-cff-test--int -107)
+                       10 ; callsubr
+                       14))
+         (geom (apply #'fontsloth-otf-cff-test--outline-with-metadata
+                      metadata values)))
+    (should (= (length (fontsloth-otf-cff-test--lines geom)) 2))))
+
+(ert-deftest fontsloth-otf-cff-test-global-subr ()
+  "Check callgsubr with a single global subroutine."
+  (let* ((subr (list (fontsloth-otf-cff-test--int 50)
+                     (fontsloth-otf-cff-test--int 10)
+                     5 11))
+         (metadata `((global-subrs . ((index . ((count . 1)))
+                                      (data . ,(vector
+                                                (apply #'fontsloth-otf-cff-test--bytes
+                                                       subr)))))))
+         (values (list (fontsloth-otf-cff-test--int 0)
+                       (fontsloth-otf-cff-test--int 0)
+                       21
+                       (fontsloth-otf-cff-test--int -107)
+                       29 ; callgsubr
+                       14))
+         (geom (apply #'fontsloth-otf-cff-test--outline-with-metadata
+                      metadata values)))
+    (should (= (length (fontsloth-otf-cff-test--lines geom)) 2))))
+
 (provide 'fontsloth-otf-cff-test)
+
 ;;; fontsloth-otf-cff-test.el ends here

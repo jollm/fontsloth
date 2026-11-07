@@ -107,5 +107,92 @@ EUSER-DATA expected user data"
         :eparent parent :ex x :ey y :ewidth width :eheight height
         :echar-data (fontsloth-layout-linebreak-char-data-create :bits bits))))))
 
+(ert-deftest fontsloth-layout-test-reset-settings ()
+  "Check settings propagation and default line state."
+  (let ((layout (fontsloth-layout-create))
+        (settings (fontsloth-layout-settings-create
+                   :x 5.0 :y 7.0 :max-width 100 :max-height 200
+                   :horizontal-align 'center :vertical-align 'middle)))
+    (fontsloth-layout-reset layout settings)
+    (should (= (fontsloth-layout-x layout) 5.0))
+    (should (= (fontsloth-layout-y layout) 7.0))
+    (should (= (fontsloth-layout-max-width layout) 100))
+    (should (= (fontsloth-layout-max-height layout) 200))
+    (should (= (fontsloth-layout-horizontal-align layout) 0.5))
+    (should (= (fontsloth-layout-vertical-align layout) 0.5))
+    (should (= (fontsloth-layout-linebreak-data-bits
+                (fontsloth-layout-wrap-mask layout))
+               3))
+    (should (= (fontsloth-layout-lines layout) 1))
+    (should (= (fontsloth-layout-current-height layout) 0.0))))
+
+(ert-deftest fontsloth-layout-test-clear ()
+  "Check that clearing resets glyphs, output, and line state."
+  (skip-unless (f-exists-p fontsloth-layout-test--font))
+  (let ((font (fontsloth-load-font fontsloth-layout-test--font :cache 'bypass))
+        (layout (fontsloth-layout-create)))
+    (fontsloth-layout-reset layout (fontsloth-layout-settings-create))
+    (fontsloth-layout-append layout `(,font)
+                             (fontsloth-layout-text-style-create
+                              :text "Hello" :px 35.0 :font-index 0))
+    (should (> (fontsloth-layout-current-height layout) 0.0))
+    (should (= (fontsloth-layout-lines layout) 1))
+    (fontsloth-layout-clear layout)
+    (should (null (fontsloth-layout-glyphs layout)))
+    (should (null (fontsloth-layout-output layout)))
+    (should (= (fontsloth-layout-lines layout) 1))
+    (should (= (fontsloth-layout-current-height layout) 0.0))))
+
+(ert-deftest fontsloth-layout-test-empty-text ()
+  "Check that appending empty text is a no-op."
+  (skip-unless (f-exists-p fontsloth-layout-test--font))
+  (let ((font (fontsloth-load-font fontsloth-layout-test--font :cache 'bypass))
+        (layout (fontsloth-layout-create)))
+    (fontsloth-layout-reset layout (fontsloth-layout-settings-create))
+    (fontsloth-layout-append layout `(,font)
+                             (fontsloth-layout-text-style-create
+                              :text "" :px 35.0 :font-index 0))
+    (should (= (fontsloth-layout-lines layout) 1))
+    (should-not (fontsloth-layout-finalize layout))))
+
+(ert-deftest fontsloth-layout-test-missing-glyph ()
+  "Check that code points without a glyph are skipped."
+  (skip-unless (f-exists-p fontsloth-layout-test--font))
+  (let ((font (fontsloth-load-font fontsloth-layout-test--font :cache 'bypass))
+        (layout (fontsloth-layout-create)))
+    (fontsloth-layout-reset layout (fontsloth-layout-settings-create))
+    (should-not (fontsloth-font-glyph-id font ?→))
+    (fontsloth-layout-append layout `(,font)
+                             (fontsloth-layout-text-style-create
+                              :text "→" :px 35.0 :font-index 0))
+    (should (= (fontsloth-layout-lines layout) 1))
+    (should-not (fontsloth-layout-finalize layout))))
+
+(ert-deftest fontsloth-layout-test-kerning ()
+  "Check that horizontal kerning shifts the second glyph."
+  (skip-unless (f-exists-p fontsloth-layout-test--font))
+  (let* ((font (fontsloth-load-font fontsloth-layout-test--font :cache 'bypass))
+         (kern (fontsloth-font-horizontal-kern-by-code-point
+                font ?& ?δ 1000.0))
+         (positions
+          (cl-loop
+           for kern? in '(nil t)
+           collect
+           (let ((layout (fontsloth-layout-create)))
+             (fontsloth-layout-reset layout (fontsloth-layout-settings-create))
+             (fontsloth-layout-append
+              layout `(,font)
+              (fontsloth-layout-text-style-create
+               :text "&δ" :px 1000.0 :font-index 0
+               :horizontal-kern? kern?))
+             (let ((output (fontsloth-layout-finalize layout)))
+               (list (fontsloth-layout-glyph-position-x (elt output 0))
+                     (fontsloth-layout-glyph-position-x (elt output 1))))))))
+    (should (= kern -5.0))
+    (should (= (- (elt (elt positions 1) 1)
+                  (elt (elt positions 0) 1))
+               kern))))
+
 (provide 'fontsloth-layout-test)
+
 ;;; fontsloth-layout-test.el ends here
