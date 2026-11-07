@@ -163,5 +163,84 @@
       (should (= (fontsloth-bbox-xmin bounds) 50.0))
       (should (= (fontsloth-bbox-xmax bounds) 600.0)))))
 
+(ert-deftest fontsloth-otf-glyf-test-manual-component-arguments ()
+  "Check the manual component argument reader."
+  (let ((flags '((args-are-words . t) (args-are-xy . t))))
+    (should (= (bindat-unpack
+                (bindat-type (_ unit
+                               (fontsloth-otf--unpack-component-argument flags)))
+                [255 254])
+               -2)))
+  (let ((flags '((args-are-words . t) (args-are-xy . nil))))
+    (should (= (bindat-unpack
+                (bindat-type (_ unit
+                               (fontsloth-otf--unpack-component-argument flags)))
+                [0 2])
+               2)))
+  (let ((flags '((args-are-words . nil) (args-are-xy . t))))
+    (should (= (bindat-unpack
+                (bindat-type (_ unit
+                               (fontsloth-otf--unpack-component-argument flags)))
+                [254])
+               -2)))
+  (let ((flags '((args-are-words . nil) (args-are-xy . nil))))
+    (should (= (bindat-unpack
+                (bindat-type (_ unit
+                               (fontsloth-otf--unpack-component-argument flags)))
+                [254])
+               254))))
+
+(ert-deftest fontsloth-otf-glyf-test-manual-transform-options ()
+  "Check the manual transform option reader."
+  (let ((flags '((we-have-a-scale . t))))
+    (let ((transform
+           (bindat-unpack
+            (bindat-type (_ unit
+                           (fontsloth-otf--unpack-transform-option flags)))
+            [32 0])))
+      (should (= (alist-get 'a transform) 0.5))
+      (should (= (alist-get 'd transform) 0.5))))
+  (let ((flags '((we-have-an-xy-scale . t))))
+    (let ((transform
+           (bindat-unpack
+            (bindat-type (_ unit
+                           (fontsloth-otf--unpack-transform-option flags)))
+            [64 0 32 0])))
+      (should (= (alist-get 'a transform) 1.0))
+      (should (= (alist-get 'd transform) 0.5))))
+  (let ((flags '((we-have-a-two-by-two . t))))
+    (let ((transform
+           (bindat-unpack
+            (bindat-type (_ unit
+                           (fontsloth-otf--unpack-transform-option flags)))
+            [64 0 0 0 0 0 32 0])))
+      (should (= (alist-get 'a transform) 1.0))
+      (should (= (alist-get 'b transform) 0.0))
+      (should (= (alist-get 'c transform) 0.0))
+      (should (= (alist-get 'd transform) 0.5)))))
+
+(ert-deftest fontsloth-otf-glyf-test-manual-composite-data ()
+  "Check the manual composite component reader."
+  (let ((data (bindat-unpack
+               (bindat-type (_ unit
+                              (fontsloth-otf--unpack-composite-glyf-data 8)))
+               [0 3 0 2 0 0 0 0]))) ; words/xy, glyph 2, args 0,0
+    (should (= (alist-get 'glyph-id data) 2))
+    (should (= (alist-get 'argument1 data) 0))
+    (should (= (alist-get 'argument2 data) 0))
+    (should (equal (alist-get 'transform-option data)
+                   '((a . 1.0) (b . 0.0) (c . 0.0) (d . 1.0))))
+    (should-not (alist-get 'next-component data)))
+  (let ((data (bindat-unpack
+               (bindat-type (_ unit
+                              (fontsloth-otf--unpack-composite-glyf-data 16)))
+               [0 35 0 2 0 0 0 0
+                0 3 0 4 0 0 0 0]))) ; more-components on first component
+    (should (= (alist-get 'glyph-id data) 2))
+    (let ((next (alist-get 'next-component data)))
+      (should (= (alist-get 'glyph-id next) 4))
+      (should-not (alist-get 'next-component next)))))
+
 (provide 'fontsloth-otf-glyf-test)
+
 ;;; fontsloth-otf-glyf-test.el ends here

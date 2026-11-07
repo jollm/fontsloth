@@ -293,8 +293,9 @@ The benchmark reports wall time, approximate bytes allocated, and retained
 heap for parsing, high-level loading/outlining, and two raster passes.
 =maak test= remains the correctness gate; the benchmark is for before/after
 measurements.  The captured eager baseline is in
-[[file:benchmarks/baseline.org][benchmarks/baseline.org]] and the first lazy-outline results are in
-[[file:benchmarks/lazy-outline.org][benchmarks/lazy-outline.org]].
+[[file:benchmarks/baseline.org][benchmarks/baseline.org]], the first lazy-outline results are in
+[[file:benchmarks/lazy-outline.org][benchmarks/lazy-outline.org]], and the glyf bindat allocation results are
+in [[file:benchmarks/bindat-glyf.org][benchmarks/bindat-glyf.org]].
 
 ** Compile and lint
 #+begin_src shell

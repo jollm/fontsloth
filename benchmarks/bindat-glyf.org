@@ -1,0 +1,50 @@
+#+TITLE: glyf bindat allocation results (2026-11-07)
+#+OPTIONS: toc:nil ^:{} \n:t
+
+Replaced the per-glyph dynamically constructed bindat specs for the
+`glyf` table with manual readers using `bindat--unpack-u8/u16` and
+`bindat-idx`.  The stored table shape is unchanged.
+
+* Environment and command
+
+Same environment as the other benchmarks. Lazy outlining was enabled.
+The parse phase is the relevant measurement.
+
+#+begin_src shell
+FONTSLOTH_BENCH_LAZY=1 \
+FONTSLOTH_BENCH_FONT=/gnu/store/zqrwsqs1lfk1ag3ni1zhv04skc4q36hc-font-apple-sf-pro-20.0d8e1/share/fonts/truetype/SF-Pro.ttf \
+FONTSLOTH_BENCH_RASTER_LIMIT=200 \
+maak benchmark
+#+end_src
+
+* Results
+
+| Font | Phase | Before | After |
+|------+-------+--------+-------|
+| SF Pro (27,262 glyf glyphs) | parse time | 17.311s | **6.068s** |
+| SF Pro | parse allocation | 6,326.36 MB | **1,697.63 MB** |
+| SF Pro | parse retained | 59.02 MB | 59.02 MB |
+| SF Pro | load+outline total | 63.0s | 45.9s |
+| Plex subset (CFF, 159 glyphs) | parse time | 0.555s | 0.590s |
+| Plex subset | parse allocation | 186.73 MB | 186.73 MB |
+
+SF Pro parse is ~2.85× faster and allocates ~73% fewer bytes.  The
+retained table footprint is unchanged, as expected: this change removes
+temporary type/closure construction, not the parsed data.
+
+The Plex subset is CFF, so it does not exercise the glyf path. Its
+numbers are unchanged within noise.
+
+* What changed
+
+- `fontsloth-otf--glyf-spec` now has one manual `unit` reader instead of
+  a `vec` of per-glyph `(type (bindat-type ...))` specs.
+- Simple glyph data (end points, instructions, flags, coordinates) is
+  read directly.
+- Composite glyph components are read in a loop, with manual component
+  flag, argument, and F-2.14 transform readers.
+- The historical output alists are preserved, so the outline, golden
+  hash, and raster tests all continue to pass.
+
+The remaining parse allocation is now a target for the next pass:
+GPOS/CFF dynamic specs and the glyph/table alist construction itself.

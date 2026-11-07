@@ -445,31 +445,156 @@ RANGE length in bytes from loca for data, excluding header size"
       ;; TODO: we-have-instructions
       (_ fill (- fill-to bindat-idx)))))
 
+(defun fontsloth-otf--unpack-s16 ()
+  "Read a signed 16-bit big-endian integer at `bindat-idx'."
+  (let ((n (bindat--unpack-u16)))
+    (if (>= n #x8000) (- n #x10000) n)))
+
+(defun fontsloth-otf--unpack-f2dot14 ()
+  "Read a signed 16.14 fixed value at `bindat-idx'.
+Matches the historical `f-2.14' bindat type used by the composite spec."
+  (let ((v (fontsloth-otf--unpack-s16)))
+    (+ (/ v (ash 1 14))
+       (/ (* 1.0 (logand v #x3fff)) #x4000))))
+
+(defun fontsloth-otf--unpack-simple-glyf-data (num-contours range)
+  "Read simple glyf data for NUM-CONTOURS points of RANGE bytes.
+Returns the same alist shape as the former dynamic bindat spec."
+  (let* ((start bindat-idx)
+         (end (+ start range))
+         (end-pts (make-vector num-contours 0))
+         (instruction-length nil)
+         (instructions nil)
+         (num-points 0)
+         (flags (make-vector 0 0))
+         (x-coords (make-vector 0 0))
+         (y-coords (make-vector 0 0)))
+    (dotimes (i num-contours)
+      (aset end-pts i (bindat--unpack-u16)))
+    (setq instruction-length (bindat--unpack-u16))
+    (setq instructions (make-vector instruction-length 0))
+    (dotimes (i instruction-length)
+      (aset instructions i (bindat--unpack-u8)))
+    (when (> num-contours 0)
+      (setq num-points (1+ (aref end-pts (1- num-contours))))
+      (setq flags (fontsloth-otf--make-simple-glyf-flags-vec num-points))
+      (setq x-coords
+            (fontsloth-otf--make-simple-glyf-coords-vec
+             flags num-points 'x-short-vector 'x-is-same-or-pos-x-short-vec))
+      (setq y-coords
+            (fontsloth-otf--make-simple-glyf-coords-vec
+             flags num-points 'y-short-vector 'y-is-same-or-pos-y-short-vec)))
+    ;; Glyph records are padded to the loca range.
+    (setq bindat-idx end)
+    (list (cons 'end-pts end-pts)
+          (cons 'instruction-length instruction-length)
+          (cons 'instructions instructions)
+          (cons 'num-points num-points)
+          (cons 'flags flags)
+          (cons 'x-coords x-coords)
+          (cons 'y-coords y-coords))))
+
+(defun fontsloth-otf--unpack-component-flags ()
+  "Read a composite component flag word into the historical alist."
+  (let ((word (bindat--unpack-u16)))
+    (list (cons 'args-are-words (/= 0 (logand 1 word)))
+          (cons 'args-are-xy (/= 0 (logand 2 word)))
+          (cons 'round-xy-to-grid (/= 0 (logand 4 word)))
+          (cons 'we-have-a-scale (/= 0 (logand 8 word)))
+          (cons 'more-components (/= 0 (logand 32 word)))
+          (cons 'we-have-an-xy-scale (/= 0 (logand 64 word)))
+          (cons 'we-have-a-two-by-two (/= 0 (logand 128 word)))
+          (cons 'we-have-instructions (/= 0 (logand 256 word)))
+          (cons 'use-my-metrics (/= 0 (logand 512 word)))
+          (cons 'overlap-compound (/= 0 (logand 1024 word))))))
+
+(defun fontsloth-otf--unpack-component-argument (flags)
+  "Read one component argument according to FLAGS."
+  (let ((words (alist-get 'args-are-words flags))
+        (xy (alist-get 'args-are-xy flags)))
+    (cond ((and words xy) (fontsloth-otf--unpack-s16))
+          (words (bindat--unpack-u16))
+          (xy (let ((n (bindat--unpack-u8)))
+                (if (>= n #x80) (- n #x100) n)))
+          (t (bindat--unpack-u8)))))
+
+(defun fontsloth-otf--unpack-transform-option (flags)
+  "Read a component transform option according to FLAGS."
+  (cond
+   ((alist-get 'we-have-a-scale flags)
+    (let ((a (fontsloth-otf--unpack-f2dot14)))
+      (list (cons 'a a) (cons 'b 0.0) (cons 'c 0.0) (cons 'd a))))
+   ((alist-get 'we-have-an-xy-scale flags)
+    (let ((a (fontsloth-otf--unpack-f2dot14))
+          (d (fontsloth-otf--unpack-f2dot14)))
+      (list (cons 'a a) (cons 'b 0.0) (cons 'c 0.0) (cons 'd d))))
+   ((alist-get 'we-have-a-two-by-two flags)
+    (list (cons 'a (fontsloth-otf--unpack-f2dot14))
+          (cons 'b (fontsloth-otf--unpack-f2dot14))
+          (cons 'c (fontsloth-otf--unpack-f2dot14))
+          (cons 'd (fontsloth-otf--unpack-f2dot14))))
+   (t (list (cons 'a 1.0) (cons 'b 0.0)
+            (cons 'c 0.0) (cons 'd 1.0)))))
+
+(defun fontsloth-otf--unpack-composite-glyf-data (range)
+  "Read composite glyf data of RANGE bytes at `bindat-idx'."
+  (let ((start bindat-idx)
+        (end (+ bindat-idx range)))
+    (cl-labels
+        ((read-component ()
+           (let* ((flags (fontsloth-otf--unpack-component-flags))
+                  (glyph-id (bindat--unpack-u16))
+                  (argument1 (fontsloth-otf--unpack-component-argument flags))
+                  (argument2 (fontsloth-otf--unpack-component-argument flags))
+                  (transform (fontsloth-otf--unpack-transform-option flags))
+                  (next (when (alist-get 'more-components flags)
+                          (read-component))))
+             (list (cons 'flags flags)
+                   (cons 'glyph-id glyph-id)
+                   (cons 'argument1 argument1)
+                   (cons 'argument2 argument2)
+                   (cons 'transform-option transform)
+                   (cons 'next-component next)))))
+      (prog1 (read-component)
+        ;; Skip any instructions/padding to the next glyph.
+        (setq bindat-idx end)))))
+
+(defun fontsloth-otf--unpack-glyf-glyphs ()
+  "Read every glyph in the current glyf table.
+Uses the loca and maxp tables from the dynamically current font."
+  (let* ((loca (fontsloth-otf--get-table-value
+                'glyph-index-to-location "loca"))
+         (num-glyphs (fontsloth-otf--get-table-value 'num-glyphs "maxp"))
+         (glyphs (make-vector num-glyphs nil)))
+    (dotimes (glyph-id num-glyphs)
+      (let ((range (fontsloth-otf--glyph-data-range glyph-id loca)))
+        (if (null range)
+            (aset glyphs glyph-id '((missing . missing-char)))
+          (let* ((start bindat-idx)
+                 (number-of-contours (fontsloth-otf--unpack-s16))
+                 (x-min (fontsloth-otf--unpack-s16))
+                 (y-min (fontsloth-otf--unpack-s16))
+                 (x-max (fontsloth-otf--unpack-s16))
+                 (y-max (fontsloth-otf--unpack-s16))
+                 (data-range (- range 10))
+                 (data (if (> 0 number-of-contours)
+                           (fontsloth-otf--unpack-composite-glyf-data
+                            data-range)
+                         (fontsloth-otf--unpack-simple-glyf-data
+                          number-of-contours data-range))))
+            (aset glyphs glyph-id
+                  (list (cons 'number-of-contours number-of-contours)
+                        (cons 'x-min x-min)
+                        (cons 'y-min y-min)
+                        (cons 'x-max x-max)
+                        (cons 'y-max y-max)
+                        (cons 'data data)))
+            (setq bindat-idx (+ start range))))))
+    glyphs))
+
 (defvar fontsloth-otf--glyf-spec
-  (let ((loca) (glyf-header-size 10))
-    (bindat-type
-      (_ unit
-         (progn
-           (setf loca (fontsloth-otf--get-table-value
-                       'glyph-index-to-location "loca")) nil))
-      (glyphs vec (fontsloth-otf--get-table-value 'num-glyphs "maxp")
-              type
-              (if-let (range (fontsloth-otf--glyph-data-range bindat--i loca))
-                  (bindat-type
-                    (number-of-contours sint 16 nil)
-                    (x-min sint 16 nil)
-                    (y-min sint 16 nil)
-                    (x-max sint 16 nil)
-                    (y-max sint 16 nil)
-                    (data type
-                          (let ((range (- range glyf-header-size)))
-                            (if (> 0 number-of-contours)
-                                (fontsloth-otf--make-composite-glyf-data-spec
-                                 range)
-                              (fontsloth-otf--make-simple-glyf-data-spec
-                               number-of-contours range)))))
-                (bindat-type
-                  (missing unit 'missing-char))))))
+  (bindat-type
+    (glyphs unit (fontsloth-otf--unpack-glyf-glyphs)))
   "Bindat spec for the TrueType glyf table.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/glyf")
 
