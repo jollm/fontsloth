@@ -109,9 +109,8 @@ To be handed to `fontsloth-otf-outline-glyph'"
   "Holds state for a stack of `fontsloth-segment'."
   (idx -1 :type 'integer :documentation "current push index")
   (pop-ptr -1 :type 'integer :documentation "current pop pointer")
-  (pops (make-hash-table :size (+ fontsloth-seg-stack--size
-                                  fontsloth-seg-stack--size))
-        :type 'hash-table :documentation "tracks pops")
+  (pops (make-vector fontsloth-seg-stack--size 0)
+        :type vector :documentation "previous pop pointer per stack slot")
   (pool nil :type 'vector :documentation "pool of objects"))
 
 (defsubst fontsloth-seg-stack--reset (stack)
@@ -123,16 +122,19 @@ To be handed to `fontsloth-otf-outline-glyph'"
   "Grow STACK."
   (let* ((old-length (length (fontsloth-seg-stack-pool stack)))
          (new-length (+ old-length old-length old-length))
-         (new-pool (make-vector new-length nil)))
+         (new-pool (make-vector new-length nil))
+         (new-pops (make-vector new-length 0)))
       (fontsloth:info*
        fontsloth-log "Fontsloth-geometry: resizing segment stack from %s to %s"
        old-length new-length)
       (cl-loop for i from 0 below new-length
                if (< i old-length) do
                (aset new-pool i (aref (fontsloth-seg-stack-pool stack) i))
+               (aset new-pops i (aref (fontsloth-seg-stack-pops stack) i))
                else do
                (aset new-pool i (fontsloth-segment-create))
-               finally (setf (fontsloth-seg-stack-pool stack) new-pool))))
+               finally (setf (fontsloth-seg-stack-pool stack) new-pool
+                             (fontsloth-seg-stack-pops stack) new-pops))))
 
 (defun fontsloth-seg-stack--push (a at c ct stack)
   "Push `fontsloth-segment' components A, AT, C, CT onto STACK."
@@ -142,12 +144,13 @@ To be handed to `fontsloth-otf-outline-glyph'"
              do (aset res i (fontsloth-segment-create))
              finally do (setf (fontsloth-seg-stack-pool stack) res)))
   (cl-incf (fontsloth-seg-stack-idx stack))
-  (puthash (fontsloth-seg-stack-idx stack)
-           (fontsloth-seg-stack-pop-ptr stack)
-           (fontsloth-seg-stack-pops stack))
-  (setf (fontsloth-seg-stack-pop-ptr stack) (fontsloth-seg-stack-idx stack))
-  (when (>= (fontsloth-seg-stack-idx stack) (length (fontsloth-seg-stack-pool stack)))
+  (when (>= (fontsloth-seg-stack-idx stack)
+            (length (fontsloth-seg-stack-pool stack)))
     (fontsloth-seg-stack--grow stack))
+  (aset (fontsloth-seg-stack-pops stack)
+        (fontsloth-seg-stack-idx stack)
+        (fontsloth-seg-stack-pop-ptr stack))
+  (setf (fontsloth-seg-stack-pop-ptr stack) (fontsloth-seg-stack-idx stack))
   (let ((seg (aref (fontsloth-seg-stack-pool stack)
                    (fontsloth-seg-stack-idx stack))))
     (aset seg 1 a)
@@ -162,8 +165,8 @@ To be handed to `fontsloth-otf-outline-glyph'"
         (aref (fontsloth-seg-stack-pool stack)
               (fontsloth-seg-stack-pop-ptr stack))
       (setf (fontsloth-seg-stack-pop-ptr stack)
-            (gethash (fontsloth-seg-stack-pop-ptr stack)
-                     (fontsloth-seg-stack-pops stack))))))
+            (aref (fontsloth-seg-stack-pops stack)
+                  (fontsloth-seg-stack-pop-ptr stack))))))
 
 (defvar fontsloth-geom--seg-stack (fontsloth-seg-stack-create)
   "A stack with a fixed pool of `fontsloth-segment' objects.
@@ -194,39 +197,56 @@ Objects are re-used during curve-to and quad-to.")
           :type 'fontsloth-glyph-outline-bounds
           :documentation "calculated outline bounds"))
 
+(defmacro fontsloth-geometry--with-quad-curve-xy (qc time x y &rest body)
+  "Bind X and Y to the quad curve QC at TIME, then evaluate BODY."
+  (declare (indent 4) (debug (form form symbolp symbolp body)))
+  (let ((tm (make-symbol "tm")) (a (make-symbol "a"))
+        (b (make-symbol "b")) (c (make-symbol "c")))
+    `(let* ((,tm (- 1.0 ,time))
+            (,a (* ,tm ,tm))
+            (,b (* 2.0 ,tm ,time))
+            (,c (* ,time ,time))
+            (,x (+ (* ,a (fontsloth-point-x (fontsloth-quad-curve-a ,qc)))
+                   (* ,b (fontsloth-point-x (fontsloth-quad-curve-b ,qc)))
+                   (* ,c (fontsloth-point-x (fontsloth-quad-curve-c ,qc)))))
+            (,y (+ (* ,a (fontsloth-point-y (fontsloth-quad-curve-a ,qc)))
+                   (* ,b (fontsloth-point-y (fontsloth-quad-curve-b ,qc)))
+                   (* ,c (fontsloth-point-y (fontsloth-quad-curve-c ,qc))))))
+       ,@body)))
+
 (defun fontsloth-geometry--quad-curve-point (qc time)
   "Determine the point along a curve at a given time.
 QC the curve
 TIME the time"
-  (let* ((tm (- 1.0 time))
-         (a (* tm tm))
-         (b (* 2.0 tm time))
-         (c (* time time))
-         (x (+ (* a (fontsloth-point-x (fontsloth-quad-curve-a qc)))
-               (* b (fontsloth-point-x (fontsloth-quad-curve-b qc)))
-               (* c (fontsloth-point-x (fontsloth-quad-curve-c qc)))))
-         (y (+ (* a (fontsloth-point-y (fontsloth-quad-curve-a qc)))
-               (* b (fontsloth-point-y (fontsloth-quad-curve-b qc)))
-               (* c (fontsloth-point-y (fontsloth-quad-curve-c qc))))))
+  (fontsloth-geometry--with-quad-curve-xy qc time x y
     (fontsloth-point-create :x x :y y)))
+
+(defmacro fontsloth-geometry--with-cube-curve-xy (cc time x y &rest body)
+  "Bind X and Y to the cube curve CC at TIME, then evaluate BODY."
+  (declare (indent 4) (debug (form form symbolp symbolp body)))
+  (let ((tm (make-symbol "tm")) (a (make-symbol "a"))
+        (b (make-symbol "b")) (c (make-symbol "c"))
+        (d (make-symbol "d")))
+    `(let* ((,tm (- 1.0 ,time))
+            (,a (* ,tm ,tm ,tm))
+            (,b (* 3.0 ,tm ,tm ,time))
+            (,c (* 3.0 ,tm ,time ,time))
+            (,d (* ,time ,time ,time))
+            (,x (+ (* ,a (fontsloth-point-x (fontsloth-cube-curve-a ,cc)))
+                   (* ,b (fontsloth-point-x (fontsloth-cube-curve-b ,cc)))
+                   (* ,c (fontsloth-point-x (fontsloth-cube-curve-c ,cc)))
+                   (* ,d (fontsloth-point-x (fontsloth-cube-curve-d ,cc)))))
+            (,y (+ (* ,a (fontsloth-point-y (fontsloth-cube-curve-a ,cc)))
+                   (* ,b (fontsloth-point-y (fontsloth-cube-curve-b ,cc)))
+                   (* ,c (fontsloth-point-y (fontsloth-cube-curve-c ,cc)))
+                   (* ,d (fontsloth-point-y (fontsloth-cube-curve-d ,cc))))))
+       ,@body)))
 
 (defun fontsloth-geometry--cube-curve-point (cc time)
   "Determine the point along a curve at a given time.
 CC the curve
 TIME the time"
-  (let* ((tm (- 1.0 time))
-         (a (* tm tm tm))
-         (b (* 3.0 (* tm tm) time))
-         (c (* 3.0 tm (* time time)))
-         (d (* time time time))
-         (x (+ (* a (fontsloth-point-x (fontsloth-cube-curve-a cc)))
-               (* b (fontsloth-point-x (fontsloth-cube-curve-b cc)))
-               (* c (fontsloth-point-x (fontsloth-cube-curve-c cc)))
-               (* d (fontsloth-point-x (fontsloth-cube-curve-d cc)))))
-         (y (+ (* a (fontsloth-point-y (fontsloth-cube-curve-a cc)))
-               (* b (fontsloth-point-y (fontsloth-cube-curve-b cc)))
-               (* c (fontsloth-point-y (fontsloth-cube-curve-c cc)))
-               (* d (fontsloth-point-y (fontsloth-cube-curve-d cc))))))
+  (fontsloth-geometry--with-cube-curve-xy cc time x y
     (fontsloth-point-create :x x :y y)))
 
 (defun fontsloth-geometry-create (scale units-per-em)
@@ -341,36 +361,28 @@ Y1 y coord of the next curve point"
              while seg do
              (let* ((bt (* 0.5 (+ (fontsloth-segment-at seg)
                                   (fontsloth-segment-ct seg))))
-                    (b (fontsloth-geometry--quad-curve-point curve bt))
-                    (area (- (* (- (fontsloth-point-x b)
-                                   (fontsloth-point-x
-                                    (fontsloth-segment-a seg)))
-                                (- (fontsloth-point-y (fontsloth-segment-c seg))
-                                   (fontsloth-point-y
-                                    (fontsloth-segment-a seg))))
-                             (* (- (fontsloth-point-x (fontsloth-segment-c seg))
-                                   (fontsloth-point-x
-                                    (fontsloth-segment-a seg)))
-                                (- (fontsloth-point-y b)
-                                   (fontsloth-point-y
-                                    (fontsloth-segment-a seg)))))))
-               (if (> (abs area) (fontsloth-geometry-max-area outliner))
-                   (progn (fontsloth-seg-stack--push
-                           (fontsloth-segment-a seg)
-                           (fontsloth-segment-at seg)
-                           b
-                           bt
-                           stack)
-                          (fontsloth-seg-stack--push
-                           b
-                           bt
-                           (fontsloth-segment-c seg)
-                           (fontsloth-segment-ct seg)
-                           stack))
-                 (fontsloth-geometry-push
-                  outliner
-                  (fontsloth-segment-a seg)
-                  (fontsloth-segment-c seg)))))
+                    (a-x (fontsloth-point-x (fontsloth-segment-a seg)))
+                    (a-y (fontsloth-point-y (fontsloth-segment-a seg)))
+                    (c-x (fontsloth-point-x (fontsloth-segment-c seg)))
+                    (c-y (fontsloth-point-y (fontsloth-segment-c seg))))
+               (fontsloth-geometry--with-quad-curve-xy curve bt bx by
+                 (let ((area (- (* (- bx a-x) (- c-y a-y))
+                                (* (- c-x a-x) (- by a-y)))))
+                   (if (> (abs area) (fontsloth-geometry-max-area outliner))
+                       (let ((b (fontsloth-point-create :x bx :y by)))
+                         (fontsloth-seg-stack--push
+                          (fontsloth-segment-a seg)
+                          (fontsloth-segment-at seg)
+                          b bt stack)
+                         (fontsloth-seg-stack--push
+                          b bt
+                          (fontsloth-segment-c seg)
+                          (fontsloth-segment-ct seg)
+                          stack))
+                     (fontsloth-geometry-push
+                      outliner
+                      (fontsloth-segment-a seg)
+                      (fontsloth-segment-c seg)))))))
     (setf (fontsloth-geometry-previous-point outliner) next-point)))
 
 (cl-defmethod fontsloth-otf-curve-to
@@ -401,36 +413,28 @@ Y2 y coord of the next curve point"
              while seg do
              (let* ((bt (* 0.5 (+ (fontsloth-segment-at seg)
                                   (fontsloth-segment-ct seg))))
-                    (b (fontsloth-geometry--cube-curve-point curve bt))
-                    (area (- (* (- (fontsloth-point-x b)
-                                   (fontsloth-point-x
-                                    (fontsloth-segment-a seg)))
-                                (- (fontsloth-point-y (fontsloth-segment-c seg))
-                                   (fontsloth-point-y
-                                    (fontsloth-segment-a seg))))
-                             (* (- (fontsloth-point-x (fontsloth-segment-c seg))
-                                   (fontsloth-point-x
-                                    (fontsloth-segment-a seg)))
-                                (- (fontsloth-point-y b)
-                                   (fontsloth-point-y
-                                    (fontsloth-segment-a seg)))))))
-               (if (> (abs area) (fontsloth-geometry-max-area outliner))
-                   (progn (fontsloth-seg-stack--push
-                           (fontsloth-segment-a seg)
-                           (fontsloth-segment-at seg)
-                           b
-                           bt
-                           stack)
-                          (fontsloth-seg-stack--push
-                           b
-                           bt
-                           (fontsloth-segment-c seg)
-                           (fontsloth-segment-ct seg)
-                           stack))
-                 (fontsloth-geometry-push
-                  outliner
-                  (fontsloth-segment-a seg)
-                  (fontsloth-segment-c seg)))))
+                    (a-x (fontsloth-point-x (fontsloth-segment-a seg)))
+                    (a-y (fontsloth-point-y (fontsloth-segment-a seg)))
+                    (c-x (fontsloth-point-x (fontsloth-segment-c seg)))
+                    (c-y (fontsloth-point-y (fontsloth-segment-c seg))))
+               (fontsloth-geometry--with-cube-curve-xy curve bt bx by
+                 (let ((area (- (* (- bx a-x) (- c-y a-y))
+                                (* (- c-x a-x) (- by a-y)))))
+                   (if (> (abs area) (fontsloth-geometry-max-area outliner))
+                       (let ((b (fontsloth-point-create :x bx :y by)))
+                         (fontsloth-seg-stack--push
+                          (fontsloth-segment-a seg)
+                          (fontsloth-segment-at seg)
+                          b bt stack)
+                         (fontsloth-seg-stack--push
+                          b bt
+                          (fontsloth-segment-c seg)
+                          (fontsloth-segment-ct seg)
+                          stack))
+                     (fontsloth-geometry-push
+                      outliner
+                      (fontsloth-segment-a seg)
+                      (fontsloth-segment-c seg)))))))
     (setf (fontsloth-geometry-previous-point outliner) next-point)))
 
 (cl-defmethod fontsloth-otf-close-contour ((outliner fontsloth-geometry))

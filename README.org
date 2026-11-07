@@ -300,7 +300,8 @@ measurements. The captured eager baseline is in
 in [[file:benchmarks/bindat-glyf.org][benchmarks/bindat-glyf.org]], and the GPOS/CFF results are in
 [[file:benchmarks/gpos-cff.org][benchmarks/gpos-cff.org]].  Byte-compiled results are in
 [[file:benchmarks/compiled.org][benchmarks/compiled.org]]. Earlier files were captured from interpreted
-source.
+source. Geometry allocation results are in
+[[file:benchmarks/geometry.org][benchmarks/geometry.org]].
 
 ** Compile and lint
 #+begin_src shell

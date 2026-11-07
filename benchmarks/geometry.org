@@ -1,0 +1,40 @@
+#+TITLE: Geometry allocation results (2026-11-07)
+#+OPTIONS: toc:nil ^:{} \n:t
+
+Reduced geometry allocations in the curve flattener and segment stack.
+Measured with byte-compiled sources on SF-Pro-Text-Regular.otf
+(27,250 CFF glyphs) using =maak benchmark=.
+
+* Results
+
+| Metric | Before | After |
+|--------+--------+-------|
+| Full outline (force-all) time | 9.312s | **8.726s** |
+| Full outline allocation | 806.33 MB | **737.49 MB** |
+| Full outline retained | 312.42 MB | 312.42 MB |
+| Parse time / allocation | 0.103s / 39.00 MB | 0.104s / 39.00 MB |
+| 50 individual glyphs | 0.008s / 1.77 MB | 0.008s / 1.77 MB |
+
+Full outlining is ~6% faster and allocates ~8.5% less. Retained size
+is unchanged because glyphs still own their line and bounds objects.
+
+* Changes
+
+- `fontsloth-seg-stack` now uses a vector of previous pop pointers instead
+  of a hash table. Push/pop are pure array operations. The vector grows
+  together with the segment pool
+- Quad and cubic curve evaluation have macro-based XY helpers. The
+  curve flattener computes the midpoint coordinates directly and only
+  allocates a `fontsloth-point' when the segment actually subdivides. It
+  no longer allocates one per flattened segment.
+- The existing point-returning curve helpers are kept for tests and
+  other callers, implemented on top of the XY macros.
+
+* Remaining geometry cost
+
+The largest remaining geometry allocations are per-line objects:
+each line currently carries separate coords, nudge, adjustment, and
+params vectors. Consolidating those into a single compact line
+representation is the next likely win, but it touches the raster and
+line APIs, so it should be done with the same golden-outline/raster
+guardrails and benchmark comparison.

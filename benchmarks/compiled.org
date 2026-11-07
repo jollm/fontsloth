@@ -45,7 +45,7 @@ full-outline measurement.  The byte-compiled equivalent allocates
 The remaining compiled outlining cost is mostly geometry: flattening
 cubic curves into lines and constructing the line objects.  CFF
 charstring parsing is no longer a dominant part of parse or outline
-time.
+time. Follow-up geometry results are in =benchmarks/geometry.org=.
 
 * Correctness
 
