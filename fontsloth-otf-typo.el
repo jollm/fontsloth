@@ -535,7 +535,11 @@ Return class 0 if not found."
 
 (defun fontsloth-otf-typo-gpos-hkern (left-glyph-id right-glyph-id)
   "Try to kern a pair LEFT-GLYPH-ID/RIGHT-GLYPH-ID using default lang kerning.
-Return a x-advance adjustment or 0."
+Return a x-advance adjustment or 0.
+
+A matched pair whose x-advance is 0 is skipped rather than returned:
+GPOS lookups are cumulative, and the kern map builder keeps the first
+non-zero adjustment, so zero adjustments must not mask later lookups."
   (or (when-let* ((kerning (fontsloth-otf-typo-gpos-kerning-tables nil "DFLT")))
         (seq-some
          (lambda (k)
@@ -567,7 +571,7 @@ Return a x-advance adjustment or 0."
                      (or (map-nested-elt
                           pair
                           '(value-1 x-advance)) 0)))))
-            when value return value))
+            when (and value (/= 0 value)) return value))
          kerning))
       0))
 
@@ -583,7 +587,7 @@ Return a x-advance adjustment or 0."
         (let* ((right (alist-get 'second-glyph-id p))
                (id (logior (ash left 16) right))
                (v (map-nested-elt p '(value-1 x-advance))))
-          (when v
+          (when (and v (/= 0 v))
             (unless (map-contains-key mappings id)
               (puthash id v mappings)))))))))
 
@@ -604,7 +608,7 @@ Return a x-advance adjustment or 0."
                for id = (logior (ash left 16) right)
                for p = (elt c2s (alist-get 'index r))
                for v = (map-nested-elt p '(value-1 x-advance))
-               when v do
+               when (and v (/= 0 v)) do
                (unless (map-contains-key mappings id)
                  (puthash id v mappings)))))))
 
@@ -653,14 +657,12 @@ This is very expensive, but the result can be cached along with the font."
                      mappings left-is st))
                  (2 (fontsloth-otf-typo--gpos-map-class-kerns
                      mappings left-is st)))))
-    ;; there will be many zeros because of the way GPOS pair pos works
-    ;; zeroes effectively mask later pairs that would otherwise be active
+    ;; Zero adjustments are skipped while building (see
+    ;; `fontsloth-otf-typo-gpos-hkern'), so a zero-valued pair from an
+    ;; earlier lookup does not mask a later non-zero one.
     (fontsloth:info* fontsloth-log
-                        "GPOS PairPos map size before compacting %s"
-                        (hash-table-count mappings))
-    (cl-loop for k being the hash-keys of mappings do
-             (when (= 0 (gethash k mappings))
-               (remhash k mappings)))
+                     "GPOS PairPos map size %s"
+                     (hash-table-count mappings))
     (let* ((new-size (truncate (/ (map-length mappings) .8)))
            (result (make-hash-table :test 'eq :size new-size)))
       (cl-loop for k being the hash-keys of mappings do

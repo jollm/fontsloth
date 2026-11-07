@@ -1,0 +1,318 @@
+** Overview
+
+Fontsloth is a project encompassing font loading, outlining, and
+rendering.
+
+It aims to eventually cover all common font formats and to support
+modern features of those fonts, on par with libraries like freetype and
+harfbuzz.
+
+See [[file:README.org][README.org]] for what it currently supports.
+
+It is currently consumed by one project, slothbar. See
+[[../slothbar]][[slothbar]].
+
+** Goals
+
+- stay in elisp, no external library dependencies
+- support algorithmic and language specific text shaping, rtl and
+  vertical layout
+- support round-tripping a font from unpack to repacking (thereby
+  allowing modifications, merging glyphsets from multiple fonts, etc.)
+- include UIs for exploring and editing fonts and glyphs from within
+  Emacs
+- sufficient memory efficiency to maintain usability
+- rendering latency and caching features that are sufficient for
+  usability in display engines
+
+** Non-goals
+
+- being the fastest or the most memory efficient
+- being standalone apart from elisp/emacs
+
+** Challenges
+
+*** Memory efficiency
+
+For loading, fontsloth relies on bindat.el. It is convenient to
+declaratively spec out the structures of the various font tables,
+however, it requires some knowledge of its internals to maintain
+memory efficiency. The use of for example nexted bindat-type leads to
+lots of unnecessary allocations due to repeated object construction
+and nested closures. I recently made some changes to avoid this on a
+few critical paths. More work is needed in this area and in general to
+make the use of bindat efficient across the codebase.
+
+*** Test coverage
+
+Fontsloth needs more unit tests, more end-to-end tests, and more tests
+of sub-components. This would allow for more experimentation with
+confidence of avoiding regressions.
+
+*** Completeness
+
+- lacks CFF 2.0 support
+- missing support for font collections
+- does not support bitmap fonts
+- does not support all of GVAR tables for OTF, thus missing
+  requirements for complex text shaping
+- no re-packing support
+- exploratory and introspection features are incomplete and not
+  surfaced in a UI
+- the raster could likely be improved in accuracy and robustness
+- the layout engine currently only does left-to-right, top-to-bottom
+  layout
+
+** Roadmap
+
+Order of work: make the suite runnable, then coverage, then memory,
+then completeness. Each phase should leave the previous phase's tests
+green and add a measurement for the property it changes.
+
+*** Phase 0: make the test suite runnable (blocking)
+
+Baseline observed on 2026-11-07 (Emacs 31.1, `emacs --batch`):
+
+- Loading =fontsloth-test.el= errors with "Window system frame should
+  be used" because =fontsloth-test--find-font-path= calls =font-info=,
+  which needs a window-system frame. No ERT test can run in batch at
+  all until this is fixed.
+- =fontsloth-otf-typo-test= hardcodes
+  =/usr/share/fonts/TTF/IBMPlexSerif-Regular.ttf=, which does not
+  exist here (the installed font is
+  =~/.guix-home/profile/share/fonts/opentype/IBMPlexSerif-Regular.otf=).
+  After pointing the test at the installed font it still fails, so the
+  hardcoded path was masking a real inconsistency: the eager
+  =fontsloth-otf-typo-gpos-build-kern-mappings= result disagrees with
+  the direct =fontsloth-otf-typo-gpos-hkern= lookup on 16950 of 107915
+  pairs for this font (e.g. left=80 right=600, map=-50 direct=0). The
+  likely cause is a semantic mismatch between the two: =hkern= stops
+  at the first subtable whose coverage matches even when that subtable
+  yields no pair value (=seq-some= returns 0), while the builder falls
+  through to a later subtable; the builder's `unless map-contains-key'
+  and zero-compaction also do not model the same precedence. This is
+  the highest-value test to make deterministic, then fix (or document
+  the intended precedence).
+- =fontsloth-layout-test= asserts pixel positions from whatever
+  fontconfig returns for "Roboto". With a locally installed Roboto it
+  fails by 1 unit (55.0 vs expected 54.0); the test is currently red
+  for environmental reasons, not necessarily a code regression.
+
+Actions:
+
+1. Replace =fontsloth-test--find-font-path= with a deterministic
+   resolver: a bundled fixture directory, overridable by an environment
+   variable (e.g. =FONTSLOTH_TEST_FONT_DIR=). Do not use =font-info=,
+   =fc-match=, or absolute system paths in tests.
+2. Add small, redistributable fixture fonts (OFL/Apache) covering:
+   TTF simple + composite glyf, OTF CFF1, WOFF, kern + GPOS, cmap
+   formats 4 and 12, and (later) CFF2/TTC/vertical metrics. Keep them
+   tiny; generate minimal fonts with fonttools/ttx where possible and
+   record how they were generated.
+3. Add a =Makefile= (or =build.el=) with =test=, =test-file=,
+   =compile=, =lint= targets, and an ERT batch entry point that works
+   with =emacs -Q --batch= plus the package load path.
+4. Add CI (.builds/ for sr.ht and/or a forge workflow) on the Emacs
+   versions actually supported. Decide the floor: README says 28.1,
+   but the codebase now emits Emacs 31 obsolete-macro warnings; either
+   keep 28 compatibility (use =if-let*= etc. only if available) or
+   raise the floor explicitly.
+5. Move scratch material out of the tracked tree (=scratch.el=,
+   =bindat-notes.txt=, =fontsloth-woff.el.bak=, =fontsloth-woff.el~=,
+   the PDF) into =.gitignore= / =docs/=, so "git status" is meaningful
+   and fixtures are not mixed with experiments.
+
+*** Phase 1: test coverage
+
+Prioritize deterministic, pure units before font-dependent golden
+tests. A rough static check today finds that almost all parser and
+inliner functions are never referenced by a test: ~46/46 in
+fontsloth-otf-cff.el, 33/33 in fontsloth-otf.el, 10/10 in
+fontsloth-otf-glyf.el, 8/8 in fontsloth-raster.el, 8/8 in
+fontsloth-layout-linebreak.el, 9/10 in fontsloth-otf-cff-dict.el.
+Only seg-stack, cff-dict number parsing, kern mapping, top-level
+load/raster, and one layout case have assertions.
+
+1. Pure data structures (no fonts): bbox, point, coords, line
+   (=fontsloth-line--create-adj=, =fontsloth-line-reposition=),
+   geometry quad/cube evaluation, geometry push/finalize, seg-stack
+   reset/grow.
+2. Byte-level parsers with synthetic byte vectors:
+   - cff-dict: every operator, skip/offset/range, all number encodings
+     and their bounds (including #x1c/#x1d negatives).
+   - cmap: formats 0, 4, 6, 12, including =idRangeOffset= arithmetic,
+     malformed/truncated tables, and the missing-glyph case.
+   - glyf: simple flags with repeat, short/long coords, composite
+     argument/transform variants, empty and missing glyphs, malformed
+     loca ranges.
+   - hmtx (=numberOfHMetrics= truncation), loca (short/long format),
+     kern format 0/3, GPOS coverage/class-def/pair-set lookups.
+   - WOFF header and per-table decompression.
+3. Golden tests from fixtures or ttx dumps:
+   - outline equality (contours, points, bounds) for simple and
+     composite glyf, and for each CFF1 charstring operator group
+     (lines, curves, flex, subrs, seac, hints).
+   - raster: pixel-for-pixel PGM for a small matrix of glyphs and
+     pixel sizes, including fractional sizes and empty glyphs.
+   - layout: metrics, kerning on/off, line breaking, empty text,
+     missing glyphs.
+4. Property/robustness tests: segment stack vs. a reference list,
+   raster output length and value range, outline bounds containing all
+   points, advance widths non-negative, and no error for malformed
+   input (fuzz a few truncated fixtures).
+5. End-to-end regression: load every fixture and outline every
+   mapped glyph; check the result is finite and bounded. This is the
+   cheap net that catches most parser regressions.
+6. Use built-in =testcover= to see which forms are exercised per
+   module. Track per-module coverage rather than a single global line
+   percentage, and use it to choose the next target. Add a
+   `make coverage` target.
+7. Testability refactor: =fontsloth-otf-load-font= communicates through
+   the globals =fontsloth-otf--current-tables= and
+   =fontsloth-otf--current-font-bytes=. Introduce a load-result object
+   (or a struct holding tables + bytes) that is passed explicitly, and
+   keep the globals as a thin compatibility layer. This makes table
+   parsing unit-testable without loading a whole font, and is also a
+   prerequisite for safe async/concurrent use.
+
+Definition of done for this phase: `make test` is green from a clean
+checkout in batch; every parser module has direct unit tests; each
+fixture is exercised end to end; CI runs on the supported Emacs
+versions.
+
+*** Phase 2: memory efficiency
+
+Measure before optimizing. Add a reproducible benchmark (elisp script,
+output captured in notes) that reports, for a synthetic font and one
+large real font:
+
+- =garbage-collect= counts and total bytes allocated during load
+- =memory-report= / retained heap after load, after outlining all
+  glyphs, and after rasterizing
+- wall-clock time for load, first raster, and steady-state raster
+
+Current likely wins, in order:
+
+1. Lazy glyph outlining. =fontsloth--load-font= currently calls
+   =fontsloth-glyph-create= for every glyph reachable from cmap and
+   stores fully outlined glyphs in a vector. Store an unoutlined glyph
+   entry and outline on first metrics/rasterize. This is the single
+   largest retained-memory and load-time win, and it directly serves
+   the "sufficient memory efficiency" goal. Keep the eager path behind
+   an option so golden tests can compare both.
+2. Eliminate per-element bindat type construction on hot paths. Per
+   =bindat-notes.txt=, =type (bindat-type ...)= builds a type object
+   and closures every time the enclosing spec is evaluated, whereas
+   using the type macro directly is inlined. The offenders are
+   =fontsloth-otf--glyf-spec= (one dynamically built spec per glyph),
+   =fontsloth-otf--make-composite-glyf-data-spec= (recursive
+   per-component), and the CFF/GPOS specs. Hoist reusable type objects
+   or use the macro directly. Keep the existing comment in
+   =fontsloth-otf--make-simple-glyf-coords-vec= as the tracking note.
+3. Release the raw font bytes. =fontsloth-otf--current-font-bytes= is a
+   global holding the whole file, and the font hash is computed from
+   it at load. After loading, it can be dropped unless repacking needs
+   it (and repacking can re-read the file). Today it also keeps the
+   last loaded font's bytes alive in the cache-adjacent state.
+4. Build GPOS kerning mappings lazily. =fontsloth-otf-load-font= calls
+   =fontsloth-otf-typo-gpos-build-kern-mappings= eagerly; for large
+   fonts this is both time and a large hash table.
+5. Reduce cache footprint: cache the compact font representation, not
+   a fully outlined glyph vector; bump `fontsloth--font-data-version`
+   whenever the struct changes. Revisit pcache load times (README notes
+   seconds for >10 fonts).
+6. Raster allocation hygiene: =fontsloth-raster-v-line= and
+   =fontsloth-raster-m-line= build temporary lists for truncated
+   coords, and every raster allocates a fresh canvas. Only do this
+   after profiling shows it matters; correctness is more valuable than
+   the last few percent here.
+
+Every memory change must be guarded by Phase 1's outline and pixmap
+golden tests, and must come with before/after numbers in the commit
+message. Do not trade accuracy for memory without an explicit note.
+
+*** Phase 3: completeness
+
+Order by leverage toward the stated goal (FreeType/HarfBuzz
+equivalent for Emacs), not by spec order:
+
+1. CFF2. =fontsloth-otf-cff2--parse-top-dict= exists but the outline
+   path is CFF1 only; CFF2 needs the top dict charstrings, blend
+   operator and variation store. This is required for essentially all
+   modern variable fonts and is a prerequisite for the rest of the
+   variable-font work.
+2. fvar + GVAR (+ HVAR) for variable font instances. Start with fvar
+   axes, named instances, and the default instance; then per-glyph
+   gvar deltas and phantom points; then HVAR for advance widths. This
+   closes the "does not support all of GVAR" gap and unlocks the
+   planned variation-index API.
+3. Font collections. =fontsloth-otf-load-font= accepts =:coll-index=
+   but ignores it, and the WOFF/TTC headers are not handled. Parse the
+   ttcf header, select the requested face, and thread the index into
+   loading and cache keys. Small change, unlocks .ttc.
+4. Repacking / round-trip. bindat supports packing; add per-table pack
+   specs and a =fontsloth-otf-save-font= path. This is an explicit
+   project goal and the foundation for merging glyph sets and
+   modifications. Do it after the representation is stable (post
+   Phase 2), since the serialized form must match the in-memory form.
+5. Vertical metrics and layout: vhea/vmtx, OS/2 (also fixes the
+   "Charter line height is off" note), vertical line metrics, and
+   then vertical text layout. Bidi and script shaping (GSUB/GPOS per
+   script) are a separate, much larger project and should be scoped
+   as their own milestone.
+6. Remaining cmap formats: 2, 8, 10, 13, 14 (variation selectors), and
+   subtable selection by platform/encoding rather than first-wins.
+7. Bitmap fonts (CBDT/CBLC, sbix, EBDT/EBLC) in a separate backend
+   module. They should not complicate the outline path.
+8. Raster accuracy and robustness: fuzz outlines, fix invariant
+   violations found by the fuzzer, and add a second raster backend for
+   comparison. The README already warns that fontdue's raster has
+   safety invariants; make those preconditions explicit and checked in
+   debug builds.
+9. Introspection and UI: expose existing loading/outlining data
+   (font info, glyph outline, code-point diff) as commands, then a
+   glyph browser (tabulated-list + SVG/image preview). Keep this thin
+   and built on the same public API slothbar uses.
+
+*** Cross-cutting
+
+- Define a small stable public API (=fontsloth-load-font=,
+  =fontsloth-font-rasterize=, =fontsloth-font-metrics=, layout
+  entry points) and mark everything else internal with `--`. README
+  already says pre-1.0; make the eventual 1.0 boundary explicit.
+- Keep byte-compile clean. The Emacs 31 warnings for =if-let= /
+  =when-let= are a good marker; decide whether to support 28 or move
+  the floor forward, then enforce it in CI.
+- Add checkdoc/package-lint to the lint target.
+- Keep benchmark and coverage outputs as committed artifacts or in
+  notes so regressions are visible in review.
+
+** References
+
+Fontsloth is developed by closely examining other projects that are
+robust and further along.
+
+- [[../fontdue]][[fontdue]] is probably the biggest inspiration. takes
+  a unique approach and provides a good outliner and raster
+- [[../fontations]][[fontations]] is state-of-the art in terms of
+  efficiency and accuracy, so worth examining
+- [[../font-rs]][[font-rs]] a reliable source of information for
+  algorithms and data structures. readable code.
+- [[../ttf-parser]][[ttf-parser]] useful to examine in a similar vein
+  as font-rs
+
+Then there are the standards themselves:
+
+TTF: https://developer.apple.com/fonts/TrueType-Reference-Manual/
+OTF: https://learn.microsoft.com/en-us/typography/opentype/spec/
+
+These are invaluable sources of truth.
+
+The OTF manual is here locally as a pdf also:
+[[./microsoft-typography.pdf]][[microsoft-typography.pdf]]
+
+
+** Tools
+
+We have available ttx to dump otf and ttf tables to xml and ttfdump to
+dump info to stdout for ttf.

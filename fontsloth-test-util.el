@@ -43,18 +43,26 @@
 
 ;;; Code:
 
-(require 'cl-lib)
-(require 'seq)
 
-(declare-function font-info "font.c" (name &optional frame))
+(defvar fontsloth-test--font-directory
+  (or (getenv "FONTSLOTH_TEST_FONT_DIR")
+      (expand-file-name
+       "test/fonts"
+       (file-name-directory
+        (or (locate-library "fontsloth-test-util")
+            load-file-name
+            buffer-file-name))))
+  "Directory containing the font fixtures used by the test suite.
+Override with the FONTSLOTH_TEST_FONT_DIR environment variable.")
 
-(cl-defsubst fontsloth-test--find-font-path (font-name-list)
-  "Return a path to the first found in FONT-NAME-LIST or nil if none."
-  (seq-some (lambda (v) (when v v))
-	    (cl-mapcar (lambda (name)
-			 (when-let ((fuck (font-info name)))
-			   (elt fuck 12)))
-		       font-name-list)))
+(defun fontsloth-test--fixture-font (name)
+  "Return the absolute path of fixture font NAME.
+Tests should skip when the returned path does not exist."
+  (expand-file-name name fontsloth-test--font-directory))
+
+(defun fontsloth-test--fixture-font-p (name)
+  "Return non-nil if fixture font NAME exists."
+  (file-exists-p (fontsloth-test--fixture-font name)))
 
 (provide 'fontsloth-test-util)
 ;;; fontsloth-test-util.el ends here

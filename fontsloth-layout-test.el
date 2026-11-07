@@ -49,7 +49,7 @@
 (require 'fontsloth-test-util)
 
 (defvar fontsloth-layout-test--font
-  (fontsloth-test--find-font-path '("Roboto")))
+  (fontsloth-test--fixture-font "IBMPlexSerif-Regular-subset.otf"))
 
 (cl-defun fontsloth-layout-test--verify-glyph-position
     (pos &key ekey eparent ex ey ewidth eheight echar-data euser-data)
@@ -83,78 +83,29 @@ EUSER-DATA expected user data"
                                               :px 35.0 :font-index 0
                                               :horizontal-kern? nil))
     (let ((output (fontsloth-layout-finalize layout)))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 0)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 45 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?H :ex 2.0 :ey -33.0 :ewidth 21 :eheight 25
-       :echar-data (fontsloth-layout-linebreak-char-data-create))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 1)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 74 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?e :ex 26.0 :ey -34.0 :ewidth 17 :eheight 20
-       :echar-data (fontsloth-layout-linebreak-char-data-create))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 2)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 81 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?l :ex 46.0 :ey -33.0 :ewidth 4 :eheight 27
-       :echar-data (fontsloth-layout-linebreak-char-data-create))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 3)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 81 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?l :ex 54.0 :ey -33.0 :ewidth 4 :eheight 27
-       :echar-data (fontsloth-layout-linebreak-char-data-create))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 4)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 84 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?o :ex 61.0 :ey -34.0 :ewidth 18 :eheight 20
-       :echar-data (fontsloth-layout-linebreak-char-data-create))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 5)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 5 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent '? ' :ex 80.0 :ey -33.0 :ewidth 0 :eheight 0
-       :echar-data (fontsloth-layout-linebreak-char-data-create :bits 1))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 6)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 92 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?w :ex 89.0 :ey -33.0 :ewidth 26 :eheight 19
-       :echar-data (fontsloth-layout-linebreak-char-data-create))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 7)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 84 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?o :ex 116.0 :ey -34.0 :ewidth 18 :eheight 20
-       :echar-data (fontsloth-layout-linebreak-char-data-create))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 8)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 87 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?r :ex 137.0 :ey -33.0 :ewidth 10 :eheight 19
-       :echar-data (fontsloth-layout-linebreak-char-data-create))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 9)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 81 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?l :ex 149.0 :ey -33.0 :ewidth 4 :eheight 27
-       :echar-data (fontsloth-layout-linebreak-char-data-create))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 10)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 73 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?d :ex 156.0 :ey -34.0 :ewidth 17 :eheight 28
-       :echar-data (fontsloth-layout-linebreak-char-data-create))
-      (fontsloth-layout-test--verify-glyph-position
-       (elt output 11)
-       :ekey (fontsloth-layout-glyph-raster-config-create
-              :glyph-id 6 :px 35.0 :font-hash (fontsloth-font-hash font))
-       :eparent ?! :ex 177.0 :ey -34.0 :ewidth 5 :eheight 26
-       :echar-data (fontsloth-layout-linebreak-char-data-create)))))
+      (should (= (length output) 12))
+      (cl-loop
+       for pos in output
+       for (parent x y width height glyph-id bits) in
+       '((?H 1.0 -36.0 25 25 34 0)
+         (?e 29.0 -37.0 17 20 5 0)
+         (?l 48.0 -36.0 9 27 12 0)
+         (?l 59.0 -36.0 9 27 12 0)
+         (?o 70.0 -37.0 18 20 15 0)
+         (?\s 89.0 -36.0 0 0 158 1)
+         (?w 97.0 -36.0 27 19 23 0)
+         (?o 125.0 -37.0 18 20 15 0)
+         (?r 145.0 -36.0 15 19 18 0)
+         (?l 161.0 -36.0 9 27 12 0)
+         (?d 172.0 -37.0 20 28 4 0)
+         (?! 194.0 -37.0 6 26 80 0))
+       do
+       (fontsloth-layout-test--verify-glyph-position
+        pos
+        :ekey (fontsloth-layout-glyph-raster-config-create
+               :glyph-id glyph-id :px 35.0 :font-hash (fontsloth-font-hash font))
+        :eparent parent :ex x :ey y :ewidth width :eheight height
+        :echar-data (fontsloth-layout-linebreak-char-data-create :bits bits))))))
 
 (provide 'fontsloth-layout-test)
 ;;; fontsloth-layout-test.el ends here

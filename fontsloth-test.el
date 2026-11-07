@@ -48,14 +48,17 @@
 (require 'fontsloth)
 (require 'fontsloth-test-util)
 
-(defvar fontsloth-test--font (fontsloth-test--find-font-path '("DejaVu Sans")))
-(defvar fontsloth-test--glyph-id 315) ; should correspond to ?Ź
+(defvar fontsloth-test--font
+  (fontsloth-test--fixture-font "fontsloth-test.ttf"))
+
+(defvar fontsloth-test--glyph-code-point ?A)
+
+(defvar fontsloth-test--px 12.0)
 
 (defvar fontsloth-test--expected-pixmap
-  [0 0 0 0 29 7 0 0 0 0 0 71 181 4 0 0 0 0 0 84 13 0 0 0 62 191 191 191 191 191
-   191 104 20 63 63 63 63 109 252 68 0 0 0 0 18 221 117 0 0 0 0 3 187 166 0 0 0
-   0 0 142 206 9 0 0 0 0 93 234 30 0 0 0 0 52 242 63 0 0 0 0 23 227 108 0 0 0 0
-   0 116 255 254 254 254 254 254 173])
+  [0 0 5 102 87 0 0 0 0 0 65 255 252 17 0 0 0 0 138 255 255 87 0 0 0 0 212 255
+   255 160 0 0 0 29 255 255 255 232 1 0 0 102 255 255 255 255 51 0 0 175 255 255
+   255 255 124 0 5 242 255 255 255 255 197 0 65 255 255 255 255 255 252 17])
 
 (defvar fontsloth-test--post-invalidate? nil
   "For use in fixtures to ensure the current state of cache is left unchanged.")
@@ -64,7 +67,19 @@
 ;; "(ert-run-tests-batch-and-exit fontsloth-test--order)"
 (defvar fontsloth-test--order '(member fontsloth-test-font-load-rasterize
                                        fontsloth-test-font-pcache-rasterize
+                                       fontsloth-test-font-formats
+                                       fontsloth-test-font-composite-rasterize
                                        fontsloth-test-font-code-point-diff))
+
+(defun fontsloth-test--assert-raster (font)
+  "Check FONT's raster output for the fixture glyph against the golden pixmap."
+  (pcase-let* ((glyph-id (fontsloth-font-glyph-id
+                          font fontsloth-test--glyph-code-point))
+               ((cl-struct fontsloth-metrics+pixmap metrics pixmap)
+                (fontsloth-font-rasterize font glyph-id fontsloth-test--px)))
+    (should (eq (fontsloth-metrics-width metrics) 8))
+    (should (eq (fontsloth-metrics-height metrics) 9))
+    (should (equal pixmap fontsloth-test--expected-pixmap))))
 
 (defun fontsloth-test--pre-fixture (body)
   "A fixture to run before BODY."
@@ -84,27 +99,39 @@
   (fontsloth-test--pre-fixture
    (lambda ()
      (skip-unless (f-exists-p fontsloth-test--font))
-     (pcase-let* ((font (fontsloth-load-font fontsloth-test--font
-                                             :cache 'reload))
-                  ((cl-struct fontsloth-metrics+pixmap metrics pixmap)
-                   (fontsloth-font-rasterize
-                    font fontsloth-test--glyph-id 12.0)))
-       (should (eq (fontsloth-metrics-width metrics) 8))
-       (should (eq (fontsloth-metrics-height metrics) 12))
-       (should (equal pixmap fontsloth-test--expected-pixmap))))))
+     (fontsloth-test--assert-raster
+      (fontsloth-load-font fontsloth-test--font :cache 'reload)))))
 
 (ert-deftest fontsloth-test-font-pcache-rasterize ()
   "Test rasterizing a glyph from a cached font."
   (fontsloth-test--post-fixture
    (lambda ()
      (skip-unless (f-exists-p fontsloth-test--font))
-     (pcase-let* ((font (fontsloth-load-font fontsloth-test--font))
-                  ((cl-struct fontsloth-metrics+pixmap metrics pixmap)
-                   (fontsloth-font-rasterize
-                    font fontsloth-test--glyph-id 12.0)))
-       (should (eq (fontsloth-metrics-width metrics) 8))
-       (should (eq (fontsloth-metrics-height metrics) 12))
-       (should (equal pixmap fontsloth-test--expected-pixmap))))))
+     (fontsloth-test--assert-raster
+      (fontsloth-load-font fontsloth-test--font)))))
+
+(ert-deftest fontsloth-test-font-formats ()
+  "Check that TTF, CFF1 OTF, and WOFF fixtures rasterize identically."
+  (dolist (name '("fontsloth-test.ttf"
+                  "fontsloth-test.otf"
+                  "fontsloth-test.woff"))
+    (let ((path (fontsloth-test--fixture-font name)))
+      (skip-unless (f-exists-p path))
+      (fontsloth-test--assert-raster
+       (fontsloth-load-font path :cache 'bypass)))))
+
+(ert-deftest fontsloth-test-font-composite-rasterize ()
+  "Check that a composite glyf can be outlined and rasterized."
+  (skip-unless (f-exists-p fontsloth-test--font))
+  (let* ((font (fontsloth-load-font fontsloth-test--font :cache 'bypass))
+         (glyph-id (fontsloth-font-glyph-id font ?Á)))
+    (should glyph-id)
+    (pcase-let* (((cl-struct fontsloth-metrics+pixmap metrics pixmap)
+                  (fontsloth-font-rasterize font glyph-id fontsloth-test--px)))
+      ;; The acute accent makes the composite taller than plain A.
+      (should (= (fontsloth-metrics-width metrics) 8))
+      (should (= (fontsloth-metrics-height metrics) 11))
+      (should (= (length pixmap) 88)))))
 
 (ert-deftest fontsloth-test-font-code-point-diff ()
   "Test `fontsloth-font-code-point-diff'."
