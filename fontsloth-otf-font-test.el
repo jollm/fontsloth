@@ -58,7 +58,12 @@
     (let ((font (fontsloth-otf-load-font-data fontsloth-otf-font-test--path)))
       (should (fontsloth-otf-font-p font))
       (should (hash-table-p (fontsloth-otf-font-tables font)))
-      (should (stringp (fontsloth-otf-font-bytes font)))
+      (should-not (fontsloth-otf-font-bytes font))
+      (should (stringp (fontsloth-otf-font-hash font)))
+      (should (equal (fontsloth-otf-font-hash font)
+                     (fontsloth-font-hash
+                      (fontsloth-load-font fontsloth-otf-font-test--path
+                                           :cache 'bypass))))
       (should (= (fontsloth-otf-num-glyphs font) 7))
       (should (= (fontsloth-otf-units-per-em font) 1000))
       (should (= (fontsloth-otf-ascender font) 800))

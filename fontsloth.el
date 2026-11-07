@@ -218,8 +218,7 @@ Useful for tests and benchmarks that need the eager representation."
                             units-per-em glyphs char-to-glyph
                             horizontal-line-metrics horizontal-kern
                             vertical-line-metrics font-settings
-                            (secure-hash 'sha1
-                                         (fontsloth-otf-font-bytes data)))))
+                            (fontsloth-otf-font-hash data))))
           (if (fontsloth-font-settings-lazy-outline? font-settings)
               (puthash font data fontsloth--lazy-fonts)
             (let ((seen (make-hash-table :test 'eq))

@@ -56,3 +56,19 @@ the glyphs it actually renders.
 The full suite (including the golden outline hashes, parser-vs-high-level
 comparison, bounds/orientation invariants, raster stability, and cache
 round-trip/reparse tests) passes with lazy outlining enabled by default.
+
+
+* After dropping raw bytes (same day)
+
+The loaded `fontsloth-otf-font` now keeps only the parsed tables and the
+source SHA-1. The raw bytes are released after parsing.
+
+| Font | Mode | Load | Load alloc | Load retained | Force all | Force retained |
+|------+------+------+------------+---------------+-----------+----------------|
+| Plex subset | lazy | 0.551s | 186.73 MB | 0.74 MB | 1.257s | 1.90 MB |
+| SF Pro | lazy | 17.379s | 6,327.05 MB | **59.02 MB** | 45.973s | 314.33 MB |
+
+SF Pro lazy retained heap drops from 77.89 MB to 59.02 MB, matching the
+19.8 MB source file size. Parsing time and allocation are unchanged,
+and the full-outline retained figure remains dominated by the glyph
+data (~314 MB).

@@ -207,11 +207,13 @@ Bind this with `fontsloth-otf-with-font' rather than setting it directly.")
     (fontsloth-otf-font
      (:constructor fontsloth-otf-font-create)
      (:copier nil))
-  "A loaded OTF/TTF font's parsed tables and source bytes."
+  "A loaded OTF/TTF font's parsed tables and a hash of the source bytes."
   (tables nil :type hash-table
           :documentation "tag -> parsed table data")
   (bytes nil :type string
-         :documentation "raw font file bytes, kept for WOFF and hashing"))
+         :documentation "Raw bytes during parsing; nil after the load completes")
+  (hash nil :type string
+        :documentation "SHA-1 of the original font bytes"))
 
 (defsubst fontsloth-otf--font-tables (font)
   "Return FONT's table map, or the dynamically current map when FONT is nil."
@@ -719,8 +721,11 @@ COLL-INDEX is currently ignored (font collections are not supported)."
 TTF-PATH the path to a ttf file
 :COLL-INDEX the collection index if this file is a collection, default 0"
   (let* ((bytes (fontsloth-otf--read-font-bytes ttf-path))
+         (hash (secure-hash 'sha1 bytes))
          (tables (fontsloth-otf--parse-tables bytes coll-index)))
-    (fontsloth-otf-font-create :tables tables :bytes bytes)))
+    ;; Tables are fully parsed and WOFF tables are decompressed by now
+    ;; the raw bytes are no longer needed.
+    (fontsloth-otf-font-create :tables tables :bytes nil :hash hash)))
 
 (cl-defun fontsloth-otf-load-font (ttf-path &key (coll-index 0))
   "Read `ttf-path' into an abstract representation suitable for rendering.
