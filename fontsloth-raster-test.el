@@ -45,6 +45,7 @@
 
 (require 'ert)
 (require 'seq)
+(require 'fontsloth-geometry)
 (require 'fontsloth-raster)
 
 (ert-deftest fontsloth-raster-create ()
@@ -95,5 +96,40 @@
         (should (= (aref out 11) 0))
         (should (= (aref out 12) 255))))))
 
+(ert-deftest fontsloth-raster-v-line ()
+  "Check that a vertical edge contributes coverage."
+  (let* ((raster (fontsloth-raster-create 20 20))
+         (line (fontsloth-line-create
+                (fontsloth-point-create :x 0.0 :y 0.0)
+                (fontsloth-point-create :x 0.0 :y 10.0))))
+    (fontsloth-raster-v-line raster line (fontsloth-line-coords line))
+    (should (seq-some (lambda (v) (/= v 0.0))
+                      (fontsloth-raster-canvas raster)))))
+
+(ert-deftest fontsloth-raster-m-line ()
+  "Check that a diagonal edge contributes coverage."
+  (let* ((raster (fontsloth-raster-create 20 20))
+         (line (fontsloth-line-create
+                (fontsloth-point-create :x 0.0 :y 0.0)
+                (fontsloth-point-create :x 10.0 :y 10.0))))
+    (fontsloth-raster-m-line raster line (fontsloth-line-coords line)
+                             (fontsloth-line-params line))
+    (should (seq-some (lambda (v) (/= v 0.0))
+                      (fontsloth-raster-canvas raster)))))
+
+(ert-deftest fontsloth-raster-draw ()
+  "Check drawing a simple glyph with one vertical line."
+  (let* ((line (fontsloth-line-create
+                (fontsloth-point-create :x 0.0 :y 0.0)
+                (fontsloth-point-create :x 0.0 :y 10.0)))
+         (glyph (record 'fontsloth-glyph
+                        (vector line) (vector) 10.0 0.0
+                        (fontsloth-glyph-outline-bounds-create)))
+         (raster (fontsloth-raster-create 20 20)))
+    (fontsloth-raster-draw raster glyph 1.0 1.0 0.0 0.0)
+    (should (seq-some (lambda (v) (/= v 0.0))
+                      (fontsloth-raster-canvas raster)))))
+
 (provide 'fontsloth-raster-test)
+
 ;;; fontsloth-raster-test.el ends here

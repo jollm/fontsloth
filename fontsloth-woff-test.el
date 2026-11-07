@@ -135,5 +135,14 @@
     (should (equal (fontsloth-woff--maybe-decompress-table props bytes)
                    "XhelloY"))))
 
+(ert-deftest fontsloth-woff-test-maybe-decompress-garbage ()
+  "Check that corrupt compressed table data signals an error."
+  (skip-unless (zlib-available-p))
+  (should-error
+   (fontsloth-woff--maybe-decompress-table
+    '((comp-length . 4) (orig-length . 5) (offset . 0))
+    (unibyte-string 0 0 0 0))))
+
 (provide 'fontsloth-woff-test)
+
 ;;; fontsloth-woff-test.el ends here

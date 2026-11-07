@@ -133,5 +133,21 @@
           (should-error (fontsloth-load-font path :cache 'bypass)))
       (delete-file path))))
 
+(ert-deftest fontsloth-e2e-test-unknown-sfnt-version ()
+  "Check that an unknown sfnt version fails cleanly."
+  (let ((path (make-temp-file "fontsloth-e2e-badsfnt-" nil ".ttf"))
+        (source (fontsloth-test--fixture-font "fontsloth-test.ttf")))
+    (unwind-protect
+        (progn
+          (with-temp-file path
+            (set-buffer-multibyte nil)
+            (insert-file-contents-literally source)
+            (goto-char 1)
+            (delete-region 1 5)
+            (insert "XXXX"))
+          (should-error (fontsloth-load-font path :cache 'bypass)))
+      (delete-file path))))
+
 (provide 'fontsloth-e2e-test)
+
 ;;; fontsloth-e2e-test.el ends here

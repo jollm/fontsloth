@@ -701,7 +701,7 @@ COLL-INDEX is currently ignored (font collections are not supported)."
               fontsloth-log
               "Fontsloth-otf: cannot yet fully handle OpenType CFF")
              (put-table "CFF " (unpack-table "CFF " fontsloth-otf-cff--spec)))
-            (t (fontsloth:error "Fontsloth-otf: Unknown sfnt-ver %s" sfnt-ver)))
+            (t (error "Fontsloth-otf: Unknown sfnt-ver %s" sfnt-ver)))
       (when (gethash "kern" props)
         (put-table "kern" (unpack-table "kern" fontsloth-otf-kern-spec)))
       ;; (when (gethash "GDEF" props)

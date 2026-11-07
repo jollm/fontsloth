@@ -7,9 +7,22 @@ on:
 jobs:
   test:
     runs-on: docker
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - debian:bookworm-slim
+          - debian:trixie-slim
     container:
-      image: debian:trixie-slim
+      image: ${{ matrix.image }}
     steps:
+      # actions/checkout needs git inside the job container.
+      - name: Install git
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git
+
       - name: Check out
         uses: actions/checkout@v4
 

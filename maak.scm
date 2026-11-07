@@ -73,9 +73,16 @@
   ($ (list (format #f "~a --batch -L . -l ert -l ~a --eval '(ert-run-tests-batch-and-exit)'"
                    emacs file))))
 
+(define (coverage-test-files)
+  "Return the test files used for per-file coverage.
+The end-to-end suite is excluded: it is expensive and is re-run for
+every source file."
+  (remove (lambda (file) (string-suffix? "-e2e-test.el" file))
+          (test-files)))
+
 (define (coverage)
   "Report per-file test coverage, one Emacs process per source file."
-  (let ((tests (string-join (test-files) " ")))
+  (let ((tests (string-join (coverage-test-files) " ")))
     (for-each
      (lambda (source)
        ($ (list (format #f "~a --batch -L . -l scripts/coverage.el -- ~a ~a"

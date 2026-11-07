@@ -267,7 +267,9 @@ maak coverage
 
 One Emacs process is used per source file so that a file testcover
 cannot instrument does not abort the whole report. Those files print
-=SKIP=.
+=SKIP=. The end-to-end suite is excluded from per-file coverage because
+it is re-run for every source file. Run =maak test= for end-to-end
+coverage.
 
 Forgejo CI runs =maak compile= and =maak test= from =.forgejo/workflows/ci.yml=.
 

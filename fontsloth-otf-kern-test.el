@@ -173,5 +173,11 @@
     (should (= (alist-get 'minor-version table) 0))
     (should (= (gethash (logior (ash 1 16) 2) mappings) -50))))
 
+(ert-deftest fontsloth-otf-kern-test-truncated ()
+  "Check that a truncated kern table signals an error."
+  (should-error
+   (bindat-unpack fontsloth-otf-kern-spec (unibyte-string 0 0 0 0))))
+
 (provide 'fontsloth-otf-kern-test)
+
 ;;; fontsloth-otf-kern-test.el ends here
