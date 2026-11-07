@@ -75,9 +75,11 @@
 
 (define (coverage-test-files)
   "Return the test files used for per-file coverage.
-The end-to-end suite is excluded: it is expensive and is re-run for
-every source file."
-  (remove (lambda (file) (string-suffix? "-e2e-test.el" file))
+The end-to-end and invariant suites are excluded: they are expensive and
+are re-run for every source file."
+  (remove (lambda (file)
+            (or (string-suffix? "-e2e-test.el" file)
+                (string-suffix? "-invariant-test.el" file)))
           (test-files)))
 
 (define (coverage)

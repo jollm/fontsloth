@@ -43,6 +43,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+
 
 (defvar fontsloth-test--font-directory
   (or (getenv "FONTSLOTH_TEST_FONT_DIR")
@@ -63,6 +65,87 @@ Tests should skip when the returned path does not exist."
 (defun fontsloth-test--fixture-font-p (name)
   "Return non-nil if fixture font NAME exists."
   (file-exists-p (fontsloth-test--fixture-font name)))
+
+(defun fontsloth-test--format-number (n)
+  "Format N canonically for outline comparisons."
+  (format "%.6f" (if (< (abs n) 1.0e-9) 0.0 n)))
+
+(defun fontsloth-test--line-signature (line)
+  "Return a canonical signature for LINE."
+  (let ((coords (fontsloth-line-coords line)))
+    (mapcar #'fontsloth-test--format-number
+            (list (fontsloth-coords-x0 coords)
+                  (fontsloth-coords-y0 coords)
+                  (fontsloth-coords-x1 coords)
+                  (fontsloth-coords-y1 coords)))))
+
+(defun fontsloth-test--glyph-signature (glyph)
+  "Return a canonical signature for GLYPH."
+  (let ((bounds (fontsloth-glyph-bounds glyph)))
+    (list :v (mapcar #'fontsloth-test--line-signature
+                     (fontsloth-glyph-v-lines glyph))
+          :m (mapcar #'fontsloth-test--line-signature
+                     (fontsloth-glyph-m-lines glyph))
+          :bounds (mapcar #'fontsloth-test--format-number
+                          (list (fontsloth-glyph-outline-bounds-xmin bounds)
+                                (fontsloth-glyph-outline-bounds-ymin bounds)
+                                (fontsloth-glyph-outline-bounds-width bounds)
+                                (fontsloth-glyph-outline-bounds-height bounds)))
+          :advance (mapcar #'fontsloth-test--format-number
+                           (list (fontsloth-glyph-advance-width glyph)
+                                 (fontsloth-glyph-advance-height glyph))))))
+
+(defun fontsloth-test--glyph-hash (glyph)
+  "Return a stable SHA-1 of GLYPH's outline signature."
+  (secure-hash 'sha1 (prin1-to-string (fontsloth-test--glyph-signature glyph))))
+
+(defun fontsloth-test--glyph-ids (char-to-glyph)
+  "Return the sorted unique glyph ids in CHAR-TO-GLYPH."
+  (let ((seen (make-hash-table :test 'eq))
+        (ids nil))
+    (maphash (lambda (_code-point glyph-id)
+               (unless (gethash glyph-id seen)
+                 (puthash glyph-id t seen)
+                 (push glyph-id ids)))
+             char-to-glyph)
+    (sort ids #'<)))
+
+(defun fontsloth-test--outline-signatures (font)
+  "Return an alist of glyph id to outline signature for FONT."
+  (let ((glyphs (fontsloth-font-glyphs font)))
+    (cl-loop for glyph-id in (fontsloth-test--glyph-ids
+                              (fontsloth-font-char-to-glyph font))
+             for glyph = (aref glyphs glyph-id)
+             when glyph
+             collect (cons glyph-id (fontsloth-test--glyph-signature glyph)))))
+
+(defun fontsloth-test--outline-signatures-from-data (path)
+  "Outline PATH from an explicit parser object and return signatures."
+  (let* ((data (fontsloth-otf-load-font-data path))
+         (settings (fontsloth-font-settings-create))
+         (scale (fontsloth-font-settings-scale settings))
+         (units-per-em (fontsloth-otf-units-per-em data))
+         (ids (fontsloth-test--glyph-ids
+               (fontsloth-otf-char-to-glyph-map data))))
+    (cl-loop for glyph-id in ids
+             collect (cons glyph-id
+                           (fontsloth-test--glyph-signature
+                            (fontsloth-glyph-create glyph-id scale
+                                                    units-per-em data))))))
+
+(defun fontsloth-test--raster-signature (font glyph-id px)
+  "Return a canonical raster signature for GLYPH-ID at PX."
+  (let* ((result (fontsloth-font-rasterize font glyph-id px))
+         (metrics (fontsloth-metrics+pixmap-metrics result))
+         (pixmap (fontsloth-metrics+pixmap-pixmap result)))
+    (list (list (fontsloth-metrics-width metrics)
+                (fontsloth-metrics-height metrics)
+                (fontsloth-metrics-offset-x metrics)
+                (fontsloth-metrics-offset-y metrics)
+                (fontsloth-metrics-advance-width metrics)
+                (fontsloth-metrics-advance-height metrics))
+          (secure-hash 'sha1
+                       (apply #'unibyte-string (append pixmap nil))))))
 
 (provide 'fontsloth-test-util)
 ;;; fontsloth-test-util.el ends here
