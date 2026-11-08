@@ -161,6 +161,20 @@ def main():
     fb.setupDummyDSIG()
     fb.save(ttf_path)
 
+    # A minimal variable font: one wght axis, two named instances.  It is
+    # only for fvar parsing; no gvar deltas are needed.
+    vf = FontBuilder(UPM, isTTF=True)
+    setup_common(vf, glyph_order, cmap, widths)
+    vf.setupGlyf(tt_glyphs(drawers))
+    vf.setupFvar(
+        [("wght", 100, 400, 900, "Weight")],
+        [
+            {"location": {"wght": 400}, "stylename": "Regular"},
+            {"location": {"wght": 700}, "stylename": "Bold"},
+        ],
+    )
+    vf.save(HERE / "fontsloth-test-vf.ttf")
+
     fb = FontBuilder(UPM, isTTF=False)
     setup_common(fb, glyph_order, cmap, widths)
     fb.setupCFF(

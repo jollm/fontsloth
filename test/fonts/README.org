@@ -19,6 +19,7 @@ python3 test/fonts/generate.py
 | =fontsloth-test.ttf=   | TrueType: simple and composite glyf, cmap 4 and 12   |
 | =fontsloth-test.otf=   | CFF1: cubic outlines, same cmap                        |
 | =fontsloth-test.woff=  | WOFF1 wrapping =fontsloth-test.ttf=                   |
+| =fontsloth-test-vf.ttf= | TrueType with an fvar wght axis and two instances    |
 
 The synthetic fonts are original to this project and carry the same
 license as fontsloth.

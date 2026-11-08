@@ -59,6 +59,7 @@
 (require 'fontsloth-otf-glyf)
 (require 'fontsloth-otf-kern)
 (require 'fontsloth-otf-typo)
+(require 'fontsloth-otf-var)
 (require 'fontsloth-woff)
 
 (defvar fontsloth-otf--header-spec
@@ -211,7 +212,7 @@ Bind this with `fontsloth-otf-with-font' rather than setting it directly.")
   (tables nil :type hash-table
           :documentation "tag -> parsed table data")
   (bytes nil :type string
-         :documentation "Raw bytes during parsing; nil after the load completes")
+         :documentation "Raw bytes during parsing, nil after the load completes")
   (hash nil :type string
         :documentation "SHA-1 of the original font bytes"))
 
@@ -820,6 +821,8 @@ COLL-INDEX is currently ignored (font collections are not supported)."
       (put-table "hmtx" (unpack-table "hmtx" fontsloth-otf--hmtx-spec))
       (put-table "cmap" (unpack-table "cmap" fontsloth-otf--cmap-spec))
       (put-table "post" (unpack-table "post" fontsloth-otf--post-spec))
+      (when (gethash "fvar" props)
+        (put-table "fvar" (unpack-table "fvar" fontsloth-otf-var--fvar-spec)))
       (cond ((string-equal "   " sfnt-ver)
              (put-table "loca" (unpack-table "loca" fontsloth-otf--loca-spec))
              (put-table "glyf" (unpack-table "glyf" fontsloth-otf--glyf-spec)))
@@ -863,19 +866,19 @@ TTF-PATH the path to a ttf file
 
 (defun fontsloth-otf-num-glyphs (&optional font)
   "If a font is loaded, find its specified number of glyphs.
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   (when-let ((maxp (gethash "maxp" (fontsloth-otf--font-tables font))))
     (alist-get 'num-glyphs maxp)))
 
 (defun fontsloth-otf-units-per-em (&optional font)
   "If a font is loaded, find its units-per-em.
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   (when-let ((head (gethash "head" (fontsloth-otf--font-tables font))))
     (alist-get 'units-per-em head)))
 
 (defun fontsloth-otf-char-to-glyph-map (&optional font)
   "Get the font's code-point -> glyph id mapping.
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   (when-let* ((cmap (gethash "cmap" (fontsloth-otf--font-tables font)))
               (sub-tables (alist-get 'sub-tables cmap))
               (map (make-hash-table
@@ -904,14 +907,14 @@ FONT an optional `fontsloth-otf-font'; defaults to the current context."
 (defun fontsloth-otf-glyph-id-for-code-point (code-point &optional font)
   "Return the font's glyph index for a given code point or nil if not found.
 CODE-POINT a character code point
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   (when-let ((glyph-index-map (fontsloth-otf-char-to-glyph-map font)))
     (gethash code-point glyph-index-map)))
 
 (defun fontsloth-otf-glyph-name (glyph-id &optional font)
   "Return the name the font specifies for the glyph or nil if none is given.
 GLYPH-ID the glyph-id
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   (when-let* ((post (gethash "post" (fontsloth-otf--font-tables font)))
               (name-map (alist-get 'name-mapping post)))
     (when (vectorp name-map)
@@ -922,7 +925,7 @@ FONT an optional `fontsloth-otf-font'; defaults to the current context."
 
 (defun fontsloth-otf-ascender (&optional font)
   "Return the font's horizontal face ascender.
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   ;; TODO: parse OS/2 table
   ;; TODO: support variation axes
   (when-let ((hhea (gethash "hhea" (fontsloth-otf--font-tables font))))
@@ -930,7 +933,7 @@ FONT an optional `fontsloth-otf-font'; defaults to the current context."
 
 (defun fontsloth-otf-descender (&optional font)
   "Return the font's horizontal face descender.
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   ;; TODO: parse OS/2 table
   ;; TODO: support variation axes
   (when-let ((hhea (gethash "hhea" (fontsloth-otf--font-tables font))))
@@ -938,15 +941,40 @@ FONT an optional `fontsloth-otf-font'; defaults to the current context."
 
 (defun fontsloth-otf-line-gap (&optional font)
   "Return the font's horizontal face line gap.
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   ;; TODO: parse OS/2 table
   ;; TODO: support variation axes
   (when-let ((hhea (gethash "hhea" (fontsloth-otf--font-tables font))))
     (alist-get 'line-gap hhea)))
 
+(defun fontsloth-otf-fvar (&optional font)
+  "Return FONT's parsed fvar table, if any.
+FONT an optional `fontsloth-otf-font', defaults to the current context."
+  (gethash "fvar" (fontsloth-otf--font-tables font)))
+
+(defun fontsloth-otf-fvar-axes (&optional font)
+  "Return FONT's variation axes as a vector of alists.
+FONT an optional `fontsloth-otf-font', defaults to the current context."
+  (when-let ((fvar (fontsloth-otf-fvar font)))
+    (alist-get 'axes (alist-get 'axes fvar))))
+
+(defun fontsloth-otf-fvar-instances (&optional font)
+  "Return FONT's named instances as a vector of alists.
+FONT an optional `fontsloth-otf-font', defaults to the current context."
+  (when-let ((fvar (fontsloth-otf-fvar font)))
+    (alist-get 'instances (alist-get 'instances fvar))))
+
+(defun fontsloth-otf-fvar-axis (tag &optional font)
+  "Return FONT's axis alist for TAG, or nil.
+TAG a four-character axis tag such as wght
+FONT an optional `fontsloth-otf-font', defaults to the current context."
+  (when-let ((axes (fontsloth-otf-fvar-axes font)))
+    (cl-find tag axes :key (lambda (axis) (alist-get 'tag axis))
+             :test #'equal)))
+
 (defun fontsloth-otf-glyph-hor-advance (glyph-id &optional font)
   "Return the horizontal advance for GLYPH-ID.
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   ;; Todo: support font variations
   (when-let* ((hmtx (gethash "hmtx" (fontsloth-otf--font-tables font)))
               (metrics (alist-get 'hmetrics hmtx))
@@ -964,7 +992,7 @@ FONT an optional `fontsloth-otf-font'; defaults to the current context."
 
 (defun fontsloth-otf-glyph-ver-advance (glyph-id &optional font)
   "Return the vertical advance for a GLYPH-ID.
-FONT is ignored; vertical metrics are not implemented yet."
+FONT is ignored, vertical metrics are not implemented yet."
   (ignore glyph-id font)
   ;; TODO: parse vmtx
   ;; TODO: support font variations
@@ -972,7 +1000,7 @@ FONT is ignored; vertical metrics are not implemented yet."
 
 (defun fontsloth-otf-find-hkern-mappings (&optional font)
   "Try to find indexed horizontal pair kern mappings for the current font.
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   (when-let ((table (or (gethash "kern" (fontsloth-otf--font-tables font))
                         (gethash "GPOS" (fontsloth-otf--font-tables font)))))
     (or (alist-get 'mappings table)
@@ -1037,7 +1065,7 @@ generics to dispatch on their outliner type:
 `fontsloth-otf-close-contour'
 GLYPH-ID the id of the glyph to outline
 OUTLINER the caller's outliner implementation
-FONT an optional `fontsloth-otf-font'; defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   ;; TODO gvar
   (fontsloth-otf-with-font font
     (if-let ((glyf (gethash "glyf" (fontsloth-otf--font-tables font))))

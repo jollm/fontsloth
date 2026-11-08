@@ -40,6 +40,7 @@
     "fontsloth-otf-glyf.el"
     "fontsloth-otf-kern.el"
     "fontsloth-otf-typo.el"
+    "fontsloth-otf-var.el"
     "fontsloth-otf.el"
     "fontsloth-point.el"
     "fontsloth-raster.el"
