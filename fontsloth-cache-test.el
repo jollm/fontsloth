@@ -158,6 +158,37 @@
          (should (equal (fontsloth-test--outline-signatures cached)
                         (fontsloth-test--outline-signatures font))))))))
 
+(ert-deftest fontsloth-cache-test-collection-index ()
+  "Check that different TTC faces use independent cache entries."
+  (fontsloth-cache-test--with-cache
+   (let ((path "/tmp/fontsloth-test.ttc"))
+     (fontsloth-cache-put path 'face-0 0)
+     (fontsloth-cache-put path 'face-1 1)
+     (should (eq (fontsloth-cache-get path 0) 'face-0))
+     (should (eq (fontsloth-cache-get path 1) 'face-1))
+     (should (fontsloth-cache-has path 1))
+     (fontsloth-cache-invalidate path 0)
+     (should-not (fontsloth-cache-has path 0))
+     (should (eq (fontsloth-cache-get path 1) 'face-1)))))
+
+(ert-deftest fontsloth-cache-test-collection-fonts ()
+  "Check that loaded TTC faces round-trip through the cache independently."
+  (let ((path (fontsloth-test--fixture-font "fontsloth-test.ttc")))
+    (skip-unless (f-exists-p path))
+    (fontsloth-cache-test--with-cache
+     (let* ((settings-0 (fontsloth-font-settings-create :collection-index 0))
+            (settings-1 (fontsloth-font-settings-create :collection-index 1))
+            (font-0 (fontsloth-load-font path :font-settings settings-0))
+            (font-1 (fontsloth-load-font path :font-settings settings-1)))
+       (should (gethash "glyf"
+                        (fontsloth-otf--font-tables
+                         (fontsloth--font-data font-0))))
+       (should (gethash "CFF "
+                        (fontsloth-otf--font-tables
+                         (fontsloth--font-data font-1))))
+       (should (fontsloth-cache-has path 0))
+       (should (fontsloth-cache-has path 1))))))
+
 (provide 'fontsloth-cache-test)
 
 

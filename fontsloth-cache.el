@@ -71,11 +71,14 @@ A nil value or zero indicates to save immediately."
 (defconst fontsloth-cache--pcache-prefix "fontsloth-"
   "The pcache file name prefix for all fontsloth related repositories.")
 
-(defsubst fontsloth-cache--pcache-path-name (file-path)
-  "Given FILE-PATH, generate the path name to use for pcache storage."
-  (format "%s%s"
+(defsubst fontsloth-cache--pcache-path-name (file-path &optional collection-index)
+  "Given FILE-PATH and COLLECTION-INDEX, generate the pcache path name."
+  (format "%s%s%s"
           fontsloth-cache--pcache-prefix
-          (replace-regexp-in-string "[/\\.]" "_" file-path)))
+          (replace-regexp-in-string "[/\\.]" "_" file-path)
+          (if (and collection-index (/= collection-index 0))
+              (format "_c%s" collection-index)
+            "")))
 
 (defvar fontsloth-cache--initialized? nil
   "Nil if fontsloth cache repositories are not yet loaded.")
@@ -119,12 +122,14 @@ FORCE? if non-nil, re-load even if already initialized"
 (declare-function fontsloth--font-cache-snapshot "fontsloth" (font))
 (declare-function fontsloth-font-p "fontsloth" (object))
 
-(defun fontsloth-cache-put (file-path font)
+(defun fontsloth-cache-put (file-path font &optional collection-index)
   "Put `fontsloth-font' FONT in cache using lookup key FILE-PATH.
-Lazy fonts are stored as compact snapshots rather than serializing
-whatever glyphs and kern map happen to be loaded at save time."
+COLLECTION-INDEX selects the TTC face.  Lazy fonts are stored as compact
+snapshots rather than serializing whatever glyphs and kern map happen to
+be loaded at save time."
   (fontsloth-cache--load-repos)
-  (let* ((repo-name (fontsloth-cache--pcache-path-name file-path))
+  (let* ((repo-name (fontsloth-cache--pcache-path-name
+                     file-path collection-index))
          (cache (or (gethash repo-name *pcache-repositories*)
                     (make-instance 'fontsloth-cache-pcache
                                    :object-name repo-name)))
@@ -140,25 +145,28 @@ whatever glyphs and kern map happen to be loaded at save time."
      (lambda ()
        (pcache-save cache t)))))
 
-(defun fontsloth-cache-has (file-path)
-  "Return non-nil if cache has a `fontsloth-font' corresponding to FILE-PATH."
-  (when-let* ((repo-name (fontsloth-cache--pcache-path-name file-path))
+(defun fontsloth-cache-has (file-path &optional collection-index)
+  "Return non-nil if cache has a font for FILE-PATH at COLLECTION-INDEX."
+  (when-let* ((repo-name (fontsloth-cache--pcache-path-name
+                          file-path collection-index))
               (cache (gethash repo-name *pcache-repositories*)))
     (pcache-has cache file-path)))
 
-(defun fontsloth-cache-get (file-path)
-  "Retrieve a cached `fontsloth-font' corresponding to FILE-PATH, if any.
+(defun fontsloth-cache-get (file-path &optional collection-index)
+  "Retrieve a cached font for FILE-PATH at COLLECTION-INDEX, if any.
 
 The value is nil if no entry is found."
   (fontsloth-cache--load-repos)
-  (when-let* ((repo-name (fontsloth-cache--pcache-path-name file-path))
+  (when-let* ((repo-name (fontsloth-cache--pcache-path-name
+                          file-path collection-index))
               (cache (gethash repo-name *pcache-repositories*)))
     (pcache-get cache file-path)))
 
-(defun fontsloth-cache-invalidate (file-path)
-  "Invalidate a single font corresponding to FILE-PATH."
+(defun fontsloth-cache-invalidate (file-path &optional collection-index)
+  "Invalidate a single font for FILE-PATH at COLLECTION-INDEX."
   (fontsloth-cache--load-repos)
-  (when-let* ((repo-name (fontsloth-cache--pcache-path-name file-path))
+  (when-let* ((repo-name (fontsloth-cache--pcache-path-name
+                          file-path collection-index))
               (cache (gethash repo-name *pcache-repositories*)))
     (pcache-invalidate cache file-path)
     (pcache-destroy-repository repo-name)))

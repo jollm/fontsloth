@@ -306,11 +306,13 @@ Eager fonts are already fully outlined and are returned unchanged."
 
 (defun fontsloth--load-font-cached (path font-settings)
   "Retrieve a font from cache and if not load it with PATH and FONT-SETTINGS."
-  (cl-flet ((load-font ()
-              (let ((font (fontsloth--load-font path font-settings)))
-                (fontsloth-cache-put path font)
-                font)))
-    (if-let* ((cached-font (fontsloth-cache-get path)))
+  (let ((collection-index
+         (fontsloth-font-settings-collection-index font-settings)))
+    (cl-flet ((load-font ()
+                (let ((font (fontsloth--load-font path font-settings)))
+                  (fontsloth-cache-put path font collection-index)
+                  font)))
+      (if-let* ((cached-font (fontsloth-cache-get path collection-index)))
         (if (and (eq (aref cached-font 1) fontsloth--font-data-version)
                  (eq (fontsloth-font-settings-lazy-outline?
                       (fontsloth-font-settings cached-font))
@@ -327,9 +329,9 @@ Eager fonts are already fully outlined and are returned unchanged."
           (message
            "fontsloth: mismatched version or settings, invalidating cache for %s"
            path)
-          (fontsloth-cache-invalidate path)
+          (fontsloth-cache-invalidate path collection-index)
           (load-font))
-      (load-font))))
+        (load-font)))))
 
 (cl-defun fontsloth-load-font
     (source &key (font-settings (fontsloth-font-settings-create))
@@ -346,7 +348,9 @@ cache"
            source (type-of source)))
   (cl-case cache
     (bypass (fontsloth--load-font source font-settings))
-    (reload (fontsloth-cache-invalidate source)
+    (reload (fontsloth-cache-invalidate
+             source
+             (fontsloth-font-settings-collection-index font-settings))
             (fontsloth--load-font-cached source font-settings))
     (t (fontsloth--load-font-cached source font-settings))))
 
@@ -368,7 +372,10 @@ regardless of whether they are already cached"
                     :font-settings font-settings
                     :cache (when force-reload? 'reload))
                    (pcache-save
-                    (gethash (fontsloth-cache--pcache-path-name s)
+                    (gethash (fontsloth-cache--pcache-path-name
+                              s
+                              (fontsloth-font-settings-collection-index
+                               font-settings))
                              *pcache-repositories*)
                     t)
                    t)))
@@ -392,7 +399,12 @@ regardless of whether they are already cached"
            (sources
             (if force-reload?
                 sources
-              (seq-remove #'fontsloth-cache-get sources))))
+              (seq-remove
+               (lambda (source)
+                 (fontsloth-cache-get
+                  source
+                  (fontsloth-font-settings-collection-index font-settings)))
+               sources))))
       (progn
         (message "fontsloth: loading %s font(s) asynchronously" (length sources))
         (fontsloth:info fontsloth-log
