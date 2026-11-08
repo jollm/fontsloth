@@ -337,10 +337,9 @@ Eager fonts are already fully outlined and are returned unchanged."
     (source &key (font-settings (fontsloth-font-settings-create))
             (cache t))
   "Load a font from SOURCE and return a `fontsloth-font' describing it.
-Currently only file path sources are accepted.
-Loading from font collections is not yet implemented.
 SOURCE the font source
-FONT-SETTINGS the `fontsloth-font-settings' to use
+FONT-SETTINGS the `fontsloth-font-settings' to use.  For TTC files, set
+its `collection-index' to select a face
 CACHE t to use cache, \\='bypass to bypass cache, \\='reload to force update
 cache"
   (unless (and (stringp source) (f-file-p source))

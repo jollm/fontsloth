@@ -25,6 +25,7 @@
       (should-not (gethash "glyf" cff-tables))
       (should (= (fontsloth-otf-num-glyphs ttf)
                  (fontsloth-otf-num-glyphs cff)))
+      (should (= 2 (fontsloth-otf-ttc-num-fonts path)))
       (should-error (fontsloth-otf-load-font-data path :coll-index 2)))))
 
 (ert-deftest fontsloth-otf-ttc-test-high-level-face ()

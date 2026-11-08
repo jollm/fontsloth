@@ -34,6 +34,7 @@ to happen, please let me know.
   - [[#force-reload-a-font][Force reload a font]]
   - [[#invalidate-a-cache-entry][Invalidate a cache entry]]
   - [[#clear-the-cache][Clear the cache]]
+  - [[#font-collections][Font collections]]
 - [[#installation][Installation]]
   - [[#melpa][MELPA]]
   - [[#manual-installation-using-quelpa][Manual installation (using Quelpa)]]
@@ -68,13 +69,15 @@ to happen, please let me know.
   + HVAR advance-width deltas
   + GVAR deltas for simple and composite glyphs, including IUP
   + GVAR phantom-point advance fallback when HVAR is absent
++ TTC font collections (as of 0.21.0)
+  Select a face with `fontsloth-font-settings-collection-index';
+  `fontsloth-otf-ttc-num-fonts` reports the available face count.
 + Web Open Font Format (WOFF) (as of 0.17.0) Note: since WOFF is a meta
   format, the underlying format must also be supported.
 ** Not currently supported (but planned)
 + Vertical metrics tables (and vertical text layout)
 + All possible cmap tables for char-code to glyph-id mappings
 + All of GPOS and GSUB for every script/lang
-+ Font collections (TTC)
 + HVAR LSB/RSB deltas, MVAR, VVAR, and other metric variation tables
 + Allow custom per font family sets of additional char-code -> glyph mappings
   that derive new glyph outlines not in a font from those already
@@ -140,10 +143,11 @@ fonts, which is the default for ~fontsloth-load-font~.
 
 *Invalidation at present must be handled manually*.
 
-Each font has its own pcache repository, so loading a font does not
-deserialize every other cached font. Lazy fonts are stored as compact
-snapshots: the glyph vector is empty and the kern map is unloaded, and
-outlines are rebuilt from the source path on demand after a cache hit.
+Each font face has its own pcache repository, keyed by source path and
+collection index, so loading a font does not deserialize every other
+cached font. Lazy fonts are stored as compact snapshots: the glyph vector
+is empty and the kern map is unloaded, and outlines are rebuilt from the
+source path on demand after a cache hit.
 
 ** Variation coordinates
 Normalized variation coordinates are part of `fontsloth-font-settings' and
@@ -162,6 +166,18 @@ GVAR outlines.  HVAR takes precedence for advance widths when present.
 GVAR phantom-point deltas are used as the fallback when HVAR is absent.
 HVAR LSB/RSB deltas, MVAR, VVAR, and other metric variation tables are not
 applied yet.
+
+** Font collections
+TTC faces are selected with `fontsloth-font-settings-collection-index'
+(default =0=). Cache entries are independent per path and collection
+index.
+
+#+begin_src emacs-lisp
+(fontsloth-otf-ttc-num-fonts path-to-font.ttc) ; => 2
+(fontsloth-load-font path-to-font.ttc
+                     :font-settings
+                     (fontsloth-font-settings-create :collection-index 1))
+#+end_src
 
 ** Bypass the cache
 #+begin_src emacs-lisp

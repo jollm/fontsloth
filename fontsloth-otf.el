@@ -820,6 +820,13 @@ TABLE-PROPS-LIST the list of table props to index"
              coll-index (1- num-fonts)))
     (fontsloth-otf--read-u32 bytes (+ 12 (* 4 coll-index)))))
 
+(defun fontsloth-otf-ttc-num-fonts (path)
+  "Return the number of faces in the font collection at PATH."
+  (let ((bytes (fontsloth-otf--read-font-bytes path)))
+    (unless (fontsloth-otf--ttc-p bytes)
+      (error "%s is not a font collection" path))
+    (fontsloth-otf--read-u32 bytes 8)))
+
 (defun fontsloth-otf--face-offset (bytes coll-index)
   "Return the sfnt face offset for COLL-INDEX in BYTES."
   (cond ((fontsloth-otf--ttc-p bytes)
