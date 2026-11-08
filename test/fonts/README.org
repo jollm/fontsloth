@@ -64,3 +64,21 @@ pyftsubset Cantarell-VF.otf \
   --output-file=test/fonts/Cantarell-VF-subset.otf \
   --unicodes='U+0020-007E' --layout-features='' --name-IDs='*'
 #+end_src
+
+* Source Sans variable subset
+
+=SourceSansVariable-Roman-subset.ttf= is a subset of Source Sans Variable
+3.006, used for TrueType variation tests. It retains =fvar=, =gvar=, and
+=HVAR=. It is redistributed under the SIL Open Font License 1.1; see
+=OFL.txt=.
+
+Copyright 2010-2019 Adobe Systems Incorporated, with Reserved Font Name
+"Source".
+
+Regenerate from the full variable font with:
+
+#+begin_src shell
+pyftsubset SourceSansVariable-Roman.ttf \
+  --output-file=test/fonts/SourceSansVariable-Roman-subset.ttf \
+  --unicodes='U+0020-007E' --layout-features='' --name-IDs='*'
+#+end_src
