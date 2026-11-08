@@ -58,6 +58,7 @@
 (require 'fontsloth-otf-cff)
 (require 'fontsloth-otf-cff2)
 (require 'fontsloth-otf-glyf)
+(require 'fontsloth-otf-hvar)
 (require 'fontsloth-otf-kern)
 (require 'fontsloth-otf-typo)
 (require 'fontsloth-otf-var)
@@ -833,6 +834,11 @@ COLL-INDEX is currently ignored (font collections are not supported)."
       (put-table "post" (unpack-table "post" fontsloth-otf--post-spec))
       (when (gethash "fvar" props)
         (put-table "fvar" (unpack-table "fvar" fontsloth-otf-var--fvar-spec)))
+      (when (gethash "HVAR" props)
+        (put-table "HVAR"
+                   (fontsloth-otf-hvar--parse
+                    (fontsloth-otf--table-data
+                     "HVAR" props fontsloth-otf--current-font-bytes))))
       (cond ((string-equal "   " sfnt-ver)
              (put-table "loca" (unpack-table "loca" fontsloth-otf--loca-spec))
              (put-table "glyf" (unpack-table "glyf" fontsloth-otf--glyf-spec)))
@@ -971,6 +977,11 @@ FONT an optional `fontsloth-otf-font', defaults to the current context."
 FONT an optional `fontsloth-otf-font', defaults to the current context."
   (gethash "CFF2" (fontsloth-otf--font-tables font)))
 
+(defun fontsloth-otf-hvar (&optional font)
+  "Return FONT's parsed HVAR table, if any.
+FONT an optional `fontsloth-otf-font', defaults to the current context."
+  (gethash "HVAR" (fontsloth-otf--font-tables font)))
+
 (defun fontsloth-otf-fvar (&optional font)
   "Return FONT's parsed fvar table, if any.
 FONT an optional `fontsloth-otf-font', defaults to the current context."
@@ -1002,21 +1013,27 @@ FONT an optional `fontsloth-otf-font', defaults to the current context."
 FONT an optional `fontsloth-otf-font', defaults to the current context.
 VARIATION-COORDS is an optional normalized variation-coordinate vector.
 It is threaded here for HVAR support."
-  (ignore variation-coords)
-  ;; TODO: apply HVAR deltas.
   (when-let* ((hmtx (gethash "hmtx" (fontsloth-otf--font-tables font)))
               (metrics (alist-get 'hmetrics hmtx))
               (num-glyphs (fontsloth-otf-num-glyphs font)))
-    (let ((num-metrics
-           (fontsloth-otf--get-table-value 'num-of-long-hor-metrics "hhea"
-                                           font)))
-      (unless (<= num-glyphs glyph-id)
-        ;; 'As an optimization, the number of records can be less than the
-        ;; number of glyphs, in which case the advance width value of the last
-        ;; record applies to all remaining glyph IDs.'
-        (if (< glyph-id num-metrics)
-            (alist-get 'advance-width (elt metrics glyph-id))
-          (alist-get 'advance-width (elt metrics (1- num-metrics))))))))
+    (let* ((num-metrics
+            (fontsloth-otf--get-table-value 'num-of-long-hor-metrics "hhea"
+                                            font))
+           (advance
+            (unless (<= num-glyphs glyph-id)
+              ;; 'As an optimization, the number of records can be less than
+              ;; the number of glyphs, in which case the advance width value
+              ;; of the last record applies to all remaining glyph IDs.'
+              (if (< glyph-id num-metrics)
+                  (alist-get 'advance-width (elt metrics glyph-id))
+                (alist-get 'advance-width (elt metrics (1- num-metrics)))))))
+      (if (and advance variation-coords)
+          (+ advance
+             (or (when-let ((hvar (fontsloth-otf-hvar font)))
+                   (fontsloth-otf-hvar-advance-delta
+                    hvar glyph-id variation-coords))
+                 0.0))
+        advance))))
 
 (defun fontsloth-otf-glyph-ver-advance (glyph-id &optional font)
   "Return the vertical advance for a GLYPH-ID.
