@@ -196,13 +196,19 @@ Returns nil when GLYPH-ID is out of range or nil."
 
 (defun fontsloth-font-all-glyphs (font)
   "Outline every mapped glyph in FONT and return its glyph vector.
-Useful for tests and benchmarks that need the eager representation."
+Useful for tests and benchmarks that need the eager representation.
+After a successful full pass the transient parser data is released. A
+later kern lookup or out-of-band glyph request reparses from FONT's
+source path."
   (let ((seen (make-hash-table :test 'eq)))
     (maphash (lambda (_code-point glyph-id)
                (unless (gethash glyph-id seen)
                  (puthash glyph-id t seen)
                  (fontsloth-font-glyph font glyph-id)))
              (fontsloth-font-char-to-glyph font)))
+  ;; All mapped glyphs are now in the vector.  Drop the parser tables and
+  ;; bytes. They can be re-created from `source' if needed later.
+  (remhash font fontsloth--lazy-fonts)
   (fontsloth-font-glyphs font))
 
 (defun fontsloth--font-cache-snapshot (font)

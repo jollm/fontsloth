@@ -1,0 +1,39 @@
+#+TITLE: Parser-data release results (2026-11-07)
+#+OPTIONS: toc:nil ^:{} \n:t
+
+After `fontsloth-font-all-glyphs` outlines every mapped glyph, the
+font's transient parser data is removed from `fontsloth--lazy-fonts`.
+A later kern lookup or out-of-band glyph request reparses from the
+stored source path.
+
+* Results
+
+Compiled, lazy mode:
+
+| Font | Retained before release | Retained after release | Drop |
+|------+-------------------------+------------------------+------|
+| SF-Pro-Text-Regular.otf | 196.66 MB | **182.13 MB** | 14.53 MB |
+| SF-Pro.ttf | ~196.08 MB | **137.06 MB** | 59.02 MB |
+
+The drop equals the parsed-table footprint already reported by the
+parse phase.  Outline time and allocation are unchanged. Only live
+retained memory falls after the full glyph pass.
+
+Follow-up cost after release:
+
+- OTF kern lookup or an unmapped glyph request reparses in ~0.10s /
+  39 MB and retains ~14.5 MB again.
+- TTF does the same in ~0.69s / 82 MB and retains ~59 MB again.
+
+The full-outline case is the one where releasing matters. Partial-use
+lazy workloads keep the parser data so subsequent glyphs do not
+reparse.
+
+* Verification
+
+`fontsloth-test-release-parser-data` checks that:
+
+- the weak-map entry exists before the full pass
+- it is removed after the pass
+- already-outlined glyphs remain available
+- a later kern lookup reparses and returns the expected value

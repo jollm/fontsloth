@@ -211,7 +211,26 @@
       (should (fontsloth-font-horizontal-kern-loaded? font))
       (should (hash-table-p (fontsloth-font-horizontal-kern font))))))
 
+(ert-deftest fontsloth-test-release-parser-data ()
+  "A full glyph pass releases transient parser data and can reparse."
+  (let ((path (fontsloth-test--fixture-font
+               "IBMPlexSerif-Regular-subset.otf")))
+    (skip-unless (f-exists-p path))
+    (let* ((font (fontsloth-load-font path :cache 'bypass))
+           (glyph-id (fontsloth-font-glyph-id font ?&)))
+      (should (gethash font fontsloth--lazy-fonts))
+      (fontsloth-font-all-glyphs font)
+      (should-not (gethash font fontsloth--lazy-fonts))
+      ;; Existing glyphs remain available without reparsing.
+      (should (aref (fontsloth-font-glyphs font) glyph-id))
+      ;; A later kern request reparses from the source path.
+      (should (= (fontsloth-font-horizontal-kern-by-code-point
+                  font ?& ?δ 1000.0)
+                 -5.0))
+      (should (gethash font fontsloth--lazy-fonts)))))
+
 (provide 'fontsloth-test)
+
 
 
 ;;; fontsloth-test.el ends here

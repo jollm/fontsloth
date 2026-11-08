@@ -305,8 +305,10 @@ in [[file:benchmarks/bindat-glyf.org][benchmarks/bindat-glyf.org]], and the GPOS
 [[file:benchmarks/gpos-cff.org][benchmarks/gpos-cff.org]].  Byte-compiled results are in
 [[file:benchmarks/compiled.org][benchmarks/compiled.org]]. Earlier files were captured from interpreted
 source. Geometry allocation results are in
-[[file:benchmarks/geometry.org][benchmarks/geometry.org]], and cache
-snapshot measurements are in [[file:benchmarks/cache.org][benchmarks/cache.org]].
+[[file:benchmarks/geometry.org][benchmarks/geometry.org]], cache
+snapshot measurements are in [[file:benchmarks/cache.org][benchmarks/cache.org]],
+and parser-data release results are in
+[[file:benchmarks/parser-release.org][benchmarks/parser-release.org]].
 
 ** Compile and lint
 #+begin_src shell
