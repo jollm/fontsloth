@@ -69,6 +69,98 @@
                (v sint ,bl nil :pack-val v)
                :unpack-val (/ v 16384.0)))))
 
+(defvar fontsloth-otf-var--fvar-axis-type-cache
+  (make-hash-table :test #'eql)
+  "Memoized fvar axis type objects keyed by axis size.")
+
+(defun fontsloth-otf-var--fvar-axis-type (axis-size)
+  "Return the memoized bindat type for an fvar axis of AXIS-SIZE bytes."
+  (or (gethash axis-size fontsloth-otf-var--fvar-axis-type-cache)
+      (puthash axis-size
+               (bindat-type
+                 (tag str 4)
+                 (min-value fontsloth-otf-var--fixed)
+                 (default-value fontsloth-otf-var--fixed)
+                 (max-value fontsloth-otf-var--fixed)
+                 (flags uint 16)
+                 (name-id uint 16)
+                 (_ fill (max 0 (- axis-size 20))))
+               fontsloth-otf-var--fvar-axis-type-cache)))
+
+(defvar fontsloth-otf-var--fvar-instance-type-cache
+  (make-hash-table :test #'equal)
+  "Memoized fvar instance type objects keyed by (size . axis-count).")
+
+(defun fontsloth-otf-var--fvar-instance-type (instance-size axis-count)
+  "Return the memoized bindat type for an fvar instance.
+INSTANCE-SIZE is the instance record size and AXIS-COUNT is the number
+of axis coordinates."
+  (let ((key (cons instance-size axis-count)))
+    (or (gethash key fontsloth-otf-var--fvar-instance-type-cache)
+        (puthash key
+                 (bindat-type
+                   (subfamily-name-id uint 16)
+                   (flags uint 16)
+                   (coordinates vec axis-count
+                                fontsloth-otf-var--fixed)
+                   (postscript-name-id
+                    unit
+                    (if (> instance-size (+ 4 (* axis-count 4)))
+                        (bindat--unpack-u16)
+                      nil))
+                   (_ fill (max 0 (- instance-size
+                                     (+ 4 (* axis-count 4)
+                                        (if (> instance-size
+                                               (+ 4 (* axis-count 4)))
+                                            2 0))))))
+                 fontsloth-otf-var--fvar-instance-type-cache))))
+
+(defvar fontsloth-otf-var--region-axis-type
+  (bindat-type
+    (start-coord fontsloth-otf-var--f2dot14)
+    (peak-coord fontsloth-otf-var--f2dot14)
+    (end-coord fontsloth-otf-var--f2dot14))
+  "The bindat type for one axis in a variation region.")
+
+(defvar fontsloth-otf-var--region-type-cache
+  (make-hash-table :test #'eql)
+  "Memoized variation-region type objects keyed by axis count.")
+
+(defun fontsloth-otf-var--region-type (axis-count)
+  "Return the memoized bindat type for a variation region.
+AXIS-COUNT is the number of axes in the region."
+  (or (gethash axis-count fontsloth-otf-var--region-type-cache)
+      (puthash axis-count
+               (bindat-type
+                 (coords vec axis-count type
+                         fontsloth-otf-var--region-axis-type))
+               fontsloth-otf-var--region-type-cache)))
+
+(defvar fontsloth-otf-var--delta-type-cache
+  (make-hash-table :test #'equal)
+  "Memoized ItemVariationData delta type objects.")
+
+(defun fontsloth-otf-var--delta-type (has-long-words word-delta-count
+                                                  byte-delta-count)
+  "Return the memoized bindat type for one item's delta set.
+HAS-LONG-WORDS selects 32/16-bit vs 16/8-bit deltas; WORD-DELTA-COUNT
+and BYTE-DELTA-COUNT are the two delta counts."
+  (let ((key (list has-long-words word-delta-count byte-delta-count)))
+    (or (gethash key fontsloth-otf-var--delta-type-cache)
+        (puthash key
+                 (bindat-type
+                   (word-deltas
+                    vec word-delta-count type
+                    (if has-long-words
+                        (bindat-type (_ sint 32 nil))
+                      (bindat-type (_ sint 16 nil))))
+                   (byte-deltas
+                    vec byte-delta-count type
+                    (if has-long-words
+                        (bindat-type (_ sint 16 nil))
+                      (bindat-type (_ sint 8 nil)))))
+                 fontsloth-otf-var--delta-type-cache))))
+
 (defvar fontsloth-otf-var--fvar-spec
   (bindat-type
     (table-start unit bindat-idx)
@@ -87,36 +179,16 @@
       nil
       (bindat-type
         (axes vec axis-count type
-              (bindat-type
-                (tag str 4)
-                (min-value fontsloth-otf-var--fixed)
-                (default-value fontsloth-otf-var--fixed)
-                (max-value fontsloth-otf-var--fixed)
-                (flags uint 16)
-                (name-id uint 16)
-                (_ fill (max 0 (- axis-size 20))))))))
+              (fontsloth-otf-var--fvar-axis-type axis-size)))))
     (instances
      type
      (fontsloth-otf--with-offset
       (+ table-start axes-array-offset (* axis-count axis-size))
       nil
       (bindat-type
-        (instances vec instance-count type
-                   (bindat-type
-                     (subfamily-name-id uint 16)
-                     (flags uint 16)
-                     (coordinates vec axis-count
-                                  fontsloth-otf-var--fixed)
-                     (postscript-name-id
-                      unit
-                      (if (> instance-size (+ 4 (* axis-count 4)))
-                          (bindat--unpack-u16)
-                        nil))
-                     (_ fill (max 0 (- instance-size
-                                       (+ 4 (* axis-count 4)
-                                          (if (> instance-size
-                                                 (+ 4 (* axis-count 4)))
-                                              2 0)))))))))))
+        (instances vec instance-count
+                   type (fontsloth-otf-var--fvar-instance-type
+                         instance-size axis-count))))))
   "Bindat spec for the fvar table.
 see URL https://learn.microsoft.com/en-us/typography/opentype/spec/fvar")
 
@@ -135,16 +207,8 @@ see URL https://learn.microsoft.com/en-us/typography/opentype/spec/fvar")
       (bindat-type
         (axis-count uint 16)
         (region-count uint 16)
-        (regions vec region-count type
-                 (bindat-type
-                   (coords vec axis-count type
-                           (bindat-type
-                             (start-coord
-                              fontsloth-otf-var--f2dot14)
-                             (peak-coord
-                              fontsloth-otf-var--f2dot14)
-                             (end-coord
-                              fontsloth-otf-var--f2dot14))))))))
+        (regions vec region-count
+                 type (fontsloth-otf-var--region-type axis-count)))))
     (variation-data
      vec count type
      (fontsloth-otf--with-offset
@@ -162,18 +226,9 @@ see URL https://learn.microsoft.com/en-us/typography/opentype/spec/fvar")
         (byte-delta-count
          unit (max 0 (- region-index-count word-delta-count)))
         (deltas
-         vec item-count type
-         (bindat-type
-           (word-deltas
-            vec word-delta-count type
-            (if has-long-words
-                (bindat-type (_ sint 32 nil))
-              (bindat-type (_ sint 16 nil))))
-           (byte-deltas
-            vec byte-delta-count type
-            (if has-long-words
-                (bindat-type (_ sint 16 nil))
-              (bindat-type (_ sint 8 nil))))))))))
+         vec item-count
+         type (fontsloth-otf-var--delta-type
+               has-long-words word-delta-count byte-delta-count))))))
   "Bindat spec for the OpenType ItemVariationStore.
 see URL
 `https://learn.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats#item-variation-store'")

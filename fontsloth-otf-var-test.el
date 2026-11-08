@@ -135,6 +135,24 @@
       (should (= 400.0 (aref (alist-get 'coordinates (aref instances 0)) 0)))
       (should (= 700.0 (aref (alist-get 'coordinates (aref instances 1)) 0))))))
 
+(ert-deftest fontsloth-otf-var-test-memoized-types ()
+  "Check that inner variation types are memoized by their parameters."
+  (should (eq (fontsloth-otf-var--fvar-axis-type 20)
+              (fontsloth-otf-var--fvar-axis-type 20)))
+  (should-not (eq (fontsloth-otf-var--fvar-axis-type 20)
+                  (fontsloth-otf-var--fvar-axis-type 24)))
+  (should (eq (fontsloth-otf-var--fvar-instance-type 10 1)
+              (fontsloth-otf-var--fvar-instance-type 10 1)))
+  (should-not (eq (fontsloth-otf-var--fvar-instance-type 10 1)
+                  (fontsloth-otf-var--fvar-instance-type 12 1)))
+  (should (eq (fontsloth-otf-var--region-type 1)
+              (fontsloth-otf-var--region-type 1)))
+  (should (eq (fontsloth-otf-var--delta-type nil 2 0)
+              (fontsloth-otf-var--delta-type nil 2 0)))
+  (should-not (eq (fontsloth-otf-var--delta-type nil 2 0)
+                  (fontsloth-otf-var--delta-type t 2 0))))
+
 (provide 'fontsloth-otf-var-test)
+
 
 ;;; fontsloth-otf-var-test.el ends here
