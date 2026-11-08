@@ -440,7 +440,7 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/chapter2#look
   "A spec for a GPOS table.
 see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gpos'")
 
-(declare-function fontsloth-otf--get-table-value "fontsloth-otf" (key tag))
+(declare-function fontsloth-otf--get-table-value "fontsloth-otf" (key tag &optional font))
 
 (defun fontsloth-otf-typo-gpos-get-script-table (script &optional font)
   "Given SCRIPT try to find the corresponding GPOS script table.
@@ -457,11 +457,11 @@ FONT an optional `fontsloth-otf-font'; defaults to the current context."
 If SCRIPT is nil it will be the default script.
 If LANG is nil it will be the default lang sys.
 FONT an optional `fontsloth-otf-font'; defaults to the current context."
-  (when-let ((script (fontsloth-otf-typo-gpos-get-script-table script font))
+  (when-let* ((script (fontsloth-otf-typo-gpos-get-script-table script font))
              (lang (or lang "DFLT")))
     (if (equal "DFLT" lang)
         (alist-get 'default-lang-sys script)
-      (when-let ((langs (alist-get 'langs script)))
+      (when-let* ((langs (alist-get 'langs script)))
         (seq-find (lambda (l) (equal lang (alist-get 'tag l))) langs)))))
 
 (defun fontsloth-otf-typo-gpos-get-feature-table (script lang feature &optional font)
@@ -476,7 +476,7 @@ FONT an optional `fontsloth-otf-font'; defaults to the current context."
                              'feature-list "GPOS" font))
               (features (alist-get 'features feature-list))
               (feature-idx (seq-find (lambda (i)
-                                       (when-let ((f (elt features i)))
+                                       (when-let* ((f (elt features i)))
                                          (equal feature (alist-get 'tag f))))
                                      feature-indices)))
     (elt features feature-idx)))
@@ -494,7 +494,7 @@ FONT an optional `fontsloth-otf-font'; defaults to the current context."
                             'lookup-list "GPOS" font))
               (lookups (alist-get 'lookups lookup-list)))
     (cl-loop for i in (seq-filter (lambda (i)
-                                    (when-let ((l (elt lookups i)))
+                                    (when-let* ((l (elt lookups i)))
                                       (equal type (alist-get 'lookup-type l))))
                                   lookup-indices)
              collect (elt lookups i))))
@@ -544,7 +544,7 @@ Return nil if value is not found."
 Return nil if not found."
   (cl-case (alist-get 'format coverage)
     (1 (fontsloth-otf-typo--bin-search (alist-get 'glyphs coverage) glyph-id))
-    (2 (when-let ((range
+    (2 (when-let* ((range
                    (fontsloth-otf-typo--range-search
                     (alist-get 'ranges coverage) glyph-id)))
          (- (+ (alist-get 'index range) glyph-id)
@@ -560,7 +560,7 @@ Return class 0 if not found."
                                        start-glyph-id)))
                (elt (alist-get 'class-value-array class-def)
                     (- glyph-id start-glyph-id)))))
-        (2 (when-let ((range
+        (2 (when-let* ((range
                        (fontsloth-otf-typo--range-search
                         (alist-get 'ranges class-def) glyph-id)))
              (alist-get 'index range))))

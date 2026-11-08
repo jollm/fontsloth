@@ -251,7 +251,7 @@ Eager fonts are already fully outlined and are returned unchanged."
                    (fontsloth-font-hash font))))
       ;; Keep the parser data available if this font is still live in the
       ;; current process; the snapshot itself remains compact.
-      (when-let ((data (gethash font fontsloth--lazy-fonts)))
+      (when-let* ((data (gethash font fontsloth--lazy-fonts)))
         (puthash snapshot data fontsloth--lazy-fonts))
       snapshot)))
 
@@ -303,7 +303,7 @@ Eager fonts are already fully outlined and are returned unchanged."
               (let ((font (fontsloth--load-font path font-settings)))
                 (fontsloth-cache-put path font)
                 font)))
-    (if-let ((cached-font (fontsloth-cache-get path)))
+    (if-let* ((cached-font (fontsloth-cache-get path)))
         (if (and (eq (aref cached-font 1) fontsloth--font-data-version)
                  (eq (fontsloth-font-settings-lazy-outline?
                       (fontsloth-font-settings cached-font))
@@ -377,7 +377,7 @@ FINISH-FUNC a function to be called when the process completes,
 expecting a sequence containing t for each source loaded.
 FORCE-RELOAD? non-nil if sources should be re-loaded and cached
 regardless of whether they are already cached"
-  (if-let ((sources (seq-remove #'null sources))
+  (if-let* ((sources (seq-remove #'null sources))
            (sources
             (if force-reload?
                 sources
@@ -471,7 +471,7 @@ See `fontsloth-font-code-point-ranges' to get code point ranges for a font."
 (defun fontsloth-font-horizontal-kern-by-id (font left right px)
   "Return FONT's horizontal kern value for LEFT/RIGHT scaled to PX or 0."
   (let ((scale (fontsloth-font-scale-factor font px)))
-    (* (or (when-let ((mappings (fontsloth-font-kern-map font)))
+    (* (or (when-let* ((mappings (fontsloth-font-kern-map font)))
              (gethash (logior (ash left 16) right) mappings))
            0)
        scale)))
@@ -481,7 +481,7 @@ See `fontsloth-font-code-point-ranges' to get code point ranges for a font."
   "Return FONT's horizontal kern value for left and right scaled to PX or 0.
 LEFT-CODE-POINT the char code point for the left hand side
 RIGHT-CODE-POINT the char code point for the right hand side"
-  (or (when-let ((left (fontsloth-font-glyph-id font left-code-point))
+  (or (when-let* ((left (fontsloth-font-glyph-id font left-code-point))
                  (right (fontsloth-font-glyph-id font right-code-point)))
         (fontsloth-font-horizontal-kern-by-id font left right px))
       0))
@@ -514,7 +514,7 @@ RIGHT-CODE-POINT the char code point for the right hand side"
 
 (defun fontsloth-font-metrics (font glyph-id px)
   "Return FONT's `fontsloth-metrics' for GLYPH-ID at PX pixel size."
-  (when-let ((glyph (fontsloth-font-glyph font glyph-id)))
+  (when-let* ((glyph (fontsloth-font-glyph font glyph-id)))
     (fontsloth-font-metrics-raw (fontsloth-font-scale-factor font px)
                                 glyph 0.0)))
 
@@ -523,7 +523,7 @@ RIGHT-CODE-POINT the char code point for the right hand side"
 Produces a greyscale pixmap suitable for PGM.  Returns
 `fontsloth-metrics+pixmap'.
 SUBPIXEL? optional t to produce a subpixel render suitable for PPM"
-  (when-let ((glyph (fontsloth-font-glyph font glyph-id)))
+  (when-let* ((glyph (fontsloth-font-glyph font glyph-id)))
     (pcase-let* ((scale (fontsloth-font-scale-factor font px))
                  (metrics (fontsloth-font-metrics-raw scale glyph 0.0))
                  ((cl-struct fontsloth-metrics

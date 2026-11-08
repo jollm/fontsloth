@@ -383,15 +383,15 @@ COORDS is the normalized variation-coordinate vector."
   "Return the GVAR advance-width delta for GLYPH-ID.
 GVAR is the parsed gvar table, POINT-COUNT includes phantom points, and
 COORDS is the normalized variation-coordinate vector."
-  (when-let ((phantoms (fontsloth-otf-gvar-phantom-deltas
+  (when-let* ((phantoms (fontsloth-otf-gvar-phantom-deltas
                         gvar glyph-id point-count coords)))
     (- (car (elt phantoms 1)) (car (elt phantoms 0)))))
 
 (defun fontsloth-otf-gvar-glyph-deltas
     (gvar glyph-id num-points end-pts x-coords y-coords coords)
   "Return per-point deltas for simple GLYPH-ID.
-GVAR is the parsed gvar table.  Returns a vector of (dx . dy) for the actual glyph points, or nil when
-the glyph has no variation data."
+GVAR is the parsed gvar table.  Returns a vector of (dx . dy) for the
+actual glyph points, or nil when the glyph has no variation data."
   (let ((glyph-data (fontsloth-otf-gvar--glyph-data gvar glyph-id))
         (total (make-vector num-points (cons 0.0 0.0))))
     (when glyph-data

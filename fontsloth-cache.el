@@ -107,7 +107,7 @@ ARGS ::= any arguments passed to that function"
 FORCE? if non-nil, re-load even if already initialized"
   (when (or (not fontsloth-cache--initialized?) force?)
     (advice-add 'pcache-kill-emacs-hook :around #'fontsloth-cache--avoid-save-on-kill)
-    (when-let ((pcache-files (and (file-directory-p pcache-directory)
+    (when-let* ((pcache-files (and (file-directory-p pcache-directory)
                                   (directory-files pcache-directory))))
       (cl-loop for f in pcache-files
                unless (gethash f *pcache-repositories*)

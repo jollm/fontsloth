@@ -110,7 +110,7 @@ Return a vector of font-dict alists."
                               data (car range) (cadr range))))
              (local-subrs
               (when (and private-dict range)
-                (when-let ((subrs-offset
+                (when-let* ((subrs-offset
                             (alist-get 'local-subrs-offset private-dict)))
                   (cdr (fontsloth-otf-cff2--parse-index
                         data (+ (car range) subrs-offset)))))))
@@ -182,15 +182,15 @@ Return a vector mapping glyph id to FD index."
                                 data char-strings-offset)))
          (num-glyphs (car char-strings-index))
          (char-strings (cdr char-strings-index))
-         (fd-array (when-let ((offset (alist-get 'font-dict-index-offset
+         (fd-array (when-let* ((offset (alist-get 'font-dict-index-offset
                                                   top-dict)))
                      (fontsloth-otf-cff2--parse-fd-array data offset)))
          (fd-select
-          (or (when-let ((offset (alist-get 'fd-select-offset top-dict)))
+          (or (when-let* ((offset (alist-get 'fd-select-offset top-dict)))
                 (fontsloth-otf-cff2--parse-fd-select data offset num-glyphs))
               (and num-glyphs (make-vector num-glyphs 0))))
          (variation-store
-          (when-let ((offset (alist-get 'font-dict-variation-store-offset
+          (when-let* ((offset (alist-get 'font-dict-variation-store-offset
                                         top-dict)))
             ;; CFF2 prefixes the ItemVariationStore with a uint16 length.
             (when (<= (+ offset 2) (length data))

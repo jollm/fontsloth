@@ -51,7 +51,7 @@
   "Offset spec S by O and go back to start if REWIND is t (the fn version).
 
 This function is intended to be used within macros."
-  (let ((start (cl-gensym "start")))
+  (let ((start (gensym "start")))
     `(let ((,start))
        (bindat-type
          (_ unit (progn (setq ,start bindat-idx bindat-idx ,o) nil))

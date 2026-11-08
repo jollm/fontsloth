@@ -177,7 +177,7 @@ LAST-POINT? t if the point is the last of a contour"
         (if on-curve?
             (progn (setf (fontsloth-otf-glyf-builder-first-on-curve builder) p)
                    (fontsloth-otf-glyf-move-to builder x y))
-          (if-let ((off-curve
+          (if-let* ((off-curve
                     (fontsloth-otf-glyf-builder-first-off-curve builder)))
               (let ((mid (fontsloth-point-between off-curve p 0.5)))
                 (setf (fontsloth-otf-glyf-builder-first-on-curve builder) mid
@@ -210,7 +210,7 @@ LAST-POINT? t if the point is the last of a contour"
 (defun fontsloth-otf-glyf-finish-contour (builder)
   "Finish a contour.
 BUILDER a `fontsloth-otf-glyf-builder'"
-  (when-let ((offcurve1 (fontsloth-otf-glyf-builder-first-off-curve builder))
+  (when-let* ((offcurve1 (fontsloth-otf-glyf-builder-first-off-curve builder))
              (offcurve2 (fontsloth-otf-glyf-builder-last-off-curve builder)))
     (setf (fontsloth-otf-glyf-builder-last-off-curve builder) nil)
     (let ((mid (fontsloth-point-between offcurve2 offcurve1 0.5)))
@@ -218,19 +218,19 @@ BUILDER a `fontsloth-otf-glyf-builder'"
        builder
        (fontsloth-point-x offcurve2) (fontsloth-point-y offcurve2)
        (fontsloth-point-x mid) (fontsloth-point-y mid))))
-  (if-let ((p (fontsloth-otf-glyf-builder-first-on-curve builder))
+  (if-let* ((p (fontsloth-otf-glyf-builder-first-on-curve builder))
            (offcurve1 (fontsloth-otf-glyf-builder-first-off-curve builder)))
       (fontsloth-otf-glyf-quad-to
        builder
        (fontsloth-point-x offcurve1) (fontsloth-point-y offcurve1)
        (fontsloth-point-x p) (fontsloth-point-y p))
-    (if-let ((p (fontsloth-otf-glyf-builder-first-on-curve builder))
+    (if-let* ((p (fontsloth-otf-glyf-builder-first-on-curve builder))
              (offcurve2 (fontsloth-otf-glyf-builder-last-off-curve builder)))
         (fontsloth-otf-glyf-quad-to
          builder
          (fontsloth-point-x offcurve2) (fontsloth-point-y offcurve2)
          (fontsloth-point-x p) (fontsloth-point-y p))
-      (when-let ((p (fontsloth-otf-glyf-builder-first-on-curve builder)))
+      (when-let* ((p (fontsloth-otf-glyf-builder-first-on-curve builder)))
         (fontsloth-otf-glyf-line-to
          builder (fontsloth-point-x p) (fontsloth-point-y p)))))
   (setf (fontsloth-otf-glyf-builder-first-on-curve builder) nil
@@ -248,7 +248,7 @@ GVAR and VARIATION-COORDS optionally apply simple-glyph deltas."
               (num-contours (alist-get 'number-of-contours glyph))
               (glyph-data (alist-get 'data glyph)))
     (if (< 0 num-contours)
-        (when-let ((num-points (alist-get 'num-points glyph-data))
+        (when-let* ((num-points (alist-get 'num-points glyph-data))
                    (end-pts-vec (alist-get 'end-pts glyph-data))
                    (end-pts
                     (let ((pset (make-hash-table :test 'eq)))

@@ -190,7 +190,7 @@
 
 (defsubst fontsloth-layout-current-height (layout)
   "Calculate the current height of LAYOUT."
-  (if-let ((line (car (fontsloth-layout-line-metrics layout))))
+  (if-let* ((line (car (fontsloth-layout-line-metrics layout))))
       (+ (fontsloth-layout-height layout)
          (fontsloth-layout-line-metrics-new-line-size line))
     0.0))
@@ -214,7 +214,7 @@
                ((cl-struct fontsloth-line-metrics ascent new-line-size) metrics)
                (current-ascent (ceiling ascent))
                (current-new-line (ceiling new-line-size)))
-    (when-let ((line (car (fontsloth-layout-line-metrics layout))))
+    (when-let* ((line (car (fontsloth-layout-line-metrics layout))))
       (when (< (fontsloth-layout-line-metrics-ascent line)
                current-ascent)
         (setf (fontsloth-layout-line-metrics-ascent line) current-ascent))
@@ -258,7 +258,7 @@
                    (setf (fontsloth-layout-linebreak-prev layout)
                          fontsloth-layout-linebreak-none)
                    (setq line-start? t)
-                   (when-let ((line
+                   (when-let* ((line
                                (car (fontsloth-layout-line-metrics layout))))
                      (setf (fontsloth-layout-line-metrics-end-index line)
                            (fontsloth-layout-linebreak-idx layout)
@@ -312,7 +312,7 @@
                    (setf (fontsloth-layout-current-pos layout)
                          (+ kern advance (fontsloth-layout-current-pos layout))
                          prev-char character)))))
-    (when-let ((line (car (fontsloth-layout-line-metrics layout))))
+    (when-let* ((line (car (fontsloth-layout-line-metrics layout))))
       (setf (fontsloth-layout-line-metrics-padding line)
             (- max-width (- (fontsloth-layout-current-pos layout)
                             (fontsloth-layout-start-pos layout)))
