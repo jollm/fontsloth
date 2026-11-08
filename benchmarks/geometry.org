@@ -38,3 +38,27 @@ params vectors. Consolidating those into a single compact line
 representation is the next likely win, but it touches the raster and
 line APIs, so it should be done with the same golden-outline/raster
 guardrails and benchmark comparison.
+
+* One-vector line representation (same day)
+
+The line's coords, nudge, adjustment, and params are now fields of a
+single `fontsloth-line` object instead of four separate vectors. The
+raster reads those fields directly, so it no longer allocates a
+per-line coords or params vector.
+
+| Metric | Before line change | After |
+|--------+--------------------+-------|
+| Line object size | 296 bytes | **168 bytes** |
+| Full outline time | 8.726s | **8.359s** |
+| Full outline allocation | 737.49 MB | **708.55 MB** |
+| Full outline retained | 312.42 MB | **196.66 MB** |
+| 50 glyph raster pass | 1.77 MB | **1.50 MB** |
+
+There are 948,307 lines in the full SF-Pro-Text outline. The retained
+drop (~116 MB) is larger than the allocation drop (~29 MB) because
+`memory-use-counts` does not count vector object headers, while
+`garbage-collect` does.
+
+Compatibility accessors (`fontsloth-line-coords', `-nudge',
+`-adjustment', `-params') still return the old views for callers and
+tests. The geometry and raster hot paths use the inline fields.

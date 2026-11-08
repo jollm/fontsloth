@@ -102,7 +102,7 @@
          (line (fontsloth-line-create
                 (fontsloth-point-create :x 0.0 :y 0.0)
                 (fontsloth-point-create :x 0.0 :y 10.0))))
-    (fontsloth-raster-v-line raster line (fontsloth-line-coords line))
+    (fontsloth-raster-v-line raster line 1.0 1.0 0.0 0.0)
     (should (seq-some (lambda (v) (/= v 0.0))
                       (fontsloth-raster-canvas raster)))))
 
@@ -112,8 +112,7 @@
          (line (fontsloth-line-create
                 (fontsloth-point-create :x 0.0 :y 0.0)
                 (fontsloth-point-create :x 10.0 :y 10.0))))
-    (fontsloth-raster-m-line raster line (fontsloth-line-coords line)
-                             (fontsloth-line-params line))
+    (fontsloth-raster-m-line raster line 1.0 1.0 0.0 0.0)
     (should (seq-some (lambda (v) (/= v 0.0))
                       (fontsloth-raster-canvas raster)))))
 

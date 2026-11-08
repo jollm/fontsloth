@@ -79,20 +79,18 @@ MID-X the computed mid x coord of the output"
     (aset c index (+ (- height m) (aref c index)))
     (aset c (1+ index) (+ (aref c (1+ index)) m))))
 
-(defun fontsloth-raster-v-line (raster line coords)
-  "Rasterize a v-line.
-RASTER the raster to update
-LINE the v-line
-COORDS the scaled coordinates"
-  (let* ((x0 (aref coords 0)) (y0 (aref coords 1)) (y1 (aref coords 3))
-         (nudge (fontsloth-line-nudge line))
-         (temp `(,(truncate (- (aref coords 0) (aref nudge 0)))
-                 ,(truncate (- (aref coords 1) (aref nudge 1)))
-                 ,(truncate (- (aref coords 2) (aref nudge 2)))
-                 ,(truncate (- (aref coords 3) (aref nudge 3)))))
-         (stx (car temp)) (sty (cadr temp)) (ex (caddr temp)) (ey (cadddr temp))
-         (adj (fontsloth-line-adjustment line))
-         (target-y (+ (aref adj 1) (cadr temp)))
+(defun fontsloth-raster-v-line
+    (raster line scale-x scale-y offset-x offset-y)
+  "Rasterize a v-line with SCALE-X, SCALE-Y, OFFSET-X, and OFFSET-Y."
+  (let* ((x0 (+ offset-x (* scale-x (fontsloth-line-x0 line))))
+         (y0 (+ offset-y (* scale-y (fontsloth-line-y0 line))))
+         (y1 (+ offset-y (* scale-y (fontsloth-line-y1 line))))
+         (x1 (+ offset-x (* scale-x (fontsloth-line-x1 line))))
+         (stx (truncate (- x0 (fontsloth-line-start-x-nudge line))))
+         (sty (truncate (- y0 (fontsloth-line-start-y-nudge line))))
+         (ex (truncate (- x1 (fontsloth-line-end-x-nudge line))))
+         (ey (truncate (- y1 (fontsloth-line-end-y-nudge line))))
+         (target-y (+ (fontsloth-line-y-first-adj line) sty))
          (sy (copysign 1.0 (- y1 y0)))
          (y-prev y0)
          (index (truncate (+ stx (* sty (fontsloth-raster-width raster) 1.0))))
@@ -120,25 +118,23 @@ COORDS the scaled coordinates"
      (- y-prev y1) mid-x))
   (fontsloth:debug* fontsloth-log "end v-line"))
 
-(defun fontsloth-raster-m-line (raster line coords params)
-  "Rasterize an m-line.
-RASTER the raster to update
-LINE the m-line
-COORDS the scaled coordinates
-PARAMS the scaled parameters"
-  (let* ((x0 (aref coords 0)) (y0 (aref coords 1))
-         (x1 (aref coords 2)) (y1 (aref coords 3))
-         (nudge (fontsloth-line-nudge line))
-         (temp `(,(truncate (- (aref coords 0) (aref nudge 0)))
-                 ,(truncate (- (aref coords 1) (aref nudge 1)))
-                 ,(truncate (- (aref coords 2) (aref nudge 2)))
-                 ,(truncate (- (aref coords 3) (aref nudge 3)))))
-         (stx (car temp)) (sty (cadr temp)) (ex (caddr temp)) (ey (cadddr temp))
-         (tdx (aref params 0)) (tdy (aref params 1))
-         (dx (aref params 2)) (dy (aref params 3))
-         (adj (fontsloth-line-adjustment line))
-         (target-x (+ (aref adj 0) (car temp)))
-         (target-y (+ (aref adj 1) (cadr temp)))
+(defun fontsloth-raster-m-line
+    (raster line scale-x scale-y offset-x offset-y)
+  "Rasterize an m-line with SCALE-X, SCALE-Y, OFFSET-X, and OFFSET-Y."
+  (let* ((x0 (+ offset-x (* scale-x (fontsloth-line-x0 line))))
+         (y0 (+ offset-y (* scale-y (fontsloth-line-y0 line))))
+         (x1 (+ offset-x (* scale-x (fontsloth-line-x1 line))))
+         (y1 (+ offset-y (* scale-y (fontsloth-line-y1 line))))
+         (stx (truncate (- x0 (fontsloth-line-start-x-nudge line))))
+         (sty (truncate (- y0 (fontsloth-line-start-y-nudge line))))
+         (ex (truncate (- x1 (fontsloth-line-end-x-nudge line))))
+         (ey (truncate (- y1 (fontsloth-line-end-y-nudge line))))
+         (tdx (/ (fontsloth-line-tdx line) scale-x))
+         (tdy (/ (fontsloth-line-tdy line) scale-y))
+         (dx (* scale-x (fontsloth-line-dx line)))
+         (dy (* scale-y (fontsloth-line-dy line)))
+         (target-x (+ (fontsloth-line-x-first-adj line) stx))
+         (target-y (+ (fontsloth-line-y-first-adj line) sty))
          (sx (copysign 1.0 tdx))
          (sy (copysign 1.0 tdy))
          (tmx (* tdx (- target-x x0))) (tmy (* tdy (- target-y y0)))
@@ -200,25 +196,12 @@ SCALE-X x scale
 SCALE-Y y scale
 OFFSET-X x offset
 OFFSET-Y y offset"
-  (let ((params `(,(/ 1.0 scale-x) ,(/ 1.0 scale-y) ,scale-x ,scale-y)))
-    (cl-flet ((scale-off (coords)
-                (vector (+ offset-x (* scale-x (aref coords 0)))
-                        (+ offset-y (* scale-y (aref coords 1)))
-                        (+ offset-x (* scale-x (aref coords 2)))
-                        (+ offset-y (* scale-y (aref coords 3)))))
-              (parameterize (lparams)
-                (vector (* (car params) (aref lparams 0))
-                        (* (cadr params) (aref lparams 1))
-                        (* (caddr params) (aref lparams 2))
-                        (* (cadddr params) (aref lparams 3)))))
-      (cl-loop for ln across (fontsloth-glyph-v-lines glyph) do
-               (fontsloth-raster-v-line
-                raster ln (scale-off (fontsloth-line-coords ln))))
-      (cl-loop for ln across (fontsloth-glyph-m-lines glyph) do
-               (fontsloth-raster-m-line
-                raster ln
-                (scale-off (fontsloth-line-coords ln))
-                (parameterize (fontsloth-line-params ln)))))))
+  (cl-loop for ln across (fontsloth-glyph-v-lines glyph) do
+           (fontsloth-raster-v-line
+            raster ln scale-x scale-y offset-x offset-y))
+  (cl-loop for ln across (fontsloth-glyph-m-lines glyph) do
+           (fontsloth-raster-m-line
+            raster ln scale-x scale-y offset-x offset-y)))
 
 (defun fontsloth-raster-get-pixel (raster length)
   "Get the pixelated output of the raster.

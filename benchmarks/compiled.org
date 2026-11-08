@@ -1,13 +1,14 @@
 #+TITLE: Byte-compiled CFF outlining results (2026-11-07)
+#+OPTIONS: toc:nil ^:{} \n:t
 
-The earlier benchmark files measured loaded =.el= source.  Interpreted
+The earlier benchmark files measured loaded =.el= source. Interpreted
 closures dominate allocating loops, especially in the CFF outliner, so
-those numbers are not representative of installed use.  =maak
+those numbers are not representative of installed use. =maak
 benchmark= now byte-compiles first (and cleans up afterward).
 
 * Environment
 
-Same machine and Emacs as the other benchmark files.  Lazy outlining on,
+Same machine and Emacs as the other benchmark files. Lazy outlining on,
 SF-Pro-Text-Regular.otf, raster limited to 50 code points.
 
 #+begin_src shell
@@ -45,10 +46,12 @@ full-outline measurement.  The byte-compiled equivalent allocates
 The remaining compiled outlining cost is mostly geometry: flattening
 cubic curves into lines and constructing the line objects.  CFF
 charstring parsing is no longer a dominant part of parse or outline
-time. Follow-up geometry results are in =benchmarks/geometry.org=.
+time. Follow-up geometry results, including the one-vector line
+change, are in =benchmarks/geometry.org=. Full outline now takes ~8.36s
+and retains ~196.66 MB.
 
 * Correctness
 
 `maak test` passes both interpreted and with byte-compiled sources
-(CI compiles before testing).  Golden outlines and rasters are
+(CI compiles before testing). Golden outlines and rasters are
 unchanged.
