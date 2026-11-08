@@ -54,22 +54,28 @@ to happen, please let me know.
 ** Now supported
 + Load simple and composite glyphs and character mappings in TTF and OTF fonts
 
-  These must contain loca/glyf or CFF1 tables for glyphs and cmap format4,
-  format0, format6, and/or format12 for mappings.
+  These must contain loca/glyf, CFF1, or CFF2 tables for glyphs and cmap
+  format4, format0, format6, and/or format12 for mappings.
 + Outline and rasterize glyphs that use quadratic or cubic bezier curves
 + Layouts for lines of horizontal text
 + kerning (as of 0.15.1)
 + OTF font outlining and rasterization (as of 0.16.0)
   It can now outline OpenType fonts with CFF version 1 tables.
++ CFF2 outlining and variable CFF2 blending (as of 0.21.0)
++ Variable fonts (as of 0.21.0)
+  + fvar axes and named instances
+  + Normalized variation coordinates
+  + HVAR advance-width deltas
+  + GVAR deltas for simple and composite glyphs, including IUP
+  + GVAR phantom-point advance fallback when HVAR is absent
 + Web Open Font Format (WOFF) (as of 0.17.0) Note: since WOFF is a meta
   format, the underlying format must also be supported.
 ** Not currently supported (but planned)
-+ OTF CFF version 2
-+ Font variation indices
 + Vertical metrics tables (and vertical text layout)
 + All possible cmap tables for char-code to glyph-id mappings
 + All of GPOS and GSUB for every script/lang
-+ Font collections
++ Font collections (TTC)
++ HVAR LSB/RSB deltas, MVAR, VVAR, and other metric variation tables
 + Allow custom per font family sets of additional char-code -> glyph mappings
   that derive new glyph outlines not in a font from those already
   present. E.g. subtract, add, or modify contours to produce glyphs that are
@@ -151,8 +157,11 @@ axes default to =0.0= (the default instance).
   (fontsloth-font-variation-coords font)) ; => (("wght" . 0.5))
 #+end_src
 
-The coordinates are currently used by CFF2 outlines. Glyf/GVAR, HVAR, and
-other variation tables are not wired up yet.
+The coordinates are used by CFF2 blending, HVAR advance-width deltas, and
+GVAR outlines.  HVAR takes precedence for advance widths when present.
+GVAR phantom-point deltas are used as the fallback when HVAR is absent.
+HVAR LSB/RSB deltas, MVAR, VVAR, and other metric variation tables are not
+applied yet.
 
 ** Bypass the cache
 #+begin_src emacs-lisp
