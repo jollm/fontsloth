@@ -75,10 +75,13 @@
   "Bindat spec for the OTF/TTF table directory header.
 see URL https://docs.microsoft.com/en-us/typography/opentype/spec/otff#tabledirectory")
 
+(defvar fontsloth-otf--sfnt-start 0
+  "Offset of the selected sfnt face in the current font file.")
+
 (defvar fontsloth-otf--maybe-woff-header-spec
   (bindat-type
     (--sig str 4)
-    (_ unit (progn (setq bindat-idx 0) nil))
+    (_ unit (progn (setq bindat-idx fontsloth-otf--sfnt-start) nil))
     (_ type
        (if (equal "wOFF" --sig)
            fontsloth-woff--header-spec
@@ -793,6 +796,38 @@ TABLE-PROPS-LIST the list of table props to index"
       (insert-file-contents-literally path)
       (buffer-string))))
 
+(defun fontsloth-otf--read-u32 (bytes offset)
+  "Read a big-endian uint32 from BYTES at OFFSET."
+  (+ (ash (aref bytes offset) 24)
+     (ash (aref bytes (1+ offset)) 16)
+     (ash (aref bytes (+ offset 2)) 8)
+     (aref bytes (+ offset 3))))
+
+(defun fontsloth-otf--ttc-p (bytes)
+  "Return non-nil if BYTES begin with a TTC header."
+  (and (<= 4 (length bytes))
+       (string-equal (substring bytes 0 4) "ttcf")))
+
+(defun fontsloth-otf--ttc-face-offset (bytes coll-index)
+  "Return the face offset for COLL-INDEX in TTC BYTES."
+  (unless (fontsloth-otf--ttc-p bytes)
+    (error "Not a font collection"))
+  (let ((num-fonts (fontsloth-otf--read-u32 bytes 8)))
+    (unless (and (integerp coll-index)
+                 (<= 0 coll-index)
+                 (< coll-index num-fonts))
+      (error "Collection index %s out of range 0..%s"
+             coll-index (1- num-fonts)))
+    (fontsloth-otf--read-u32 bytes (+ 12 (* 4 coll-index)))))
+
+(defun fontsloth-otf--face-offset (bytes coll-index)
+  "Return the sfnt face offset for COLL-INDEX in BYTES."
+  (cond ((fontsloth-otf--ttc-p bytes)
+         (fontsloth-otf--ttc-face-offset bytes coll-index))
+        ((= coll-index 0) 0)
+        (t (error "Collection index %s given for a non-collection font"
+                  coll-index))))
+
 (defun fontsloth-otf--table-data (tag props bytes)
   "Return TAG's raw table bytes from PROPS and BYTES."
   (when-let* ((table-props (gethash tag props)))
@@ -804,15 +839,16 @@ TABLE-PROPS-LIST the list of table props to index"
 
 (defun fontsloth-otf--parse-tables (bytes coll-index)
   "Parse font BYTES into a tag -> table map.
-COLL-INDEX is currently ignored (font collections are not supported)."
-  (ignore coll-index)
-  (let* ((fontsloth-otf--current-tables (make-hash-table :test 'equal))
+COLL-INDEX selects a face when BYTES is a font collection."
+  (let* ((face-offset (fontsloth-otf--face-offset bytes coll-index))
+         (fontsloth-otf--sfnt-start face-offset)
+         (fontsloth-otf--current-tables (make-hash-table :test 'equal))
          (fontsloth-otf--current-font-bytes bytes)
          (fontsloth-otf--current-font
           (fontsloth-otf-font-create :tables fontsloth-otf--current-tables
                                      :bytes bytes))
          (header+table-props
-          (bindat-unpack fontsloth-otf--tables-spec bytes))
+          (bindat-unpack fontsloth-otf--tables-spec bytes face-offset))
          ;; sfnt-ver to check if there is either TrueType or CFF data
          (sfnt-ver (bindat-get-field header+table-props 'header 'sfnt-version))
          (props (fontsloth-otf--index-table-props

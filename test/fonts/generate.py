@@ -16,7 +16,7 @@ from pathlib import Path
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.t2CharStringPen import T2CharStringPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
-from fontTools.ttLib import TTFont
+from fontTools.ttLib import TTCollection, TTFont
 
 HERE = Path(__file__).resolve().parent
 
@@ -189,6 +189,10 @@ def main():
     tt = TTFont(ttf_path)
     tt.flavor = "woff"
     tt.save(HERE / "fontsloth-test.woff")
+
+    collection = TTCollection()
+    collection.fonts = [TTFont(ttf_path), TTFont(HERE / "fontsloth-test.otf")]
+    collection.save(HERE / "fontsloth-test.ttc")
 
     print(f"wrote fixtures in {HERE}")
 

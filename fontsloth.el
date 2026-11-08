@@ -175,7 +175,11 @@ serializing tables and bytes into pcache.")
         (unless source
           (error "Cannot outline font %s lazily: no source path"
                  (fontsloth-font-name font)))
-        (let ((data (fontsloth-otf-load-font-data source)))
+        (let ((data (fontsloth-otf-load-font-data
+                    source
+                    :coll-index
+                    (fontsloth-font-settings-collection-index
+                     (fontsloth-font-settings font)))))
           (puthash font data fontsloth--lazy-fonts)
           data))))
 
@@ -257,7 +261,10 @@ Eager fonts are already fully outlined and are returned unchanged."
 
 (defun fontsloth--load-font (path font-settings)
   "Load a font given file path PATH and settings FONT-SETTINGS."
-  (let* ((data (fontsloth-otf-load-font-data path))
+  (let* ((data (fontsloth-otf-load-font-data
+                path
+                :coll-index
+                (fontsloth-font-settings-collection-index font-settings)))
          (source (expand-file-name path)))
     (fontsloth-otf-with-font data
       (let* ((name (f-base path))
@@ -311,6 +318,10 @@ Eager fonts are already fully outlined and are returned unchanged."
                  (equal (fontsloth-font-settings-variation-coords
                          (fontsloth-font-settings cached-font))
                         (fontsloth-font-settings-variation-coords
+                         font-settings))
+                 (equal (fontsloth-font-settings-collection-index
+                         (fontsloth-font-settings cached-font))
+                        (fontsloth-font-settings-collection-index
                          font-settings)))
             cached-font
           (message
