@@ -63,14 +63,18 @@
 
 (define (test)
   "Run the complete ERT suite in batch mode."
-  (let* ((files (test-files))
-         (loads (string-join (map (lambda (f) (string-append "-l " f))
-                                  files)
-                             " ")))
-    (when (null? files)
-      (error "No test files found"))
-    ($ (list (format #f "~a --batch -L . -l ert ~a --eval '(ert-run-tests-batch-and-exit)'"
-                     emacs loads)))))
+  (dynamic-wind
+    (lambda () (compile))
+    (lambda ()
+      (let* ((files (test-files))
+             (loads (string-join (map (lambda (f) (string-append "-l " f))
+                                      files)
+                                 " ")))
+        (when (null? files)
+          (error "No test files found"))
+        ($ (list (format #f "~a --batch -L . -l ert ~a --eval '(ert-run-tests-batch-and-exit)'"
+                         emacs loads)))))
+    (lambda () (clean))))
 
 (define (test-file file)
   "Run one ERT test file, e.g. `maak test-file -- fontsloth-test.el'."
@@ -88,12 +92,16 @@ are re-run for every source file."
 
 (define (coverage)
   "Report per-file test coverage, one Emacs process per source file."
-  (let ((tests (string-join (coverage-test-files) " ")))
-    (for-each
-     (lambda (source)
-       ($ (list (format #f "~a --batch -L . -l scripts/coverage.el -- ~a ~a"
-                        emacs source tests))))
-     source-files)))
+  (dynamic-wind
+    (lambda () (compile))
+    (lambda ()
+      (let ((tests (string-join (coverage-test-files) " ")))
+        (for-each
+         (lambda (source)
+           ($ (list (format #f "~a --batch -L . -l scripts/coverage.el -- ~a ~a"
+                            emacs source tests))))
+         source-files)))
+    (lambda () (clean))))
 
 (define (benchmark . fonts)
   "Byte-compile, then run the load/outline/raster benchmark on FONTS.
@@ -105,8 +113,9 @@ outlining measurements and are not representative of installed use."
     (lambda () #f)
     (lambda ()
       (let ((args (if (null? fonts) "" (string-join fonts " "))))
-        ($ (list (format #f "~a --batch -L . -l scripts/benchmark.el -- ~a"
-                         emacs args)))))
+        ($ (list (or emacs "emacs")
+                 "--batch -L . -l scripts/benchmark.el --"
+                 args))))
     (lambda () (clean))))
 
 (define (checkdoc)
@@ -119,11 +128,10 @@ outlining measurements and are not representative of installed use."
 
 (define (package-lint)
   "Run package-lint over the fontsloth sources."
-  (for-each
-   (lambda (file)
-     ($ (list (format #f "~a --batch -L . --eval '(progn (require (quote package-lint)) (package-lint-file \"~a\"))'"
-                      emacs file))))
-   source-files))
+  ($ `("guix shell -C -m manifest.scm --"
+       "emacs --batch -L . -l scripts/package-lint.el"
+       "-f package-lint-batch-and-exit"
+       ,@source-files)))
 
 (define (lint)
   "Run checkdoc and package-lint."
