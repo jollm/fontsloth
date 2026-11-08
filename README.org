@@ -14,9 +14,16 @@ It is currently pre version 1.0 and the API is not yet stable.
 Mostly it is modeled after the aforementioned fontdue and the outliner in
 [[https://github.com/RazrFalcon/ttf-parser][Rust ttf-parser]]. The only novel bit is using Emacs bindat.el to unpack OTF/TTF.
 
-Current semantic version: *0.21.0*
+Current semantic version: *0.21.0*.  See
+[[file:CHANGELOG.org][CHANGELOG.org]] for release notes.
 
-Melpa: [[https://melpa.org/#/fontsloth][file:https://melpa.org/packages/fontsloth-badge.svg]]
+Melpa:
+#+BEGIN_export html
+<a href="https://melpa.org/#/fontsloth" rel="nofollow">
+<img src="https://melpa.org/packages/fontsloth-badge.svg"
+     data-canonical-src="https://melpa.org/packages/fontsloth-badge.svg"
+     style="max-width: 100%;"></a>
+#+END_export
 
 *Note: at present this requires Emacs 28*
 

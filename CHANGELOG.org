@@ -1,0 +1,67 @@
+#+TITLE: Changelog
+#+OPTIONS: toc:nil ^:{}
+
+* 0.21.0
+
+** Added
+
+- CFF2 parsing and outlining, including FDArray/FDSelect, CFF2 charstrings,
+  `blend`/`vsindex`, variable coordinates, and the CFF2 operand-stack limit.
+- Variable-font support:
+  - `fvar` axes and named instances
+  - ItemVariationStore parsing and delta evaluation
+  - normalized variation coordinates in `fontsloth-font-settings`
+  - HVAR advance-width deltas
+  - GVAR deltas for simple and composite glyphs, including IUP
+  - GVAR phantom-point advance deltas as a fallback when HVAR is absent
+- TTC support:
+  - `ttcf` header parsing and face selection
+  - `fontsloth-otf-ttc-num-fonts`
+  - collection index threaded through public loading and lazy reparse
+  - cache entries keyed by source path and collection index
+- Deterministic font fixtures for TTF, OTF, WOFF, CFF2, variable fonts,
+  TTC, and a TTC containing a CFF2 face.
+- Test, coverage, benchmark, golden-outline, and CI tooling.
+
+** Changed
+
+- Lazy outlining is the default; fully outlined glyphs are optional.
+- Cache entries for lazy fonts are compact snapshots with an empty glyph
+  vector and unloaded kern map.
+- Raw font bytes and transient parser data are released after use; lazy
+  loads reparse from the source path if needed.
+- Geometry uses a consolidated line representation, a compact segment
+  stack, and fewer temporary point allocations.
+- bindat hot paths use fewer nested dynamically constructed types.
+- CFF charstrings are stored as byte strings, and the unused `stream`
+  dependency was removed.
+- GPOS zero-valued x-advance adjustments no longer mask later kern pairs.
+- Public APIs gained optional variation-coordinate arguments without
+  breaking existing callers.
+- README and docstrings updated for variable fonts and TTC.
+
+** Fixed
+
+- CFF2 large operand stacks no longer fail at the CFF1 limit.
+- CFF `parse-skip` and number parsing handle the `255` fixed-point operator.
+- WOFF decompression offsets are handled correctly.
+- Kern format 3 class indexing and bounds are handled correctly.
+- `cl-float-limits` is initialized before bounding-box and line code use
+  `cl-most-positive-float`.
+- TTC headers reject truncated, empty, unsupported, and out-of-range face
+  tables with clear errors.
+- Byte-compiler and checkdoc warnings were cleaned up.
+
+** Compatibility
+
+- The package remains pre-1.0 and its Lisp API is still settling.
+- Font cache data version is bumped. Old cached font objects are
+  invalidated on load.
+- TTC cache entries are separate per face.
+- HVAR LSB/RSB deltas, MVAR, VVAR, vertical metrics, and repacking remain
+  unsupported.
+
+* Earlier releases
+
+This project did not maintain a changelog before 0.21.0. See the git tags
+and commit history for prior releases.
