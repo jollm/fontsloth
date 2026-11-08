@@ -69,6 +69,7 @@
       (should (= (fontsloth-otf-ascender font) 800))
       (should (= (fontsloth-otf-descender font) -200))
       (should (= (fontsloth-otf-glyph-hor-advance 2 font) 600))
+      (should (= (fontsloth-otf-glyph-hor-advance 2 font (vector 0.0)) 600))
       (should (= (fontsloth-otf-glyph-id-for-code-point ?A font) 2))
       (should (= (gethash ?A (fontsloth-otf-char-to-glyph-map font)) 2))
       ;; Loading explicitly must not leak into the dynamic context.

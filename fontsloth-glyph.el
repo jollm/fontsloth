@@ -77,7 +77,8 @@ VARIATION-COORDS optional normalized variation-coordinate vector"
   (let ((geom (fontsloth-geometry-create scale units-per-em)))
     (fontsloth-otf-outline-glyph glyph-id geom font variation-coords)
     (fontsloth-geometry-finalize
-     geom (fontsloth-otf-glyph-hor-advance glyph-id font) 0.0)))
+     geom (fontsloth-otf-glyph-hor-advance glyph-id font variation-coords)
+     0.0)))
 
 (provide 'fontsloth-glyph)
 ;;; fontsloth-glyph.el ends here

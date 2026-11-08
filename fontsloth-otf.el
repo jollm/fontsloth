@@ -996,10 +996,14 @@ FONT an optional `fontsloth-otf-font', defaults to the current context."
     (cl-find tag axes :key (lambda (axis) (alist-get 'tag axis))
              :test #'equal)))
 
-(defun fontsloth-otf-glyph-hor-advance (glyph-id &optional font)
+(defun fontsloth-otf-glyph-hor-advance
+    (glyph-id &optional font variation-coords)
   "Return the horizontal advance for GLYPH-ID.
-FONT an optional `fontsloth-otf-font', defaults to the current context."
-  ;; Todo: support font variations
+FONT an optional `fontsloth-otf-font', defaults to the current context.
+VARIATION-COORDS is an optional normalized variation-coordinate vector.
+It is threaded here for HVAR support."
+  (ignore variation-coords)
+  ;; TODO: apply HVAR deltas.
   (when-let* ((hmtx (gethash "hmtx" (fontsloth-otf--font-tables font)))
               (metrics (alist-get 'hmetrics hmtx))
               (num-glyphs (fontsloth-otf-num-glyphs font)))
