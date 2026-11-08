@@ -60,7 +60,14 @@
                     (vector 1.0))))
       (should deltas)
       ;; E has untouched points in its gvar tuples; IUP should fill them.
-      (should (seq-every-p #'consp (append deltas nil))))))
+      ;; Expected values are from fontTools instancing at wght=900.
+      (should (equal (append deltas nil)
+                     '((-28.0 . 0.0) (-28.0 . -10.0)
+                       (38.0 . -10.0) (38.0 . -126.0)
+                       (112.0 . -126.0) (112.0 . 38.0)
+                       (54.0 . 38.0) (54.0 . -78.0)
+                       (112.0 . -78.0) (112.0 . 116.0)
+                       (38.0 . 116.0) (38.0 . 0.0)))))))
 
 (ert-deftest fontsloth-otf-gvar-test-high-level-variation ()
   "Check that the public font path applies GVAR to simple glyphs."
