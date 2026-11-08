@@ -273,31 +273,44 @@ GVAR and VARIATION-COORDS optionally apply simple-glyph deltas."
                  (fontsloth-otf--simple-glyf-flag 'on-curve-point flags)
                  (map-elt end-pts i))))
             (fontsloth-otf-glyf-builder-bbox builder)))
-      (let ((comps
-             (cons glyph-data
-                   (cl-loop for next = (alist-get 'next-component glyph-data)
-                            then (alist-get 'next-component next)
-                            while next collect next))))
-        (dolist (comp comps)
-          (when-let* ((a (map-nested-elt comp '(transform-option a)))
-                      (b (map-nested-elt comp '(transform-option b)))
-                      (c (map-nested-elt comp '(transform-option c)))
-                      (d (map-nested-elt comp '(transform-option d)))
-                      (e (map-elt comp 'argument1))
-                      (f (map-elt comp 'argument2))
-                      (tf (fontsloth-otf-glyf-transform-create
-                           :a a :b b :c c :d d :e e :f f))
-                      (tf (fontsloth-otf-glyf-transform-combine
-                           (fontsloth-otf-glyf-builder-transform builder)
-                           tf))
-                      (b (fontsloth-otf-glyf-builder-create
-                          :outliner (fontsloth-otf-glyf-builder-outliner
-                                     builder)
-                          :bbox (fontsloth-otf-glyf-builder-bbox builder)
-                          :transform tf)))
-            (fontsloth-otf-glyf--outline glyphs (alist-get 'glyph-id comp) b)
-            (setf (fontsloth-otf-glyf-builder-bbox builder)
-                  (fontsloth-otf-glyf-builder-bbox b))))))))
+      (let* ((comps
+              (cons glyph-data
+                    (cl-loop for next = (alist-get 'next-component glyph-data)
+                             then (alist-get 'next-component next)
+                             while next collect next)))
+             (deltas
+              (when (and gvar variation-coords)
+                (fontsloth-otf-gvar-composite-deltas
+                 gvar glyph-id (length comps) variation-coords))))
+        (cl-loop for comp in comps
+                 for i from 0
+                 do
+                 (let ((dx (if (and deltas (aref deltas i))
+                               (car (aref deltas i))
+                             0.0))
+                       (dy (if (and deltas (aref deltas i))
+                               (cdr (aref deltas i))
+                             0.0)))
+                   (when-let* ((a (map-nested-elt comp '(transform-option a)))
+                               (b (map-nested-elt comp '(transform-option b)))
+                               (c (map-nested-elt comp '(transform-option c)))
+                               (d (map-nested-elt comp '(transform-option d)))
+                               (e (+ (map-elt comp 'argument1) dx))
+                               (f (+ (map-elt comp 'argument2) dy))
+                               (tf (fontsloth-otf-glyf-transform-create
+                                    :a a :b b :c c :d d :e e :f f))
+                               (tf (fontsloth-otf-glyf-transform-combine
+                                    (fontsloth-otf-glyf-builder-transform builder)
+                                    tf))
+                               (b (fontsloth-otf-glyf-builder-create
+                                   :outliner (fontsloth-otf-glyf-builder-outliner
+                                              builder)
+                                   :bbox (fontsloth-otf-glyf-builder-bbox builder)
+                                   :transform tf)))
+                     (fontsloth-otf-glyf--outline
+                      glyphs (alist-get 'glyph-id comp) b gvar variation-coords)
+                     (setf (fontsloth-otf-glyf-builder-bbox builder)
+                           (fontsloth-otf-glyf-builder-bbox b)))))))))
 
 (defun fontsloth-otf-glyf-outline
     (glyphs glyph-id outliner &optional gvar variation-coords)

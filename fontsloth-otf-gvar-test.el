@@ -87,5 +87,61 @@
       (should-not (equal (fontsloth-test--glyph-signature default-glyph)
                          (fontsloth-test--glyph-signature varied-glyph))))))
 
+(ert-deftest fontsloth-otf-gvar-test-composite-and-phantom ()
+  "Check composite component deltas and phantom-point deltas."
+  (let ((path (fontsloth-test--fixture-font
+               "SourceSansVariable-Roman-subset.ttf")))
+    (skip-unless (f-exists-p path))
+    (let* ((data (fontsloth-otf-gvar-test--font-data))
+           (gvar (fontsloth-otf-gvar data))
+           (glyph-id (fontsloth-otf-glyph-id-for-code-point ?i data))
+           (deltas (fontsloth-otf-gvar-composite-deltas
+                    gvar glyph-id 2 (vector 1.0)))
+           (phantoms (fontsloth-otf-gvar-phantom-deltas
+                      gvar glyph-id 6 (vector 1.0))))
+      (should (equal (append deltas nil)
+                     '((0.0 . 0.0) (32.0 . 0.0)
+                       (0.0 . 0.0) (66.0 . 0.0)
+                       (0.0 . 0.0) (0.0 . 0.0))))
+      (should (equal phantoms
+                     '((0.0 . 0.0) (66.0 . 0.0)
+                       (0.0 . 0.0) (0.0 . 0.0))))
+      (should (= 66.0 (fontsloth-otf-gvar-advance-delta
+                       gvar glyph-id 6 (vector 1.0))))
+      ;; High-level composite outlines must use component deltas too.
+      (let* ((default (fontsloth-load-font path :cache 'bypass))
+             (settings (fontsloth-font-settings-create
+                        :variation-coords '(("wght" . 1.0))))
+             (varied (fontsloth-load-font path :cache 'bypass
+                                          :font-settings settings))
+             (gid (fontsloth-font-glyph-id default ?i))
+             (default-glyph (fontsloth-font-glyph default gid))
+             (varied-glyph (fontsloth-font-glyph varied gid)))
+        (should-not (equal
+                     (fontsloth-test--glyph-signature default-glyph)
+                     (fontsloth-test--glyph-signature varied-glyph)))))))
+
+(ert-deftest fontsloth-otf-gvar-test-phantom-advance-fallback ()
+  "Check that GVAR phantom deltas drive advances when HVAR is absent."
+  (let* ((path (fontsloth-test--fixture-font
+                "SourceSansVariable-Roman-subset.ttf")))
+    (skip-unless (f-exists-p path))
+    (let* ((data (fontsloth-otf-gvar-test--font-data))
+           (gid (fontsloth-otf-glyph-id-for-code-point ?A data))
+           (data-tables (fontsloth-otf--font-tables data))
+           (glyf (gethash "glyf" data-tables))
+           (glyph-data (alist-get 'data (elt (alist-get 'glyphs glyf) gid)))
+           (point-count (+ (alist-get 'num-points glyph-data) 4))
+           (delta (fontsloth-otf-gvar-advance-delta
+                   (fontsloth-otf-gvar data) gid point-count (vector 1.0)))
+           (base (fontsloth-otf-glyph-hor-advance gid data)))
+      ;; Simulate a font without HVAR; GVAR phantom points must take over.
+      (remhash "HVAR" data-tables)
+      (should (= (+ base delta)
+                 (fontsloth-otf-glyph-hor-advance
+                  gid data (vector 1.0)))))))
+
 (provide 'fontsloth-otf-gvar-test)
+
+
 ;;; fontsloth-otf-gvar-test.el ends here

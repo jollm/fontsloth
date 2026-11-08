@@ -313,6 +313,66 @@ Return (POINTS DX-LIST DY-LIST)."
                 (cons (+ (car pair) (or (aref dx i) 0.0))
                       (+ (cdr pair) (or (aref dy i) 0.0)))))))))
 
+(defun fontsloth-otf-gvar--raw-glyph-deltas (gvar glyph-id point-count coords)
+  "Return raw per-point deltas for GLYPH-ID without IUP.
+POINT-COUNT includes any phantom points."
+  (let ((glyph-data (fontsloth-otf-gvar--glyph-data gvar glyph-id))
+        (total (make-vector point-count (cons 0.0 0.0))))
+    (when glyph-data
+      (let* ((tuple-count (fontsloth-otf-gvar--u16 glyph-data 0))
+             (data-pos (fontsloth-otf-gvar--u16 glyph-data 2))
+             (header-pos 4)
+             (shared-points nil)
+             (tuple-n (logand tuple-count
+                              fontsloth-otf-gvar--tuple-index-mask)))
+        (when (/= 0 (logand tuple-count
+                            fontsloth-otf-gvar--tuples-share-points))
+          (let ((decoded (fontsloth-otf-gvar--decode-points
+                          glyph-data data-pos point-count)))
+            (setq shared-points (car decoded)
+                  data-pos (cdr decoded))))
+        (dotimes (_ tuple-n)
+          (pcase-let ((`(,data-size ,flags ,peak ,start ,end ,next-header)
+                       (fontsloth-otf-gvar--parse-tuple-header
+                        glyph-data gvar header-pos)))
+            (let ((scalar (fontsloth-otf-gvar--scalar
+                           peak start end coords)))
+              (when (> scalar 0.0)
+                (pcase-let ((`(,points ,dx-list ,dy-list)
+                             (fontsloth-otf-gvar--decode-tuple-deltas
+                              glyph-data data-pos data-size flags
+                              point-count shared-points)))
+                  (cl-loop for p in points
+                           for x in dx-list
+                           for y in dy-list
+                           when (< p point-count)
+                           do (let ((pair (aref total p)))
+                                (aset total p
+                                      (cons (+ (car pair) (* x scalar))
+                                            (+ (cdr pair) (* y scalar)))))))))
+            (setq header-pos next-header)
+            (setq data-pos (+ data-pos data-size))))
+        total))))
+
+(defun fontsloth-otf-gvar-composite-deltas (gvar glyph-id num-components coords)
+  "Return deltas for a composite glyph's components and phantom points."
+  (fontsloth-otf-gvar--raw-glyph-deltas
+   gvar glyph-id (+ num-components 4) coords))
+
+(defun fontsloth-otf-gvar-phantom-deltas (gvar glyph-id point-count coords)
+  "Return the four phantom-point deltas for GLYPH-ID."
+  (let ((raw (fontsloth-otf-gvar--raw-glyph-deltas
+              gvar glyph-id point-count coords)))
+    (when raw
+      (cl-loop for i from (- point-count 4) below point-count
+               collect (aref raw i)))))
+
+(defun fontsloth-otf-gvar-advance-delta (gvar glyph-id point-count coords)
+  "Return the GVAR advance-width delta for GLYPH-ID."
+  (when-let ((phantoms (fontsloth-otf-gvar-phantom-deltas
+                        gvar glyph-id point-count coords)))
+    (- (car (elt phantoms 1)) (car (elt phantoms 0)))))
+
 (defun fontsloth-otf-gvar-glyph-deltas
     (gvar glyph-id num-points end-pts x-coords y-coords coords)
   "Return per-point deltas for simple GLYPH-ID.

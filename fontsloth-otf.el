@@ -1018,6 +1018,23 @@ FONT an optional `fontsloth-otf-font', defaults to the current context."
     (cl-find tag axes :key (lambda (axis) (alist-get 'tag axis))
              :test #'equal)))
 
+(defun fontsloth-otf--glyph-variation-point-count (glyph-id &optional font)
+  "Return GLYPH-ID's GVAR point count including four phantom points."
+  (when-let* ((glyf (gethash "glyf" (fontsloth-otf--font-tables font)))
+              (glyph (elt (alist-get 'glyphs glyf) glyph-id)))
+    (let ((contours (alist-get 'number-of-contours glyph)))
+      (cond
+       ((< 0 contours)
+        (when-let ((data (alist-get 'data glyph)))
+          (+ (alist-get 'num-points data) 4)))
+       ((= 0 contours) 4)
+       (t
+        (let ((count 1)
+              (comp (alist-get 'data glyph)))
+          (while (setq comp (alist-get 'next-component comp))
+            (cl-incf count))
+          (+ count 4)))))))
+
 (defun fontsloth-otf-glyph-hor-advance
     (glyph-id &optional font variation-coords)
   "Return the horizontal advance for GLYPH-ID.
@@ -1039,11 +1056,21 @@ It is threaded here for HVAR support."
                   (alist-get 'advance-width (elt metrics glyph-id))
                 (alist-get 'advance-width (elt metrics (1- num-metrics)))))))
       (if (and advance variation-coords)
-          (+ advance
-             (or (when-let ((hvar (fontsloth-otf-hvar font)))
-                   (fontsloth-otf-hvar-advance-delta
-                    hvar glyph-id variation-coords))
-                 0.0))
+          (let* ((hvar (fontsloth-otf-hvar font))
+                 (gvar (fontsloth-otf-gvar font))
+                 (delta
+                  (cond
+                   (hvar
+                    (fontsloth-otf-hvar-advance-delta
+                     hvar glyph-id variation-coords))
+                   (gvar
+                    (when-let ((point-count
+                                (fontsloth-otf--glyph-variation-point-count
+                                 glyph-id font)))
+                      (fontsloth-otf-gvar-advance-delta
+                       gvar glyph-id point-count variation-coords)))
+                   (t nil))))
+            (+ advance (or delta 0.0)))
         advance))))
 
 (defun fontsloth-otf-glyph-ver-advance (glyph-id &optional font)
