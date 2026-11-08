@@ -3,7 +3,7 @@
 ;; Copyright (C) 2021 Jo Gay <jo.gay@mailfence.com>
 
 ;; Author: Jo Gay <jo.gay@mailfence.com>
-;; Version: 0.20.0
+;; Version: 0.21.0
 ;; Homepage: https://github.com/jollm/fontsloth
 ;; Package-Requires: ((async "1.9.7") (f "0.20.0") (logito "0.1") (pcache "0.5") (emacs "28.1"))
 ;; Keywords: data, font, rasterization, ttf, otf
