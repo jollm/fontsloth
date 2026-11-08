@@ -194,6 +194,13 @@ def main():
     collection.fonts = [TTFont(ttf_path), TTFont(HERE / "fontsloth-test.otf")]
     collection.save(HERE / "fontsloth-test.ttc")
 
+    cff2_collection = TTCollection()
+    cff2_collection.fonts = [
+        TTFont(ttf_path),
+        TTFont(HERE / "Cantarell-VF-subset.otf"),
+    ]
+    cff2_collection.save(HERE / "fontsloth-test-cff2.ttc")
+
     print(f"wrote fixtures in {HERE}")
 
 

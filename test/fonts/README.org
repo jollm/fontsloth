@@ -20,6 +20,7 @@ python3 test/fonts/generate.py
 | =fontsloth-test.otf=   | CFF1: cubic outlines, same cmap                        |
 | =fontsloth-test.woff=  | WOFF1 wrapping =fontsloth-test.ttf=                   |
 | =fontsloth-test.ttc=   | TTC containing the TTF face and the CFF face          |
+| =fontsloth-test-cff2.ttc= | TTC containing the TTF face and a CFF2 face        |
 | =fontsloth-test-vf.ttf= | TrueType with an fvar wght axis and two instances    |
 
 The synthetic fonts are original to this project and carry the same

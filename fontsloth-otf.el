@@ -803,29 +803,56 @@ TABLE-PROPS-LIST the list of table props to index"
      (ash (aref bytes (+ offset 2)) 8)
      (aref bytes (+ offset 3))))
 
+(defun fontsloth-otf--read-u16 (bytes offset)
+  "Read a big-endian uint16 from BYTES at OFFSET."
+  (+ (ash (aref bytes offset) 8) (aref bytes (1+ offset))))
+
 (defun fontsloth-otf--ttc-p (bytes)
   "Return non-nil if BYTES begin with a TTC header."
   (and (<= 4 (length bytes))
        (string-equal (substring bytes 0 4) "ttcf")))
 
-(defun fontsloth-otf--ttc-face-offset (bytes coll-index)
-  "Return the face offset for COLL-INDEX in TTC BYTES."
+(defun fontsloth-otf--ttc-header (bytes)
+  "Validate and return TTC header data from BYTES.
+Returns (MAJOR MINOR NUM-FONTS OFFSETS)."
   (unless (fontsloth-otf--ttc-p bytes)
     (error "Not a font collection"))
-  (let ((num-fonts (fontsloth-otf--read-u32 bytes 8)))
+  (unless (<= 12 (length bytes))
+    (error "Truncated TTC header"))
+  (let* ((major (fontsloth-otf--read-u16 bytes 4))
+         (minor (fontsloth-otf--read-u16 bytes 6))
+         (num-fonts (fontsloth-otf--read-u32 bytes 8))
+         (offsets-end (+ 12 (* 4 num-fonts))))
+    (unless (memql major '(1 2))
+      (error "Unsupported TTC version %s.%s" major minor))
+    (unless (< 0 num-fonts)
+      (error "TTC contains no faces"))
+    (unless (<= offsets-end (length bytes))
+      (error "Truncated TTC face offset table"))
+    (let ((offsets (make-vector num-fonts 0)))
+      (dotimes (i num-fonts)
+        (let ((offset (fontsloth-otf--read-u32 bytes (+ 12 (* 4 i)))))
+          (unless (and (<= offsets-end offset)
+                       (< offset (length bytes)))
+            (error "TTC face %s has invalid offset %s" i offset))
+          (aset offsets i offset)))
+      (list major minor num-fonts offsets))))
+
+(defun fontsloth-otf--ttc-face-offset (bytes coll-index)
+  "Return the face offset for COLL-INDEX in TTC BYTES."
+  (pcase-let ((`(,_major ,_minor ,num-fonts ,offsets)
+               (fontsloth-otf--ttc-header bytes)))
     (unless (and (integerp coll-index)
                  (<= 0 coll-index)
                  (< coll-index num-fonts))
       (error "Collection index %s out of range 0..%s"
              coll-index (1- num-fonts)))
-    (fontsloth-otf--read-u32 bytes (+ 12 (* 4 coll-index)))))
+    (aref offsets coll-index)))
 
 (defun fontsloth-otf-ttc-num-fonts (path)
   "Return the number of faces in the font collection at PATH."
-  (let ((bytes (fontsloth-otf--read-font-bytes path)))
-    (unless (fontsloth-otf--ttc-p bytes)
-      (error "%s is not a font collection" path))
-    (fontsloth-otf--read-u32 bytes 8)))
+  (nth 2 (fontsloth-otf--ttc-header
+          (fontsloth-otf--read-font-bytes path))))
 
 (defun fontsloth-otf--face-offset (bytes coll-index)
   "Return the sfnt face offset for COLL-INDEX in BYTES."

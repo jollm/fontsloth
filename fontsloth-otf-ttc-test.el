@@ -45,5 +45,55 @@
                     (length (fontsloth-glyph-m-lines glyph)))
                  0)))))
 
+(defun fontsloth-otf-ttc-test--header (&rest tail)
+  "Build a synthetic TTC header with TAIL bytes."
+  (apply #'unibyte-string (append (string-to-list "ttcf") tail)))
+
+(ert-deftest fontsloth-otf-ttc-test-invalid-headers ()
+  "Reject malformed and unsupported TTC headers."
+  (dolist (bytes
+           (list (unibyte-string ?t ?t ?c ?f)
+                 ;; zero faces
+                 (fontsloth-otf-ttc-test--header 0 1 0 0 0 0 0 0)
+                 ;; two faces but only one offset
+                 (fontsloth-otf-ttc-test--header 0 1 0 0 0 0 0 2 0 0 0 20)
+                 ;; face offset points into the header
+                 (fontsloth-otf-ttc-test--header 0 1 0 0 0 0 0 1 0 0 0 12)
+                 ;; unsupported version
+                 (fontsloth-otf-ttc-test--header 0 3 0 0 0 0 0 1 0 0 0 20)))
+    (should-error (fontsloth-otf--ttc-header bytes)))
+  (let ((path (fontsloth-test--fixture-font "fontsloth-test.ttf")))
+    (skip-unless (f-exists-p path))
+    (should-error (fontsloth-otf-ttc-num-fonts path))))
+
+(ert-deftest fontsloth-otf-ttc-test-version-2 ()
+  "Accept TTC version 2 headers."
+  (let ((path (fontsloth-test--fixture-font "fontsloth-test.ttc")))
+    (skip-unless (f-exists-p path))
+    (let* ((bytes (fontsloth-otf--read-font-bytes path))
+           (copy (copy-sequence bytes)))
+      (aset copy 4 0)
+      (aset copy 5 2)
+      (should (fontsloth-otf--ttc-header copy)))))
+
+(ert-deftest fontsloth-otf-ttc-test-compat-wrapper ()
+  "Select a face through the compatibility loader."
+  (let ((path (fontsloth-test--fixture-font "fontsloth-test.ttc")))
+    (skip-unless (f-exists-p path))
+    (let ((fontsloth-otf--current-tables nil))
+      (fontsloth-otf-load-font path :coll-index 1)
+      (should (gethash "CFF " fontsloth-otf--current-tables)))))
+
+(ert-deftest fontsloth-otf-ttc-test-cff2-face ()
+  "Select a CFF2 face from a collection."
+  (let ((path (fontsloth-test--fixture-font "fontsloth-test-cff2.ttc")))
+    (skip-unless (f-exists-p path))
+    (let* ((data (fontsloth-otf-load-font-data path :coll-index 1))
+           (tables (fontsloth-otf--font-tables data)))
+      (should (gethash "CFF2" tables))
+      (should (fontsloth-otf-cff2 data))
+      (should (= 2 (fontsloth-otf-ttc-num-fonts path))))))
+
 (provide 'fontsloth-otf-ttc-test)
+
 ;;; fontsloth-otf-ttc-test.el ends here
