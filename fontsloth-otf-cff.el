@@ -1341,7 +1341,7 @@ Using strings avoids constructing a bindat type for every char string."
         (setq char-string (fontsloth-otf-cff--parse-fixed p char-string)))))))
 
 (cl-defun fontsloth-otf-cff-parse-char-string
-    (data metadata glyph-id outliner &key cff2)
+    (data metadata glyph-id outliner &key cff2 coords)
   "Interpret GLYPH-ID's postscript DATA with METADATA into OUTLINER.
 CFF2 selects CFF2 semantics: no width, no required endchar, and the
 final contour is closed at the end of the charstring."
@@ -1352,7 +1352,8 @@ final contour is closed at the end of the charstring."
                :glyph-id glyph-id
                :cff2 cff2
                :width-parsed (and cff2 t)
-               :variation-store (alist-get 'variation-store metadata)))
+               :variation-store (alist-get 'variation-store metadata)
+               :coords coords))
          (builder (fontsloth-otf-cff-builder-create :outliner outliner))
          (stack (fontsloth-otf-cff-arguments-stack-create
                  :data nil

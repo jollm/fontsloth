@@ -139,6 +139,21 @@ deserialize every other cached font. Lazy fonts are stored as compact
 snapshots: the glyph vector is empty and the kern map is unloaded, and
 outlines are rebuilt from the source path on demand after a cache hit.
 
+** Variation coordinates
+Normalized variation coordinates are part of `fontsloth-font-settings' and
+are applied when a glyph is outlined. Values are in =[-1, 1]= world, missing
+axes default to =0.0= (the default instance).
+
+#+begin_src emacs-lisp
+(let* ((settings (fontsloth-font-settings-create
+                  :variation-coords '(("wght" . 0.5))))
+       (font (fontsloth-load-font path-to-font :font-settings settings)))
+  (fontsloth-font-variation-coords font)) ; => (("wght" . 0.5))
+#+end_src
+
+The coordinates are currently used by CFF2 outlines. Glyf/GVAR, HVAR, and
+other variation tables are not wired up yet.
+
 ** Bypass the cache
 #+begin_src emacs-lisp
 ;; it will take longer, but won’t end up in cache

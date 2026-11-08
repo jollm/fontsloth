@@ -124,9 +124,12 @@ LINE-GAP the line gap"
   (collection-index 0 :type 'fixed)
   (scale 40.0 :type 'number)
   (lazy-outline? t :type 'boolean
-                 :documentation "Outline glyphs on first use."))
+                 :documentation "Outline glyphs on first use.")
+  (variation-coords nil :type 'list
+                    :documentation
+                    "Alist of axis tag to normalized coordinate in [-1, 1]."))
 
-(defconst fontsloth--font-data-version 3
+(defconst fontsloth--font-data-version 4
   "For cache invalidation if fontsloth-font changes.")
 
 (cl-defstruct (fontsloth-font
@@ -154,6 +157,17 @@ LINE-GAP the line gap"
 Keeping the parser data here rather than in the cached font avoids
 serializing tables and bytes into pcache.")
 
+(defun fontsloth-font-variation-coords (font)
+  "Return FONT's normalized variation-coordinate alist."
+  (fontsloth-font-settings-variation-coords
+   (fontsloth-font-settings font)))
+
+(defun fontsloth--font-variation-coords-vector (font data)
+  "Return FONT's normalized coordinates in DATA's fvar axis order."
+  (fontsloth-otf-var-coords-vector
+   (fontsloth-otf-fvar-axes data)
+   (fontsloth-font-variation-coords font)))
+
 (defun fontsloth--font-data (font)
   "Return FONT's parser data, reloading it from FONT's source if needed."
   (or (gethash font fontsloth--lazy-fonts)
@@ -177,12 +191,14 @@ Returns nil when GLYPH-ID is out of range or nil."
                 (fontsloth-font-settings font)))
           (aref glyphs glyph-id)
         (or (aref glyphs glyph-id)
-            (let ((glyph (fontsloth-glyph-create
-                          glyph-id
-                          (fontsloth-font-settings-scale
-                           (fontsloth-font-settings font))
-                          (fontsloth-font-units-per-em font)
-                          (fontsloth--font-data font))))
+            (let* ((data (fontsloth--font-data font))
+                   (coords (fontsloth--font-variation-coords-vector font data))
+                   (glyph (fontsloth-glyph-create
+                           glyph-id
+                           (fontsloth-font-settings-scale
+                            (fontsloth-font-settings font))
+                           (fontsloth-font-units-per-em font)
+                           data coords)))
               (aset glyphs glyph-id glyph)
               glyph))))))
 
@@ -266,14 +282,18 @@ Eager fonts are already fully outlined and are returned unchanged."
           (if (fontsloth-font-settings-lazy-outline? font-settings)
               (puthash font data fontsloth--lazy-fonts)
             (let ((seen (make-hash-table :test 'eq))
-                  (scale (fontsloth-font-settings-scale font-settings)))
+                  (scale (fontsloth-font-settings-scale font-settings))
+                  (coords (fontsloth-otf-var-coords-vector
+                           (fontsloth-otf-fvar-axes data)
+                           (fontsloth-font-settings-variation-coords
+                            font-settings))))
               (maphash
                (lambda (_code-point glyph-id)
                  (unless (gethash glyph-id seen)
                    (puthash glyph-id t seen)
                    (aset glyphs glyph-id
                          (fontsloth-glyph-create glyph-id scale
-                                                 units-per-em data))))
+                                                 units-per-em data coords))))
                char-to-glyph)))
           font)))))
 
@@ -287,7 +307,11 @@ Eager fonts are already fully outlined and are returned unchanged."
         (if (and (eq (aref cached-font 1) fontsloth--font-data-version)
                  (eq (fontsloth-font-settings-lazy-outline?
                       (fontsloth-font-settings cached-font))
-                     (fontsloth-font-settings-lazy-outline? font-settings)))
+                     (fontsloth-font-settings-lazy-outline? font-settings))
+                 (equal (fontsloth-font-settings-variation-coords
+                         (fontsloth-font-settings cached-font))
+                        (fontsloth-font-settings-variation-coords
+                         font-settings)))
             cached-font
           (message
            "fontsloth: mismatched version or settings, invalidating cache for %s"

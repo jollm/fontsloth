@@ -152,7 +152,20 @@
   (should-not (eq (fontsloth-otf-var--delta-type nil 2 0)
                   (fontsloth-otf-var--delta-type t 2 0))))
 
+(ert-deftest fontsloth-otf-var-test-coords-vector ()
+  "Check mapping an axis-tag alist to normalized coordinates."
+  (let ((axes (vector '((tag . "wght")) '((tag . "wdth")))))
+    (should (equal (fontsloth-otf-var-coords-vector
+                    axes '(("wght" . 0.5)))
+                   [0.5 0.0]))
+    (should (equal (fontsloth-otf-var-coords-vector
+                    axes '(("wght" . 2.0) ("wdth" . -2.0)))
+                   [1.0 -1.0]))
+    (should (equal (fontsloth-otf-var-coords-vector axes nil)
+                   [0.0 0.0]))))
+
 (provide 'fontsloth-otf-var-test)
+
 
 
 ;;; fontsloth-otf-var-test.el ends here

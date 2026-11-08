@@ -233,6 +233,19 @@ see URL https://learn.microsoft.com/en-us/typography/opentype/spec/fvar")
 see URL
 `https://learn.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats#item-variation-store'")
 
+(defun fontsloth-otf-var-coords-vector (axes coords)
+  "Return a vector of normalized coordinates for AXES.
+COORDS is an alist of axis tag to normalized value in [-1, 1], missing
+axes default to 0.0."
+  (let ((result (make-vector (length axes) 0.0)))
+    (cl-loop for axis across axes
+             for i from 0
+             for tag = (alist-get 'tag axis)
+             for entry = (assoc-string tag coords)
+             for value = (if entry (cdr entry) 0.0)
+             do (aset result i (max -1.0 (min 1.0 value))))
+    result))
+
 (defun fontsloth-otf-var-normalize (axis value)
   "Normalize VALUE against fvar AXIS.
 AXIS is an fvar axis alist with min-value, default-value, and max-value."

@@ -14,6 +14,18 @@
 (require 'fontsloth-otf-cff2)
 (require 'fontsloth-test-util)
 
+(defun fontsloth-otf-cff2-test--outline-signature (geom)
+  "Return a comparable signature for GEOM's lines."
+  (let ((lines (append (fontsloth-geometry-v-lines geom)
+                       (fontsloth-geometry-m-lines geom))))
+    (mapcar (lambda (line)
+              (let ((coords (fontsloth-line-coords line)))
+                (list (fontsloth-coords-x0 coords)
+                      (fontsloth-coords-y0 coords)
+                      (fontsloth-coords-x1 coords)
+                      (fontsloth-coords-y1 coords))))
+            lines)))
+
 (ert-deftest fontsloth-otf-cff2-test-table ()
   "Check CFF2 header, charstrings, FDArray, and variation store parsing."
   (let ((path (fontsloth-test--fixture-font "Cantarell-VF-subset.otf")))
@@ -65,6 +77,32 @@
                     (length (fontsloth-glyph-m-lines glyph)))
                  0)))))
 
+(ert-deftest fontsloth-otf-cff2-test-variable-outline ()
+  "Check that non-default normalized coordinates change CFF2 outlines."
+  (let ((path (fontsloth-test--fixture-font "Cantarell-VF-subset.otf")))
+    (skip-unless (f-exists-p path))
+    (let* ((data (fontsloth-otf-load-font-data path))
+           (cff2 (fontsloth-otf-cff2 data))
+           (default (fontsloth-geometry-create 1.0 1000))
+           (varied (fontsloth-geometry-create 1.0 1000)))
+      (fontsloth-otf-cff2-outline cff2 1 default)
+      (fontsloth-otf-cff2-outline cff2 1 varied (vector 1.0))
+      (should-not (equal (fontsloth-otf-cff2-test--outline-signature default)
+                         (fontsloth-otf-cff2-test--outline-signature varied)))
+      ;; The public settings path should use the same coordinates.
+      (let* ((settings (fontsloth-font-settings-create
+                        :variation-coords '(("wght" . 1.0))))
+             (font (fontsloth-load-font path :cache 'bypass
+                                        :font-settings settings))
+             (glyph-id (fontsloth-font-glyph-id font ?A))
+             (glyph (fontsloth-font-glyph font glyph-id)))
+        (should (equal (fontsloth-font-variation-coords font)
+                       '(("wght" . 1.0))))
+        (should (> (+ (length (fontsloth-glyph-v-lines glyph))
+                      (length (fontsloth-glyph-m-lines glyph)))
+                   0))))))
+
 (provide 'fontsloth-otf-cff2-test)
+
 
 ;;; fontsloth-otf-cff2-test.el ends here

@@ -884,7 +884,8 @@ TTF-PATH the path to a ttf file
 
 (defun fontsloth-otf-num-glyphs (&optional font)
   "If a font is loaded, find its specified number of glyphs.
-FONT an optional `fontsloth-otf-font', defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context.
+VARIATION-COORDS optional normalized variation-coordinate vector."
   (when-let ((maxp (gethash "maxp" (fontsloth-otf--font-tables font))))
     (alist-get 'num-glyphs maxp)))
 
@@ -1077,7 +1078,8 @@ Y y coord of curve end"
 
 ;;; glyph outlining fns
 
-(defun fontsloth-otf-outline-glyph (glyph-id outliner &optional font)
+(defun fontsloth-otf-outline-glyph
+    (glyph-id outliner &optional font variation-coords)
   "Outline a glyph using a caller provided outliner.
 The caller is expected to define methods for the following
 generics to dispatch on their outliner type:
@@ -1094,7 +1096,7 @@ FONT an optional `fontsloth-otf-font', defaults to the current context."
     (if-let ((glyf (gethash "glyf" (fontsloth-otf--font-tables font))))
         (fontsloth-otf-glyf-outline (alist-get 'glyphs glyf) glyph-id outliner)
       (if-let ((cff2 (gethash "CFF2" (fontsloth-otf--font-tables font))))
-          (fontsloth-otf-cff2-outline cff2 glyph-id outliner)
+          (fontsloth-otf-cff2-outline cff2 glyph-id outliner variation-coords)
         (when-let ((cff (gethash "CFF " (fontsloth-otf--font-tables font))))
           (fontsloth-otf-cff-outline cff glyph-id outliner))))))
 

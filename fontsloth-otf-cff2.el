@@ -228,8 +228,9 @@ The result includes `private-dict' and `local-subrs'."
                 0)))
     (aref (alist-get 'font-dicts cff2) fd)))
 
-(defun fontsloth-otf-cff2-outline (cff2 glyph-id outliner)
-  "Outline GLYPH-ID from CFF2 into OUTLINER."
+(defun fontsloth-otf-cff2-outline (cff2 glyph-id outliner &optional coords)
+  "Outline GLYPH-ID from CFF2 into OUTLINER.
+COORDS is an optional normalized variation-coordinate vector."
   (fontsloth:verbose* fontsloth-log "Cff2: outlining glyph %s" glyph-id)
   (when-let* ((char-strings (alist-get 'char-strings cff2))
               (char-string (aref char-strings glyph-id)))
@@ -244,7 +245,7 @@ The result includes `private-dict' and `local-subrs'."
               (variation-store
                . ,(alist-get 'variation-store cff2)))))
       (fontsloth-otf-cff-parse-char-string
-       char-string metadata glyph-id outliner :cff2 t))))
+       char-string metadata glyph-id outliner :cff2 t :coords coords))))
 
 (provide 'fontsloth-otf-cff2)
 
