@@ -52,7 +52,7 @@
            sum (ash (aref data (+ offset i)) (* 8 (- size 1 i)))))
 
 (defun fontsloth-otf-cff2--parse-index (data offset)
-  "Parse a CFF2 INDEX at OFFSET.
+  "Parse a CFF2 INDEX from DATA at OFFSET.
 Return a cons of the item count and a vector of byte strings, or nil."
   (when (and offset (< offset (length data)))
     (let ((count (fontsloth-otf-cff2--u32 data offset)))
@@ -96,7 +96,7 @@ Return a cons of the item count and a vector of byte strings, or nil."
     (fontsloth-otf-cff1--parse-private-dict (substring data start end))))
 
 (defun fontsloth-otf-cff2--parse-fd-array (data offset)
-  "Parse the FDArray INDEX at OFFSET.
+  "Parse the FDArray INDEX from DATA at OFFSET.
 Return a vector of font-dict alists."
   (let* ((index (fontsloth-otf-cff2--parse-index data offset))
          (dicts (cdr index))
@@ -121,7 +121,7 @@ Return a vector of font-dict alists."
     result))
 
 (defun fontsloth-otf-cff2--parse-fd-select (data offset num-glyphs)
-  "Parse an FDSelect table at OFFSET for NUM-GLYPHS glyphs.
+  "Parse an FDSelect table from DATA at OFFSET for NUM-GLYPHS glyphs.
 Return a vector mapping glyph id to FD index."
   (when (and offset (< offset (length data)))
     (let ((result (make-vector num-glyphs 0))
@@ -221,7 +221,7 @@ Return a vector mapping glyph id to FD index."
   (alist-get 'fd-select cff2))
 
 (defun fontsloth-otf-cff2-font-dict (cff2 glyph-id)
-  "Return the font dict alist for GLYPH-ID.
+  "Return CFF2's font dict alist for GLYPH-ID.
 The result includes `private-dict' and `local-subrs'."
   (let ((fd (or (let ((select (fontsloth-otf-cff2-fd-select cff2)))
                   (when select (aref select glyph-id)))

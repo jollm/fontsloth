@@ -1019,7 +1019,8 @@ FONT an optional `fontsloth-otf-font', defaults to the current context."
              :test #'equal)))
 
 (defun fontsloth-otf--glyph-variation-point-count (glyph-id &optional font)
-  "Return GLYPH-ID's GVAR point count including four phantom points."
+  "Return GLYPH-ID's GVAR point count including four phantom points.
+FONT an optional `fontsloth-otf-font', defaults to the current context."
   (when-let* ((glyf (gethash "glyf" (fontsloth-otf--font-tables font)))
               (glyph (elt (alist-get 'glyphs glyf) glyph-id)))
     (let ((contours (alist-get 'number-of-contours glyph)))
@@ -1149,7 +1150,8 @@ generics to dispatch on their outliner type:
 `fontsloth-otf-close-contour'
 GLYPH-ID the id of the glyph to outline
 OUTLINER the caller's outliner implementation
-FONT an optional `fontsloth-otf-font', defaults to the current context."
+FONT an optional `fontsloth-otf-font', defaults to the current context.
+VARIATION-COORDS optional normalized variation-coordinate vector."
   ;; TODO gvar
   (fontsloth-otf-with-font font
     (if-let ((glyf (gethash "glyf" (fontsloth-otf--font-tables font))))

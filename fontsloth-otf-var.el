@@ -248,7 +248,8 @@ axes default to 0.0."
 
 (defun fontsloth-otf-var-normalize (axis value)
   "Normalize VALUE against fvar AXIS.
-AXIS is an fvar axis alist with min-value, default-value, and max-value."
+AXIS is an fvar axis alist with `min-value', `default-value', and
+`max-value'."
   (let ((min (alist-get 'min-value axis))
         (default (alist-get 'default-value axis))
         (max (alist-get 'max-value axis)))

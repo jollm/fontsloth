@@ -213,7 +213,7 @@ Returns nil when GLYPH-ID is out of range or nil."
 (defun fontsloth-font-all-glyphs (font)
   "Outline every mapped glyph in FONT and return its glyph vector.
 Useful for tests and benchmarks that need the eager representation.
-After a successful full pass the transient parser data is released. A
+After a successful full pass the transient parser data is released.  A
 later kern lookup or out-of-band glyph request reparses from FONT's
 source path."
   (let ((seen (make-hash-table :test 'eq)))
@@ -367,9 +367,9 @@ regardless of whether they are already cached"
     (sources &key (font-settings (fontsloth-font-settings-create))
              finish-func
              force-reload?)
-  "Given a sequence of font sources SOURCES, attempt to cache and save
-each font in an asynchronous process. Returns the process or nil if no
-process is started.
+  "Cache and save a sequence of font sources in an asynchronous process.
+SOURCES is the sequence of font sources.  Returns the process or nil if
+no process is started.
 
 Optional keyword arguments:
 FONT-SETTINGS the `fontsloth-font-settings' to use

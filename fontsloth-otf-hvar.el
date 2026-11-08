@@ -50,7 +50,7 @@
            sum (ash (aref data (+ offset i)) (* 8 (- size 1 i)))))
 
 (defun fontsloth-otf-hvar--parse-delta-set-index-map (data offset)
-  "Parse a DeltaSetIndexMap at OFFSET.
+  "Parse a DeltaSetIndexMap from DATA at OFFSET.
 Return a vector of (outer . inner) pairs."
   (when (and offset (< offset (length data)))
     (let ((format (aref data offset))

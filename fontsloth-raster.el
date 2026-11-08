@@ -81,7 +81,9 @@ MID-X the computed mid x coord of the output"
 
 (defun fontsloth-raster-v-line
     (raster line scale-x scale-y offset-x offset-y)
-  "Rasterize a v-line with SCALE-X, SCALE-Y, OFFSET-X, and OFFSET-Y."
+  "Rasterize a v-line into RASTER.
+RASTER the raster to update.  LINE the v-line.  SCALE-X and SCALE-Y are
+the scales.  OFFSET-X and OFFSET-Y are the offsets."
   (let* ((x0 (+ offset-x (* scale-x (fontsloth-line-x0 line))))
          (y0 (+ offset-y (* scale-y (fontsloth-line-y0 line))))
          (y1 (+ offset-y (* scale-y (fontsloth-line-y1 line))))
@@ -120,7 +122,9 @@ MID-X the computed mid x coord of the output"
 
 (defun fontsloth-raster-m-line
     (raster line scale-x scale-y offset-x offset-y)
-  "Rasterize an m-line with SCALE-X, SCALE-Y, OFFSET-X, and OFFSET-Y."
+  "Rasterize an m-line into RASTER.
+RASTER the raster to update.  LINE the m-line.  SCALE-X and SCALE-Y are
+the scales.  OFFSET-X and OFFSET-Y are the offsets."
   (let* ((x0 (+ offset-x (* scale-x (fontsloth-line-x0 line))))
          (y0 (+ offset-y (* scale-y (fontsloth-line-y0 line))))
          (x1 (+ offset-x (* scale-x (fontsloth-line-x1 line))))

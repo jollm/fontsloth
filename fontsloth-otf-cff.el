@@ -1117,7 +1117,9 @@ Using strings avoids constructing a bindat type for every char string."
         (setf (fontsloth-otf-cff-parse-context-vsindex ctx) index)))))
 
 (defun fontsloth-otf-cff--parse-blend (ctx p)
-  "Consume a CFF2 blend from P, applying the active variation store."
+  "Consume a CFF2 blend from P using CTX's variation store.
+CTX the parse context
+P the char-string parser"
   (let* ((s (fontsloth-otf-cff-char-string-parser-stack p))
          (n (truncate (fontsloth-otf-cff-arguments-stack-pop s)))
          (store (fontsloth-otf-cff-parse-context-variation-store ctx))

@@ -235,7 +235,8 @@ Return a cons of the delta list and the next offset."
         (setq start (1+ end))))))
 
 (defun fontsloth-otf-gvar--parse-tuple-header (glyph-data gvar header-pos)
-  "Parse one tuple header at HEADER-POS.
+  "Parse one tuple header from GLYPH-DATA at HEADER-POS.
+GVAR supplies the shared tuples.
 Return (DATA-SIZE FLAGS PEAK START END NEXT-HEADER-POS)."
   (let* ((data-size (fontsloth-otf-gvar--u16 glyph-data header-pos))
          (flags (fontsloth-otf-gvar--u16 glyph-data (+ header-pos 2)))
@@ -272,7 +273,9 @@ Return (DATA-SIZE FLAGS PEAK START END NEXT-HEADER-POS)."
 
 (defun fontsloth-otf-gvar--decode-tuple-deltas
     (glyph-data data-pos data-size flags point-count shared-points)
-  "Decode one tuple's points and deltas.
+  "Decode one tuple's points and deltas from GLYPH-DATA.
+DATA-POS and DATA-SIZE locate the tuple data.  FLAGS, POINT-COUNT, and
+SHARED-POINTS control point decoding.
 Return (POINTS DX-LIST DY-LIST)."
   (let* ((point-data (substring glyph-data data-pos (+ data-pos data-size)))
          (private (/= 0 (logand flags fontsloth-otf-gvar--private-points)))
@@ -294,7 +297,10 @@ Return (POINTS DX-LIST DY-LIST)."
 (defun fontsloth-otf-gvar--apply-tuple
     (total points dx-list dy-list scalar num-points end-pts
            x-coords y-coords)
-  "Apply one tuple's deltas to TOTAL."
+  "Apply one tuple's deltas to TOTAL.
+POINTS, DX-LIST, and DY-LIST are the tuple's decoded deltas.  SCALAR is
+the region scalar.  NUM-POINTS, END-PTS, X-COORDS, and Y-COORDS describe
+the glyph points."
   (let ((dx (make-vector num-points nil))
         (dy (make-vector num-points nil)))
     (cl-loop for p in points
@@ -315,7 +321,8 @@ Return (POINTS DX-LIST DY-LIST)."
 
 (defun fontsloth-otf-gvar--raw-glyph-deltas (gvar glyph-id point-count coords)
   "Return raw per-point deltas for GLYPH-ID without IUP.
-POINT-COUNT includes any phantom points."
+GVAR is the parsed gvar table.  POINT-COUNT includes any phantom points.
+COORDS is the normalized variation-coordinate vector."
   (let ((glyph-data (fontsloth-otf-gvar--glyph-data gvar glyph-id))
         (total (make-vector point-count (cons 0.0 0.0))))
     (when glyph-data
@@ -355,12 +362,17 @@ POINT-COUNT includes any phantom points."
         total))))
 
 (defun fontsloth-otf-gvar-composite-deltas (gvar glyph-id num-components coords)
-  "Return deltas for a composite glyph's components and phantom points."
+  "Return deltas for a composite glyph's components and phantom points.
+GVAR is the parsed gvar table, GLYPH-ID is the glyph, NUM-COMPONENTS is
+the component count, and COORDS is the normalized variation-coordinate
+vector."
   (fontsloth-otf-gvar--raw-glyph-deltas
    gvar glyph-id (+ num-components 4) coords))
 
 (defun fontsloth-otf-gvar-phantom-deltas (gvar glyph-id point-count coords)
-  "Return the four phantom-point deltas for GLYPH-ID."
+  "Return the four phantom-point deltas for GLYPH-ID.
+GVAR is the parsed gvar table, POINT-COUNT includes phantom points, and
+COORDS is the normalized variation-coordinate vector."
   (let ((raw (fontsloth-otf-gvar--raw-glyph-deltas
               gvar glyph-id point-count coords)))
     (when raw
@@ -368,7 +380,9 @@ POINT-COUNT includes any phantom points."
                collect (aref raw i)))))
 
 (defun fontsloth-otf-gvar-advance-delta (gvar glyph-id point-count coords)
-  "Return the GVAR advance-width delta for GLYPH-ID."
+  "Return the GVAR advance-width delta for GLYPH-ID.
+GVAR is the parsed gvar table, POINT-COUNT includes phantom points, and
+COORDS is the normalized variation-coordinate vector."
   (when-let ((phantoms (fontsloth-otf-gvar-phantom-deltas
                         gvar glyph-id point-count coords)))
     (- (car (elt phantoms 1)) (car (elt phantoms 0)))))
@@ -376,7 +390,7 @@ POINT-COUNT includes any phantom points."
 (defun fontsloth-otf-gvar-glyph-deltas
     (gvar glyph-id num-points end-pts x-coords y-coords coords)
   "Return per-point deltas for simple GLYPH-ID.
-Returns a vector of (dx . dy) for the actual glyph points, or nil when
+GVAR is the parsed gvar table.  Returns a vector of (dx . dy) for the actual glyph points, or nil when
 the glyph has no variation data."
   (let ((glyph-data (fontsloth-otf-gvar--glyph-data gvar glyph-id))
         (total (make-vector num-points (cons 0.0 0.0))))
