@@ -51,6 +51,7 @@
 (require 'fontsloth-bbox)
 (require 'fontsloth-otf-)
 (require 'fontsloth-otf-cff-dict)
+(require 'fontsloth-otf-var)
 
 ;; Standard encoding defined in Adobe Technical Note #5176 Appendix B
 (defconst fontsloth-otf-cff--standard-encoding
@@ -105,6 +106,8 @@ Defined in Adobe Technical Note #5176 Appendix C.")
 (defconst fontsloth-otf-cff-call-local-subr 10)
 (defconst fontsloth-otf-cff-return 11)
 (defconst fontsloth-otf-cff-endchar 14)
+(defconst fontsloth-otf-cff-vsindex 15)
+(defconst fontsloth-otf-cff-blend 16)
 (defconst fontsloth-otf-cff-horizontal-stem-hint-mask 18)
 (defconst fontsloth-otf-cff-hint-mask 19)
 (defconst fontsloth-otf-cff-counter-mask 20)
@@ -473,6 +476,10 @@ Using strings avoids constructing a bindat type for every char string."
   (stems-len 0 :type 'natnum)
   (has-endchar nil :type 'boolean)
   (has-seac nil :type 'boolean)
+  (cff2 nil :type 'boolean)
+  (vsindex 0 :type 'natnum)
+  (coords nil)
+  (variation-store nil)
   (glyph-id 0 :type 'natnum)
   (local-subrs nil))
 
@@ -1101,6 +1108,38 @@ Using strings avoids constructing a bindat type for every char string."
          (fontsloth-otf-cff-char-string-parser-builder p)))
       (setf (fontsloth-otf-cff-parse-context-has-endchar ctx) t))))
 
+(defun fontsloth-otf-cff--parse-vsindex (ctx p)
+  "Consume the CFF2 vsindex operand from P and update CTX."
+  (let ((stack (fontsloth-otf-cff-char-string-parser-stack p)))
+    (unless (fontsloth-otf-cff-arguments-stack-empty-p stack)
+      (let ((index (truncate
+                    (fontsloth-otf-cff-arguments-stack-pop stack))))
+        (setf (fontsloth-otf-cff-parse-context-vsindex ctx) index)))))
+
+(defun fontsloth-otf-cff--parse-blend (ctx p)
+  "Consume a CFF2 blend from P, applying the active variation store."
+  (let* ((s (fontsloth-otf-cff-char-string-parser-stack p))
+         (n (truncate (fontsloth-otf-cff-arguments-stack-pop s)))
+         (store (fontsloth-otf-cff-parse-context-variation-store ctx))
+         (index (fontsloth-otf-cff-parse-context-vsindex ctx))
+         (scalars (when store
+                    (fontsloth-otf-var-region-scalars
+                     store index
+                     (fontsloth-otf-cff-parse-context-coords ctx))))
+         (k (length scalars))
+         (delta-rev (cl-loop repeat (* n k)
+                             collect (fontsloth-otf-cff-arguments-stack-pop s)))
+         (deltas (nreverse delta-rev))
+         (base-rev (cl-loop repeat n
+                            collect (fontsloth-otf-cff-arguments-stack-pop s)))
+         (bases (nreverse base-rev)))
+    (dotimes (i n)
+      (let ((value (elt bases i)))
+        (dotimes (j k)
+          (cl-incf value (* (elt deltas (+ (* i k) j))
+                            (elt scalars j))))
+        (fontsloth-otf-cff-arguments-stack-push s value)))))
+
 (defun fontsloth-otf-cff--parse-char-string (ctx char-string depth p)
   "Parse a postscript CHAR-STRING in CTX at DEPTH with parser P."
   (fontsloth:debug* fontsloth-log "Parse-char-string, depth %s" depth)
@@ -1113,7 +1152,15 @@ Using strings avoids constructing a bindat type for every char string."
    (cl-block loop
      (fontsloth:debug* fontsloth-log "Checking op %s" op)
      (pcase op
-       ((or 0 2 9 13 15 16 17) (error "Invalid operator %s" op))
+       ((or 0 2 9 13 17) (error "Invalid operator %s" op))
+       ((pred (eq fontsloth-otf-cff-vsindex))
+        (if (fontsloth-otf-cff-parse-context-cff2 ctx)
+            (fontsloth-otf-cff--parse-vsindex ctx p)
+          (error "Invalid operator %s" op)))
+       ((pred (eq fontsloth-otf-cff-blend))
+        (if (fontsloth-otf-cff-parse-context-cff2 ctx)
+            (fontsloth-otf-cff--parse-blend ctx p)
+          (error "Invalid operator %s" op)))
        ((or (pred (eq fontsloth-otf-cff-horizontal-stem))
             (pred (eq fontsloth-otf-cff-vertical-stem))
             (pred (eq fontsloth-otf-cff-horizontal-stem-hint-mask))
@@ -1293,13 +1340,19 @@ Using strings avoids constructing a bindat type for every char string."
         (fontsloth:debug* fontsloth-log "Fixed %s" op)
         (setq char-string (fontsloth-otf-cff--parse-fixed p char-string)))))))
 
-(defun fontsloth-otf-cff-parse-char-string (data metadata glyph-id outliner)
-  "Interpret GLYPH-ID's postscript DATA with METADATA into OUTLINER."
+(cl-defun fontsloth-otf-cff-parse-char-string
+    (data metadata glyph-id outliner &key cff2)
+  "Interpret GLYPH-ID's postscript DATA with METADATA into OUTLINER.
+CFF2 selects CFF2 semantics: no width, no required endchar, and the
+final contour is closed at the end of the charstring."
   (let* ((data (fontsloth-otf-cff-reader data))
          (ctx (fontsloth-otf-cff-parse-context-create
                :metadata metadata
                :local-subrs (map-nested-elt metadata '(local-subrs data) nil)
-               :glyph-id glyph-id))
+               :glyph-id glyph-id
+               :cff2 cff2
+               :width-parsed (and cff2 t)
+               :variation-store (alist-get 'variation-store metadata)))
          (builder (fontsloth-otf-cff-builder-create :outliner outliner))
          (stack (fontsloth-otf-cff-arguments-stack-create
                  :data nil
@@ -1309,8 +1362,14 @@ Using strings avoids constructing a bindat type for every char string."
                   :stack stack
                   :builder builder)))
     (fontsloth-otf-cff--parse-char-string ctx data 0 parser)
-    (unless (fontsloth-otf-cff-parse-context-has-endchar ctx)
+    (unless (or cff2 (fontsloth-otf-cff-parse-context-has-endchar ctx))
       (error "Missing endchar for glyph-id %s" glyph-id))
+    (when (and cff2 (not (fontsloth-otf-cff-parse-context-has-endchar ctx)))
+      ;; CFF2 has no endchar, close the last contour at end of charstring
+      (unless (fontsloth-otf-cff-char-string-parser-1st-move-to parser)
+        (setf (fontsloth-otf-cff-char-string-parser-1st-move-to parser) t)
+        (fontsloth-otf-cff-builder-close
+         (fontsloth-otf-cff-char-string-parser-builder parser))))
     (let ((bbox (fontsloth-otf-cff-builder-bbox builder)))
       (when (equal bbox (fontsloth-bbox-create))
         (fontsloth:verbose* fontsloth-log "Zero bbox for glyph-id %s" glyph-id)))))

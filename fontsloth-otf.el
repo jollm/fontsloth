@@ -1093,8 +1093,10 @@ FONT an optional `fontsloth-otf-font', defaults to the current context."
   (fontsloth-otf-with-font font
     (if-let ((glyf (gethash "glyf" (fontsloth-otf--font-tables font))))
         (fontsloth-otf-glyf-outline (alist-get 'glyphs glyf) glyph-id outliner)
-      (when-let ((cff (gethash "CFF " (fontsloth-otf--font-tables font))))
-        (fontsloth-otf-cff-outline cff glyph-id outliner)))))
+      (if-let ((cff2 (gethash "CFF2" (fontsloth-otf--font-tables font))))
+          (fontsloth-otf-cff2-outline cff2 glyph-id outliner)
+        (when-let ((cff (gethash "CFF " (fontsloth-otf--font-tables font))))
+          (fontsloth-otf-cff-outline cff glyph-id outliner))))))
 
 (provide 'fontsloth-otf)
 ;;; fontsloth-otf.el ends here

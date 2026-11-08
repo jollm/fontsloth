@@ -8,6 +8,8 @@
 
 (require 'ert)
 (require 'f)
+(require 'fontsloth)
+(require 'fontsloth-geometry)
 (require 'fontsloth-otf)
 (require 'fontsloth-otf-cff2)
 (require 'fontsloth-test-util)
@@ -43,5 +45,26 @@
   "A non-CFF2 major version is rejected."
   (should-error (fontsloth-otf-cff2--parse (vector 1 0 5 0 0))))
 
+(ert-deftest fontsloth-otf-cff2-test-outline ()
+  "Check CFF2 charstring outlining, including blend at the default instance."
+  (let ((path (fontsloth-test--fixture-font "Cantarell-VF-subset.otf")))
+    (skip-unless (f-exists-p path))
+    (let* ((font (fontsloth-otf-load-font-data path))
+           (cff2 (fontsloth-otf-cff2 font))
+           (geom (fontsloth-geometry-create 1.0 1000)))
+      (fontsloth-otf-cff2-outline cff2 1 geom)
+      (should (> (+ (length (fontsloth-geometry-v-lines geom))
+                    (length (fontsloth-geometry-m-lines geom)))
+                 0)))
+    ;; The high-level path should dispatch to CFF2 as well.
+    (let* ((font (fontsloth-load-font path :cache 'bypass))
+           (glyph-id (fontsloth-font-glyph-id font ?A))
+           (glyph (fontsloth-font-glyph font glyph-id)))
+      (should glyph)
+      (should (> (+ (length (fontsloth-glyph-v-lines glyph))
+                    (length (fontsloth-glyph-m-lines glyph)))
+                 0)))))
+
 (provide 'fontsloth-otf-cff2-test)
+
 ;;; fontsloth-otf-cff2-test.el ends here

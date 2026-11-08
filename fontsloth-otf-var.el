@@ -253,7 +253,9 @@ AXIS is an fvar axis alist with min-value, default-value, and max-value."
         (scalar 1.0))
     (cl-loop for axis across coords-vector
              for i from 0
-             for value = (or (aref coords i) 0.0)
+             for value = (if (and coords (< i (length coords)))
+                             (aref coords i)
+                           0.0)
              for start = (alist-get 'start-coord axis)
              for peak = (alist-get 'peak-coord axis)
              for end = (alist-get 'end-coord axis)
@@ -271,6 +273,18 @@ AXIS is an fvar axis alist with min-value, default-value, and max-value."
                             (/ (- end value) (- end peak)))))))
              until (= scalar 0.0))
     scalar))
+
+(defun fontsloth-otf-var-region-scalars (store outer-index coords)
+  "Return the scalar for each region in STORE's OUTER-INDEX data.
+COORDS is a vector of normalized axis coordinates, or nil for the
+default instance."
+  (let* ((data (aref (alist-get 'variation-data store) outer-index))
+         (indices (alist-get 'region-indices data))
+         (regions (alist-get 'regions (alist-get 'regions store))))
+    (mapcar (lambda (region-index)
+              (fontsloth-otf-var--region-scalar
+               (aref regions region-index) coords))
+            (append indices nil))))
 
 (defun fontsloth-otf-var-item-delta (store outer-index inner-index coords)
   "Return the variation delta from STORE.
