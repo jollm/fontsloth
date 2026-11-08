@@ -63,18 +63,14 @@
 
 (define (test)
   "Run the complete ERT suite in batch mode."
-  (dynamic-wind
-    (lambda () (compile))
-    (lambda ()
-      (let* ((files (test-files))
-             (loads (string-join (map (lambda (f) (string-append "-l " f))
-                                      files)
-                                 " ")))
-        (when (null? files)
-          (error "No test files found"))
-        ($ (list (format #f "~a --batch -L . -l ert ~a --eval '(ert-run-tests-batch-and-exit)'"
-                         emacs loads)))))
-    (lambda () (clean))))
+  (let* ((files (test-files))
+         (loads (string-join (map (lambda (f) (string-append "-l " f))
+                                  files)
+                             " ")))
+    (when (null? files)
+      (error "No test files found"))
+    ($ (list (format #f "~a --batch -L . -l ert ~a --eval '(ert-run-tests-batch-and-exit)'"
+                     emacs loads)))))
 
 (define (test-file file)
   "Run one ERT test file, e.g. `maak test-file -- fontsloth-test.el'."
@@ -145,8 +141,12 @@ outlining measurements and are not representative of installed use."
 (define (all)
   "Compile and test."
   (compile)
-  (test))
+  (test)
+  (clean))
 
 (define (default)
   "Run the test suite."
-  (test))
+  (dynamic-wind
+    (lambda () (compile))
+    (lambda () (test))
+    (lambda () (clean))))
