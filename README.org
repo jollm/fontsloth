@@ -17,7 +17,7 @@ Mostly it is modeled after the aforementioned fontdue and the outliner in
 Current semantic version: *0.21.0*.  See
 [[file:CHANGELOG.org][CHANGELOG.org]] for release notes.
 
-Melpa:
+Melpa: [[https://melpa.org/#/fontsloth][file:https://melpa.org/packages/fontsloth-badge.svg]]
 #+BEGIN_export html
 <a href="https://melpa.org/#/fontsloth" rel="nofollow">
 <img src="https://melpa.org/packages/fontsloth-badge.svg"
