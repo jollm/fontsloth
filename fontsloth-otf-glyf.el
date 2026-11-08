@@ -240,29 +240,39 @@ BUILDER a `fontsloth-otf-glyf-builder'"
 
 (declare-function fontsloth-otf--simple-glyf-flag "fontsloth-otf" (sym byte))
 
-(defun fontsloth-otf-glyf--outline (glyphs glyph-id builder)
-  "Outline glyf table GLYPH-ID in GLYPHS using BUILDER."
+(defun fontsloth-otf-glyf--outline
+    (glyphs glyph-id builder &optional gvar variation-coords)
+  "Outline glyf table GLYPH-ID in GLYPHS using BUILDER.
+GVAR and VARIATION-COORDS optionally apply simple-glyph deltas."
   (when-let* ((glyph (elt glyphs glyph-id))
               (num-contours (alist-get 'number-of-contours glyph))
               (glyph-data (alist-get 'data glyph)))
     (if (< 0 num-contours)
         (when-let ((num-points (alist-get 'num-points glyph-data))
+                   (end-pts-vec (alist-get 'end-pts glyph-data))
                    (end-pts
                     (let ((pset (make-hash-table :test 'eq)))
-                      (cl-loop for ep across (alist-get 'end-pts glyph-data) do
+                      (cl-loop for ep across end-pts-vec do
                                (puthash ep t pset))
                       pset))
                    (flags (alist-get 'flags glyph-data))
                    (x-coords (alist-get 'x-coords glyph-data))
                    (y-coords (alist-get 'y-coords glyph-data)))
-          (dotimes (i num-points)
-            (let ((flags (elt flags i)))
-              (fontsloth-otf-glyf-push-point
-               builder
-               (elt x-coords i) (elt y-coords i)
-               (fontsloth-otf--simple-glyf-flag 'on-curve-point flags)
-               (map-elt end-pts i))))
-          (fontsloth-otf-glyf-builder-bbox builder))
+          (let ((deltas
+                 (when (and gvar variation-coords)
+                   (fontsloth-otf-gvar-glyph-deltas
+                    gvar glyph-id num-points end-pts-vec
+                    x-coords y-coords variation-coords))))
+            (dotimes (i num-points)
+              (let* ((flags (elt flags i))
+                     (delta (and deltas (aref deltas i)))
+                     (x (+ (elt x-coords i) (if delta (car delta) 0.0)))
+                     (y (+ (elt y-coords i) (if delta (cdr delta) 0.0))))
+                (fontsloth-otf-glyf-push-point
+                 builder x y
+                 (fontsloth-otf--simple-glyf-flag 'on-curve-point flags)
+                 (map-elt end-pts i))))
+            (fontsloth-otf-glyf-builder-bbox builder)))
       (let ((comps
              (cons glyph-data
                    (cl-loop for next = (alist-get 'next-component glyph-data)
@@ -289,10 +299,13 @@ BUILDER a `fontsloth-otf-glyf-builder'"
             (setf (fontsloth-otf-glyf-builder-bbox builder)
                   (fontsloth-otf-glyf-builder-bbox b))))))))
 
-(defun fontsloth-otf-glyf-outline (glyphs glyph-id outliner)
-  "Outline glyf table GLYPH-ID in GLYPHS using OUTLINER."
+(defun fontsloth-otf-glyf-outline
+    (glyphs glyph-id outliner &optional gvar variation-coords)
+  "Outline glyf table GLYPH-ID in GLYPHS using OUTLINER.
+GVAR and VARIATION-COORDS optionally apply simple-glyph deltas."
   (fontsloth-otf-glyf--outline
-   glyphs glyph-id (fontsloth-otf-glyf-builder-create :outliner outliner)))
+   glyphs glyph-id (fontsloth-otf-glyf-builder-create :outliner outliner)
+   gvar variation-coords))
 
 (provide 'fontsloth-otf-glyf)
 ;;; fontsloth-otf-glyf.el ends here

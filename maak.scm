@@ -39,6 +39,7 @@
     "fontsloth-otf-cff.el"
     "fontsloth-otf-cff2.el"
     "fontsloth-otf-glyf.el"
+    "fontsloth-otf-gvar.el"
     "fontsloth-otf-hvar.el"
     "fontsloth-otf-kern.el"
     "fontsloth-otf-typo.el"

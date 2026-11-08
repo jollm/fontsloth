@@ -58,6 +58,7 @@
 (require 'fontsloth-otf-cff)
 (require 'fontsloth-otf-cff2)
 (require 'fontsloth-otf-glyf)
+(require 'fontsloth-otf-gvar)
 (require 'fontsloth-otf-hvar)
 (require 'fontsloth-otf-kern)
 (require 'fontsloth-otf-typo)
@@ -839,6 +840,11 @@ COLL-INDEX is currently ignored (font collections are not supported)."
                    (fontsloth-otf-hvar--parse
                     (fontsloth-otf--table-data
                      "HVAR" props fontsloth-otf--current-font-bytes))))
+      (when (gethash "gvar" props)
+        (put-table "gvar"
+                   (fontsloth-otf-gvar--parse
+                    (fontsloth-otf--table-data
+                     "gvar" props fontsloth-otf--current-font-bytes))))
       (cond ((string-equal "   " sfnt-ver)
              (put-table "loca" (unpack-table "loca" fontsloth-otf--loca-spec))
              (put-table "glyf" (unpack-table "glyf" fontsloth-otf--glyf-spec)))
@@ -976,6 +982,11 @@ FONT an optional `fontsloth-otf-font', defaults to the current context."
   "Return FONT's parsed CFF2 table, if any.
 FONT an optional `fontsloth-otf-font', defaults to the current context."
   (gethash "CFF2" (fontsloth-otf--font-tables font)))
+
+(defun fontsloth-otf-gvar (&optional font)
+  "Return FONT's parsed gvar table, if any.
+FONT an optional `fontsloth-otf-font', defaults to the current context."
+  (gethash "gvar" (fontsloth-otf--font-tables font)))
 
 (defun fontsloth-otf-hvar (&optional font)
   "Return FONT's parsed HVAR table, if any.
@@ -1115,7 +1126,9 @@ FONT an optional `fontsloth-otf-font', defaults to the current context."
   ;; TODO gvar
   (fontsloth-otf-with-font font
     (if-let ((glyf (gethash "glyf" (fontsloth-otf--font-tables font))))
-        (fontsloth-otf-glyf-outline (alist-get 'glyphs glyf) glyph-id outliner)
+        (fontsloth-otf-glyf-outline
+         (alist-get 'glyphs glyf) glyph-id outliner
+         (fontsloth-otf-gvar font) variation-coords)
       (if-let ((cff2 (gethash "CFF2" (fontsloth-otf--font-tables font))))
           (fontsloth-otf-cff2-outline cff2 glyph-id outliner variation-coords)
         (when-let ((cff (gethash "CFF " (fontsloth-otf--font-tables font))))
