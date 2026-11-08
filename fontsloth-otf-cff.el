@@ -94,6 +94,7 @@ Defined in Adobe Technical Note #5176 Appendix C.")
 ;;; limits according to Adobe Technical Note #5177 Appendix B
 (defconst fontsloth-otf-cff-stack-limit 10)
 (defconst fontsloth-otf-cff-max-args-stack-len 48)
+(defconst fontsloth-otf-cff-cff2-max-args-stack-len 513)
 
 ;;; operator constants Adobe Technical Note #5177
 (defconst fontsloth-otf-cff-horizontal-stem 1)
@@ -1360,7 +1361,9 @@ final contour is closed at the end of the charstring."
          (stack (fontsloth-otf-cff-arguments-stack-create
                  :data nil
                  :len 0
-                 :max-len fontsloth-otf-cff-max-args-stack-len))
+                 :max-len (if cff2
+                              fontsloth-otf-cff-cff2-max-args-stack-len
+                            fontsloth-otf-cff-max-args-stack-len)))
          (parser (fontsloth-otf-cff-char-string-parser-create
                   :stack stack
                   :builder builder)))

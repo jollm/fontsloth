@@ -102,7 +102,16 @@
                       (length (fontsloth-glyph-m-lines glyph)))
                    0))))))
 
+(ert-deftest fontsloth-otf-cff2-test-large-argument-stack ()
+  "CFF2 allows operand stacks larger than the CFF1 limit of 48."
+  (let ((data (apply #'unibyte-string
+                     (append (make-list 49 139) (list 11))))
+        (geom (fontsloth-geometry-create 1.0 1000)))
+    (fontsloth-otf-cff-parse-char-string data nil 0 geom :cff2 t)
+    (should t)))
+
 (provide 'fontsloth-otf-cff2-test)
+
 
 
 ;;; fontsloth-otf-cff2-test.el ends here
