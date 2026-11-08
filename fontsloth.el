@@ -205,6 +205,34 @@ Useful for tests and benchmarks that need the eager representation."
              (fontsloth-font-char-to-glyph font)))
   (fontsloth-font-glyphs font))
 
+(defun fontsloth--font-cache-snapshot (font)
+  "Return a compact cache snapshot of FONT.
+For lazy fonts the snapshot has an empty glyph vector and an unloaded
+kern map, so transient outlined state is not serialized into pcache.
+Eager fonts are already fully outlined and are returned unchanged."
+  (if (not (fontsloth-font-settings-lazy-outline?
+            (fontsloth-font-settings font)))
+      font
+    (let ((snapshot
+           (record 'fontsloth-font
+                   (fontsloth-font--data-version font)
+                   (fontsloth-font-name font)
+                   (fontsloth-font-source font)
+                   (fontsloth-font-units-per-em font)
+                   (make-vector (length (fontsloth-font-glyphs font)) nil)
+                   (fontsloth-font-char-to-glyph font)
+                   (fontsloth-font-horizontal-line-metrics font)
+                   nil
+                   nil
+                   (fontsloth-font-vertical-line-metrics font)
+                   (fontsloth-font-settings font)
+                   (fontsloth-font-hash font))))
+      ;; Keep the parser data available if this font is still live in the
+      ;; current process; the snapshot itself remains compact.
+      (when-let ((data (gethash font fontsloth--lazy-fonts)))
+        (puthash snapshot data fontsloth--lazy-fonts))
+      snapshot)))
+
 (defun fontsloth--load-font (path font-settings)
   "Load a font given file path PATH and settings FONT-SETTINGS."
   (let* ((data (fontsloth-otf-load-font-data path))

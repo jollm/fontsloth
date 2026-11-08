@@ -116,14 +116,24 @@ FORCE? if non-nil, re-load even if already initialized"
                                  :object-name f)))
     (setq fontsloth-cache--initialized? t)))
 
+(declare-function fontsloth--font-cache-snapshot "fontsloth" (font))
+(declare-function fontsloth-font-p "fontsloth" (object))
+
 (defun fontsloth-cache-put (file-path font)
-  "Put `fontsloth-font' FONT in cache using lookup key FILE-PATH."
+  "Put `fontsloth-font' FONT in cache using lookup key FILE-PATH.
+Lazy fonts are stored as compact snapshots rather than serializing
+whatever glyphs and kern map happen to be loaded at save time."
   (fontsloth-cache--load-repos)
   (let* ((repo-name (fontsloth-cache--pcache-path-name file-path))
          (cache (or (gethash repo-name *pcache-repositories*)
                     (make-instance 'fontsloth-cache-pcache
-                                   :object-name repo-name))))
-    (pcache-put cache file-path font)
+                                   :object-name repo-name)))
+         (value (if (and (fboundp 'fontsloth--font-cache-snapshot)
+                         (fboundp 'fontsloth-font-p)
+                         (fontsloth-font-p font))
+                    (fontsloth--font-cache-snapshot font)
+                  font)))
+    (pcache-put cache file-path value)
     ;; fonts objects are read-only, so just try once to save them
     (run-with-idle-timer
      (or fontsloth-cache-idle-save-time 0) nil

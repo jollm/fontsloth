@@ -1,0 +1,45 @@
+#+TITLE: Cache snapshot results (2026-11-07)
+
+Lazy fonts are now cached as compact snapshots rather than serializing
+whatever transient glyphs and kern map happen to be loaded when the
+idle save fires.
+
+* Snapshot contents
+
+A lazy snapshot keeps:
+
+- name, source path, units-per-em
+- empty glyph vector (same length as the font)
+- cmap and line/kern metadata
+- settings and source hash
+- no loaded glyphs, no kern map
+
+Eager fonts are still cached fully outlined, since that is their
+representation.
+
+If the original live font still has its parser data in
+`fontsloth--lazy-fonts`, the snapshot is pointed at the same data, so
+an in-process cache hit avoids reparsing.  After a persistent reload,
+outlining reparses from the stored source path.
+
+* Persisted size
+
+| Font | Lazy snapshot | Eager cache |
+|------+---------------+-------------|
+| IBMPlexSerif-Regular-subset.otf | **2,690 bytes** | 802,333 bytes |
+| SF-Pro.ttf | **212,481 bytes** | not measured (fully outlined) |
+
+The SF Pro snapshot is mostly the empty glyph vector and cmap. The
+eager cache would contain all outlined glyphs.
+
+* Verification
+
+- `fontsloth-cache-test-lazy-snapshot` fills glyphs and the kern map,
+  caches the font, and checks that the cached value has none of that
+  transient state but still outlines identically.
+- `fontsloth-cache-test-lazy-snapshot-persists` saves the snapshot to
+  pcache, clears the in-memory repositories, reloads, and verifies the
+  same properties and outline equality.
+- Cache tests now use a trailing slash for their temporary
+  `pcache-directory`, so persistence stays inside the isolated
+  directory.

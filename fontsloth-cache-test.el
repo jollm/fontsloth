@@ -45,12 +45,15 @@
 ;;; Code:
 
 (require 'ert)
+(require 'f)
+(require 'fontsloth)
 (require 'fontsloth-cache)
+(require 'fontsloth-test-util)
 
 (defmacro fontsloth-cache-test--with-cache (&rest body)
   "Run BODY with an isolated pcache directory and repository table."
   `(let* ((dir (make-temp-file "fontsloth-cache-test-" t))
-          (pcache-directory dir)
+          (pcache-directory (file-name-as-directory dir))
           (*pcache-repositories* (make-hash-table :test 'equal))
           (fontsloth-cache--initialized? nil)
           ;; Avoid trying to persist while the test is running.
@@ -110,5 +113,52 @@
     (should (eq (gethash "fontsloth-a" *pcache-repositories*) 'a))
     (should (eq (gethash "other" *pcache-repositories*) 'other))))
 
+(ert-deftest fontsloth-cache-test-lazy-snapshot ()
+  "Check that cache-put stores a compact lazy snapshot."
+  (let ((path (fontsloth-test--fixture-font
+               "IBMPlexSerif-Regular-subset.otf")))
+    (skip-unless (f-exists-p path))
+    (fontsloth-cache-test--with-cache
+     (let* ((font (fontsloth-load-font path :cache 'bypass))
+            (glyph-id (fontsloth-font-glyph-id font ?&)))
+       (should glyph-id)
+       ;; Fill transient state before caching.
+       (fontsloth-font-glyph font glyph-id)
+       (fontsloth-font-kern-map font)
+       (should (aref (fontsloth-font-glyphs font) glyph-id))
+       (should (fontsloth-font-horizontal-kern-loaded? font))
+       (fontsloth-cache-put path font)
+       (let ((cached (fontsloth-cache-get path)))
+         (should cached)
+         (should-not (aref (fontsloth-font-glyphs cached) glyph-id))
+         (should-not (fontsloth-font-horizontal-kern cached))
+         (should-not (fontsloth-font-horizontal-kern-loaded? cached))
+         (should (equal (fontsloth-test--outline-signatures cached)
+                        (fontsloth-test--outline-signatures font))))))))
+
+(ert-deftest fontsloth-cache-test-lazy-snapshot-persists ()
+  "Check that a compact lazy snapshot survives a pcache save/reload."
+  (let ((path (fontsloth-test--fixture-font
+               "IBMPlexSerif-Regular-subset.otf")))
+    (skip-unless (f-exists-p path))
+    (fontsloth-cache-test--with-cache
+     (let* ((font (fontsloth-load-font path :cache 'bypass))
+            (glyph-id (fontsloth-font-glyph-id font ?&))
+            (repo-name (fontsloth-cache--pcache-path-name path)))
+       (fontsloth-font-glyph font glyph-id)
+       (fontsloth-cache-put path font)
+       (pcache-save (gethash repo-name *pcache-repositories*) t)
+       (clrhash *pcache-repositories*)
+       (setq fontsloth-cache--initialized? nil)
+       (fontsloth-cache--load-repos)
+       (let ((cached (fontsloth-cache-get path)))
+         (should cached)
+         (should-not (aref (fontsloth-font-glyphs cached) glyph-id))
+         (should-not (fontsloth-font-horizontal-kern-loaded? cached))
+         (should (equal (fontsloth-test--outline-signatures cached)
+                        (fontsloth-test--outline-signatures font))))))))
+
 (provide 'fontsloth-cache-test)
+
+
 ;;; fontsloth-cache-test.el ends here

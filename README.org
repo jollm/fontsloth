@@ -132,8 +132,12 @@ Fontsloth consists of four primary components:
 Currently fontsloth uses pcache.el to provide a persistent cache for loaded
 fonts, which is the default for ~fontsloth-load-font~.
 
-*Invalidation at present must be handled manually*. *Expect cache load times in
-the seconds if you load more than 10 or so fonts at a time*.
+*Invalidation at present must be handled manually*.
+
+Each font has its own pcache repository, so loading a font does not
+deserialize every other cached font. Lazy fonts are stored as compact
+snapshots: the glyph vector is empty and the kern map is unloaded, and
+outlines are rebuilt from the source path on demand after a cache hit.
 
 ** Bypass the cache
 #+begin_src emacs-lisp
@@ -301,7 +305,8 @@ in [[file:benchmarks/bindat-glyf.org][benchmarks/bindat-glyf.org]], and the GPOS
 [[file:benchmarks/gpos-cff.org][benchmarks/gpos-cff.org]].  Byte-compiled results are in
 [[file:benchmarks/compiled.org][benchmarks/compiled.org]]. Earlier files were captured from interpreted
 source. Geometry allocation results are in
-[[file:benchmarks/geometry.org][benchmarks/geometry.org]].
+[[file:benchmarks/geometry.org][benchmarks/geometry.org]], and cache
+snapshot measurements are in [[file:benchmarks/cache.org][benchmarks/cache.org]].
 
 ** Compile and lint
 #+begin_src shell
