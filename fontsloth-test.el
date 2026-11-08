@@ -84,7 +84,9 @@
 (defun fontsloth-test--pre-fixture (body)
   "A fixture to run before BODY."
   (unwind-protect
-      (progn (setq fontsloth-test--post-invalidate?
+      (progn (mkdir "./pcache")
+             (setq pcache-directory "./pcache"
+                   fontsloth-test--post-invalidate?
                    (not (fontsloth-cache-get fontsloth-test--font)))
              (funcall body))))
 
@@ -92,7 +94,8 @@
   "A fixture to run after BODY."
   (unwind-protect (funcall body)
     (when fontsloth-test--post-invalidate?
-      (fontsloth-cache-invalidate fontsloth-test--font))))
+      (fontsloth-cache-invalidate fontsloth-test--font)
+      (delete-directory "./pcache" t))))
 
 (ert-deftest fontsloth-test-font-load-rasterize ()
   "Test loading a font and then rasterizing a glyph."
