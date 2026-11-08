@@ -56,6 +56,7 @@
 (require 'fontsloth-otf--mac-names)
 (require 'fontsloth-otf-)
 (require 'fontsloth-otf-cff)
+(require 'fontsloth-otf-cff2)
 (require 'fontsloth-otf-glyf)
 (require 'fontsloth-otf-kern)
 (require 'fontsloth-otf-typo)
@@ -791,6 +792,15 @@ TABLE-PROPS-LIST the list of table props to index"
       (insert-file-contents-literally path)
       (buffer-string))))
 
+(defun fontsloth-otf--table-data (tag props bytes)
+  "Return TAG's raw table bytes from PROPS and BYTES."
+  (when-let ((table-props (gethash tag props)))
+    (let* ((data (fontsloth-woff--maybe-decompress-table table-props bytes))
+           (offset (alist-get 'offset table-props))
+           (length (or (alist-get 'length table-props)
+                       (alist-get 'orig-length table-props))))
+      (substring data offset (+ offset length)))))
+
 (defun fontsloth-otf--parse-tables (bytes coll-index)
   "Parse font BYTES into a tag -> table map.
 COLL-INDEX is currently ignored (font collections are not supported)."
@@ -827,10 +837,18 @@ COLL-INDEX is currently ignored (font collections are not supported)."
              (put-table "loca" (unpack-table "loca" fontsloth-otf--loca-spec))
              (put-table "glyf" (unpack-table "glyf" fontsloth-otf--glyf-spec)))
             ((string-equal "OTTO" sfnt-ver)
-             (fontsloth:info
-              fontsloth-log
-              "Fontsloth-otf: cannot yet fully handle OpenType CFF")
-             (put-table "CFF " (unpack-table "CFF " fontsloth-otf-cff--spec)))
+             (cond
+              ((gethash "CFF2" props)
+               (put-table "CFF2"
+                          (fontsloth-otf-cff2--parse
+                           (fontsloth-otf--table-data
+                            "CFF2" props fontsloth-otf--current-font-bytes))))
+              ((gethash "CFF " props)
+               (fontsloth:info
+                fontsloth-log
+                "Fontsloth-otf: cannot yet fully handle OpenType CFF")
+               (put-table "CFF " (unpack-table "CFF " fontsloth-otf-cff--spec)))
+              (t (error "Fontsloth-otf: no CFF/CFF2 table"))))
             (t (error "Fontsloth-otf: Unknown sfnt-ver %s" sfnt-ver)))
       (when (gethash "kern" props)
         (put-table "kern" (unpack-table "kern" fontsloth-otf-kern-spec)))
@@ -946,6 +964,11 @@ FONT an optional `fontsloth-otf-font', defaults to the current context."
   ;; TODO: support variation axes
   (when-let ((hhea (gethash "hhea" (fontsloth-otf--font-tables font))))
     (alist-get 'line-gap hhea)))
+
+(defun fontsloth-otf-cff2 (&optional font)
+  "Return FONT's parsed CFF2 table, if any.
+FONT an optional `fontsloth-otf-font', defaults to the current context."
+  (gethash "CFF2" (fontsloth-otf--font-tables font)))
 
 (defun fontsloth-otf-fvar (&optional font)
   "Return FONT's parsed fvar table, if any.

@@ -47,3 +47,20 @@ pyftsubset IBMPlexSerif-Regular.otf \
 The subset intentionally keeps the ASCII and Greek ranges plus the
 =kern= feature: this reproduces the GPOS class-definition precedence
 case that =fontsloth-otf-typo-test= checks.
+
+* Cantarell CFF2 subset
+
+=Cantarell-VF-subset.otf= is a subset of Cantarell-VF 0.303, used for
+CFF2 table parsing tests. It is redistributed under the SIL Open Font
+License 1.1; see =OFL.txt=.
+
+Copyright 2019 The Cantarell Project Authors
+(https://gitlab.gnome.org/GNOME/cantarell-fonts).
+
+Regenerate from the full variable font with:
+
+#+begin_src shell
+pyftsubset Cantarell-VF.otf \
+  --output-file=test/fonts/Cantarell-VF-subset.otf \
+  --unicodes='U+0020-007E' --layout-features='' --name-IDs='*'
+#+end_src

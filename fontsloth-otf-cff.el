@@ -315,6 +315,9 @@ Using strings avoids constructing a bindat type for every char string."
                  ((pred (eq fontsloth-otf-cff2-top-dict-font-dict-index-offset))
                   `(font-dict-index-offset
                     . ,(fontsloth-otf-cff-dict-parse-offset parser)))
+                 ((pred (eq fontsloth-otf-cff-top-dict-fd-select))
+                  `(fd-select-offset
+                    . ,(fontsloth-otf-cff-dict-parse-offset parser)))
                  ((pred (eq fontsloth-otf-cff-top-dict-variation-store-offset))
                   `(font-dict-variation-store-offset
                     . ,(fontsloth-otf-cff-dict-parse-offset parser)))
