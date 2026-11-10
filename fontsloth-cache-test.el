@@ -213,6 +213,41 @@
      (should fontsloth-cache--initialized?)
      (should (gethash repo-b *pcache-repositories*)))))
 
+(ert-deftest fontsloth-cache-test-async-mixed-settings ()
+  "Load mixed per-source settings through the async cache path."
+  (let ((ttf (fontsloth-test--fixture-font "fontsloth-test.ttf"))
+        (ttc (fontsloth-test--fixture-font "fontsloth-test.ttc"))
+        (init-file (make-temp-file "fontsloth-async-init-" nil ".el")))
+    (skip-unless (and (file-exists-p ttf) (file-exists-p ttc)))
+    (unwind-protect
+        (fontsloth-cache-test--with-cache
+         (let* ((settings-1 (fontsloth-font-settings-create
+                             :collection-index 1))
+                (child-load-path
+                 (mapcar (lambda (path)
+                           (if (file-name-absolute-p path)
+                               path
+                             (expand-file-name path)))
+                         load-path))
+                (sources (list ttf (cons ttc settings-1))))
+           (with-temp-file init-file
+             (insert (format "(setq load-path '%S)\n" child-load-path))
+             (insert (format "(setq pcache-directory %S)\n"
+                             pcache-directory)))
+           (let ((async-child-init init-file))
+             (with-timeout (30 (ert-fail "async cache load timed out"))
+               (async-wait
+                (fontsloth-async-load-and-cache-fonts sources))))
+           (should (fontsloth-cache-has ttf))
+           (should (fontsloth-cache-has ttc 1))
+           (should-not (fontsloth-cache-has ttc 0))
+           (let* ((font (fontsloth-cache-get ttc 1))
+                  (settings (fontsloth-font-settings font)))
+             (should font)
+             (should (= 1 (fontsloth-font-settings-collection-index
+                           settings))))))
+      (when (file-exists-p init-file) (delete-file init-file)))))
+
 (provide 'fontsloth-cache-test)
 
 
