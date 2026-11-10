@@ -115,9 +115,10 @@
 
 (ert-deftest fontsloth-test-font-formats ()
   "Check that TTF, CFF1 OTF, and WOFF fixtures rasterize identically."
-  (dolist (name '("fontsloth-test.ttf"
-                  "fontsloth-test.otf"
-                  "fontsloth-test.woff"))
+  (dolist (name (fontsloth-test--supported-fixtures
+                 '("fontsloth-test.ttf"
+                   "fontsloth-test.otf"
+                   "fontsloth-test.woff")))
     (let ((path (fontsloth-test--fixture-font name)))
       (skip-unless (f-exists-p path))
       (fontsloth-test--assert-raster

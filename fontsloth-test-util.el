@@ -66,6 +66,20 @@ Tests should skip when the returned path does not exist."
   "Return non-nil if fixture font NAME exists."
   (file-exists-p (fontsloth-test--fixture-font name)))
 
+(defun fontsloth-test--zlib-available-p ()
+  "Return non-nil when Emacs has zlib decompression support."
+  (and (fboundp 'zlib-available-p)
+       (zlib-available-p)))
+
+(defun fontsloth-test--fixture-supported-p (name)
+  "Return non-nil when fixture NAME can be loaded in this Emacs."
+  (or (not (string-suffix-p ".woff" name))
+      (fontsloth-test--zlib-available-p)))
+
+(defun fontsloth-test--supported-fixtures (names)
+  "Return the fixtures in NAMES supported by this Emacs."
+  (cl-remove-if-not #'fontsloth-test--fixture-supported-p names))
+
 (defun fontsloth-test--format-number (n)
   "Format N canonically for outline comparisons."
   (format "%.6f" (if (< (abs n) 1.0e-9) 0.0 n)))

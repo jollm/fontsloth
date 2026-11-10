@@ -45,6 +45,7 @@
 
 (require 'ert)
 (require 'fontsloth-woff)
+(require 'fontsloth-test-util)
 
 (declare-function zlib-available-p "decompress.c")
 
@@ -115,7 +116,7 @@
 
 (ert-deftest fontsloth-woff-test-maybe-decompress-compressed ()
   "Check zlib decompression of a compressed table."
-  (skip-unless (zlib-available-p))
+  (skip-unless (fontsloth-test--zlib-available-p))
   ;; zlib.compress(b"hello")
   (let* ((compressed [120 156 203 72 205 201 201 7 0 6 44 2 21])
          (props `((comp-length . ,(length compressed))
@@ -137,7 +138,7 @@
 
 (ert-deftest fontsloth-woff-test-maybe-decompress-garbage ()
   "Check that corrupt compressed table data signals an error."
-  (skip-unless (zlib-available-p))
+  (skip-unless (fontsloth-test--zlib-available-p))
   (should-error
    (fontsloth-woff--maybe-decompress-table
     '((comp-length . 4) (orig-length . 5) (offset . 0))

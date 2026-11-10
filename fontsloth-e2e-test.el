@@ -50,10 +50,11 @@
 (require 'fontsloth-test-util)
 
 (defvar fontsloth-e2e-test--fixtures
-  '("fontsloth-test.ttf"
-    "fontsloth-test.otf"
-    "fontsloth-test.woff"
-    "IBMPlexSerif-Regular-subset.otf"))
+  (fontsloth-test--supported-fixtures
+   '("fontsloth-test.ttf"
+     "fontsloth-test.otf"
+     "fontsloth-test.woff"
+     "IBMPlexSerif-Regular-subset.otf")))
 
 (defun fontsloth-e2e-test--check-font (path)
   "Load PATH and sanity-check metrics and rasters for every mapped glyph."

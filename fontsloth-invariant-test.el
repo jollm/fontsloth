@@ -53,10 +53,11 @@
 (require 'fontsloth-test-util)
 
 (defvar fontsloth-invariant-test--fixtures
-  '("fontsloth-test.ttf"
-    "fontsloth-test.otf"
-    "fontsloth-test.woff"
-    "IBMPlexSerif-Regular-subset.otf"))
+  (fontsloth-test--supported-fixtures
+   '("fontsloth-test.ttf"
+     "fontsloth-test.otf"
+     "fontsloth-test.woff"
+     "IBMPlexSerif-Regular-subset.otf")))
 
 (defvar fontsloth-invariant-test--golden-file
   (expand-file-name
