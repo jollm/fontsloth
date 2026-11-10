@@ -356,54 +356,66 @@ cache"
 (defsubst fontsloth--async-do-reload-fn (sources font-settings force-reload?)
   "Return a lambda to load and cache fonts in an asynchronous process.
 
-SOURCES a sequence of font sources
-FONT-SETTINGS the `fontsloth-font-settings' to use
+SOURCES a sequence of font paths or (PATH . FONT-SETTINGS) conses
+FONT-SETTINGS the default `fontsloth-font-settings' to use
 FORCE-RELOAD? non-nil if sources should be re-loaded and cached
 regardless of whether they are already cached"
   (lambda ()
     (require 'fontsloth)
     (require 'seq)
-    (seq-map (lambda (s)
-               (when s
-                 (progn
-                   (fontsloth-load-font
-                    s
-                    :font-settings font-settings
-                    :cache (when force-reload? 'reload))
-                   (pcache-save
-                    (gethash (fontsloth-cache--pcache-path-name
-                              s
-                              (fontsloth-font-settings-collection-index
-                               font-settings))
-                             *pcache-repositories*)
-                    t)
-                   t)))
-             sources)))
+    (seq-map
+     (lambda (s)
+       (when s
+         (let* ((path (if (consp s) (car s) s))
+                (settings (if (consp s)
+                              (or (cdr s) font-settings)
+                            font-settings)))
+           (fontsloth-load-font
+            path
+            :font-settings settings
+            :cache (when force-reload? 'reload))
+           (pcache-save
+            (gethash (fontsloth-cache--pcache-path-name
+                      path
+                      (fontsloth-font-settings-collection-index settings))
+                     *pcache-repositories*)
+            t)
+           t)))
+     sources)))
 
 (cl-defun fontsloth-async-load-and-cache-fonts
     (sources &key (font-settings (fontsloth-font-settings-create))
              finish-func
              force-reload?)
   "Cache and save a sequence of font sources in an asynchronous process.
-SOURCES is the sequence of font sources.  Returns the process or nil if
-no process is started.
+SOURCES is a sequence of font paths or (PATH . FONT-SETTINGS) conses.
+Entries without per-source settings use FONT-SETTINGS.  Returns the
+process or nil if no process is started.
 
 Optional keyword arguments:
-FONT-SETTINGS the `fontsloth-font-settings' to use
+FONT-SETTINGS the default `fontsloth-font-settings' to use
 FINISH-FUNC a function to be called when the process completes,
 expecting a sequence containing t for each source loaded.
 FORCE-RELOAD? non-nil if sources should be re-loaded and cached
 regardless of whether they are already cached"
   (if-let* ((sources (seq-remove #'null sources))
-           (sources
-            (if force-reload?
-                sources
-              (seq-remove
-               (lambda (source)
-                 (fontsloth-cache-get
-                  source
-                  (fontsloth-font-settings-collection-index font-settings)))
-               sources))))
+            (sources (seq-map
+                      (lambda (source)
+                        (if (stringp source)
+                            (cons source font-settings)
+                          (cons (car source)
+                                (or (cdr source) font-settings))))
+                      sources))
+            (sources (cl-remove-duplicates sources :test #'equal))
+            (sources
+             (if force-reload?
+                 sources
+               (seq-remove
+                (lambda (source)
+                  (fontsloth-cache-get
+                   (car source)
+                   (fontsloth-font-settings-collection-index (cdr source))))
+                sources))))
       (progn
         (message "fontsloth: loading %s font(s) asynchronously" (length sources))
         (fontsloth:info fontsloth-log
@@ -413,9 +425,9 @@ regardless of whether they are already cached"
          (fontsloth--async-do-reload-fn sources font-settings force-reload?)
          (lambda (result)
            (when (seq-remove #'null result)
-             (fontsloth-cache--load-repos t))
+             (fontsloth-cache--load-repos t sources))
            (when finish-func
-                 (apply finish-func result nil)))))
+             (apply finish-func result nil)))))
     (when finish-func
       (apply finish-func nil nil))))
 

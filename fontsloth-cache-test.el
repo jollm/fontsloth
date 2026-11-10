@@ -189,6 +189,28 @@
        (should (fontsloth-cache-has path 0))
        (should (fontsloth-cache-has path 1))))))
 
+(ert-deftest fontsloth-cache-test-load-repos-filter ()
+  "Load only the requested repositories without blocking a later scan."
+  (fontsloth-cache-test--with-cache
+   (let* ((path-a "/tmp/fontsloth-filter-a.ttf")
+          (path-b "/tmp/fontsloth-filter-b.ttf")
+          (settings (fontsloth-font-settings-create))
+          (repo-a (fontsloth-cache--pcache-path-name path-a))
+          (repo-b (fontsloth-cache--pcache-path-name path-b)))
+     (fontsloth-cache-put path-a 'a)
+     (fontsloth-cache-put path-b 'b)
+     (pcache-save (gethash repo-a *pcache-repositories*) t)
+     (pcache-save (gethash repo-b *pcache-repositories*) t)
+     (clrhash *pcache-repositories*)
+     (setq fontsloth-cache--initialized? nil)
+     (fontsloth-cache--load-repos t (list (cons path-a settings)))
+     (should (gethash repo-a *pcache-repositories*))
+     (should-not (gethash repo-b *pcache-repositories*))
+     (should-not fontsloth-cache--initialized?)
+     (fontsloth-cache--load-repos)
+     (should fontsloth-cache--initialized?)
+     (should (gethash repo-b *pcache-repositories*)))))
+
 (provide 'fontsloth-cache-test)
 
 

@@ -104,20 +104,35 @@ ARGS ::= any arguments passed to that function"
              do
              (puthash k v *pcache-repositories*))))
 
-(defun fontsloth-cache--load-repos (&optional force?)
+(declare-function fontsloth-font-settings-collection-index "fontsloth" (settings))
+
+(defun fontsloth-cache--load-repos (&optional force? filter)
   "Load any pcache repos whose names start with `fontsloth-cache--pcache-prefix'.
 
-FORCE? if non-nil, re-load even if already initialized"
-  (when (or (not fontsloth-cache--initialized?) force?)
-    (advice-add 'pcache-kill-emacs-hook :around #'fontsloth-cache--avoid-save-on-kill)
-    (when-let* ((pcache-files (and (file-directory-p pcache-directory)
-                                  (directory-files pcache-directory))))
-      (cl-loop for f in pcache-files
-               unless (gethash f *pcache-repositories*)
-               when (string-prefix-p fontsloth-cache--pcache-prefix f)
-               do (make-instance 'fontsloth-cache-pcache
-                                 :object-name f)))
-    (setq fontsloth-cache--initialized? t)))
+FORCE? if non-nil, re-load even if already initialized
+FILTER a list of (PATH . FONT-SETTINGS) to load if available"
+  (let ((partial? (and filter (consp filter))))
+    (when (or (not fontsloth-cache--initialized?) force?)
+      (advice-add 'pcache-kill-emacs-hook :around #'fontsloth-cache--avoid-save-on-kill)
+      (when-let* ((pcache-files (and (file-directory-p pcache-directory)
+                                    (directory-files pcache-directory))))
+        (cl-loop for f in pcache-files
+                 with filter = (when partial?
+                                 (mapcar
+                                  (lambda (source)
+                                    (fontsloth-cache--pcache-path-name
+                                     (car source)
+                                     (fontsloth-font-settings-collection-index
+                                      (cdr source))))
+                                  filter))
+                 unless (gethash f *pcache-repositories*)
+                 when (string-prefix-p fontsloth-cache--pcache-prefix f)
+                 when (or (null filter) (cl-member f filter :test #'equal))
+                 do (make-instance 'fontsloth-cache-pcache
+                                   :object-name f)))
+      ;; A filtered load must not prevent a later full cache scan.
+      (unless partial?
+        (setq fontsloth-cache--initialized? t)))))
 
 (declare-function fontsloth--font-cache-snapshot "fontsloth" (font))
 (declare-function fontsloth-font-p "fontsloth" (object))
