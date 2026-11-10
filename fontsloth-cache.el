@@ -104,13 +104,11 @@ ARGS ::= any arguments passed to that function"
              do
              (puthash k v *pcache-repositories*))))
 
-(declare-function fontsloth-font-settings-collection-index "fontsloth" (settings))
-
 (defun fontsloth-cache--load-repos (&optional force? filter)
   "Load any pcache repos whose names start with `fontsloth-cache--pcache-prefix'.
 
 FORCE? if non-nil, re-load even if already initialized
-FILTER a list of (PATH . FONT-SETTINGS) to load if available"
+FILTER a list of (PATH . COLLECTION-INDEX) to load if available"
   (let ((partial? (and filter (consp filter))))
     (when (or (not fontsloth-cache--initialized?) force?)
       (advice-add 'pcache-kill-emacs-hook :around #'fontsloth-cache--avoid-save-on-kill)
@@ -121,9 +119,7 @@ FILTER a list of (PATH . FONT-SETTINGS) to load if available"
                                  (mapcar
                                   (lambda (source)
                                     (fontsloth-cache--pcache-path-name
-                                     (car source)
-                                     (fontsloth-font-settings-collection-index
-                                      (cdr source))))
+                                     (car source) (cdr source)))
                                   filter))
                  unless (gethash f *pcache-repositories*)
                  when (string-prefix-p fontsloth-cache--pcache-prefix f)
@@ -142,7 +138,7 @@ FILTER a list of (PATH . FONT-SETTINGS) to load if available"
 COLLECTION-INDEX selects the TTC face.  Lazy fonts are stored as compact
 snapshots rather than serializing whatever glyphs and kern map happen to
 be loaded at save time."
-  (fontsloth-cache--load-repos)
+  (fontsloth-cache--load-repos nil `((,file-path . ,collection-index)))
   (let* ((repo-name (fontsloth-cache--pcache-path-name
                      file-path collection-index))
          (cache (or (gethash repo-name *pcache-repositories*)
@@ -162,6 +158,7 @@ be loaded at save time."
 
 (defun fontsloth-cache-has (file-path &optional collection-index)
   "Return non-nil if cache has a font for FILE-PATH at COLLECTION-INDEX."
+  (fontsloth-cache--load-repos nil `((,file-path . ,collection-index)))
   (when-let* ((repo-name (fontsloth-cache--pcache-path-name
                           file-path collection-index))
               (cache (gethash repo-name *pcache-repositories*)))
@@ -171,7 +168,7 @@ be loaded at save time."
   "Retrieve a cached font for FILE-PATH at COLLECTION-INDEX, if any.
 
 The value is nil if no entry is found."
-  (fontsloth-cache--load-repos)
+  (fontsloth-cache--load-repos nil `((,file-path . ,collection-index)))
   (when-let* ((repo-name (fontsloth-cache--pcache-path-name
                           file-path collection-index))
               (cache (gethash repo-name *pcache-repositories*)))
@@ -179,7 +176,7 @@ The value is nil if no entry is found."
 
 (defun fontsloth-cache-invalidate (file-path &optional collection-index)
   "Invalidate a single font for FILE-PATH at COLLECTION-INDEX."
-  (fontsloth-cache--load-repos)
+  (fontsloth-cache--load-repos nil `((,file-path . ,collection-index)))
   (when-let* ((repo-name (fontsloth-cache--pcache-path-name
                           file-path collection-index))
               (cache (gethash repo-name *pcache-repositories*)))

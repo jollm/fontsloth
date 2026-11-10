@@ -203,7 +203,9 @@
      (pcache-save (gethash repo-b *pcache-repositories*) t)
      (clrhash *pcache-repositories*)
      (setq fontsloth-cache--initialized? nil)
-     (fontsloth-cache--load-repos t (list (cons path-a settings)))
+     (fontsloth-cache--load-repos
+      t (list (cons path-a
+                    (fontsloth-font-settings-collection-index settings))))
      (should (gethash repo-a *pcache-repositories*))
      (should-not (gethash repo-b *pcache-repositories*))
      (should-not fontsloth-cache--initialized?)

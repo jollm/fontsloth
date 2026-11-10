@@ -425,7 +425,13 @@ regardless of whether they are already cached"
          (fontsloth--async-do-reload-fn sources font-settings force-reload?)
          (lambda (result)
            (when (seq-remove #'null result)
-             (fontsloth-cache--load-repos t sources))
+             (fontsloth-cache--load-repos
+              t (mapcar
+                 #'(lambda (source)
+                     `(,(car source)
+                       . ,(fontsloth-font-settings-collection-index
+                           (cdr source))))
+                 sources)))
            (when finish-func
              (apply finish-func result nil)))))
     (when finish-func
