@@ -156,11 +156,13 @@ see URL `https://docs.microsoft.com/en-us/typography/opentype/spec/gdef'")
                       (default-lang-sys-offset uint 16)
                       (lang-sys-count uint 16)
                       (default-lang-sys type
-                        (fontsloth-otf-typo--offset-spec
-                         (+ default-lang-sys-offset
-                            (alist-get 'offset (elt script-offsets bindat--i))
-                            script-list-offset)
-                         fontsloth-otf-typo--lang-sys-spec))
+                        (if (= 0 default-lang-sys-offset)
+                            (bindat-type unit nil)
+                          (fontsloth-otf-typo--offset-spec
+                           (+ default-lang-sys-offset
+                              (alist-get 'offset (elt script-offsets bindat--i))
+                              script-list-offset)
+                           fontsloth-otf-typo--lang-sys-spec)))
                       ;; TODO: read all lang-sys
                       ))))
   "A spec for a GPOS script list.")

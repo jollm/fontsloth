@@ -83,5 +83,17 @@ lookup must both report -5."
                           (fontsloth-otf-typo-gpos-build-kern-mappings font))
                  -5)))))
 
+(ert-deftest fontsloth-otf-typo-test-script-without-default-lang-sys ()
+  "Skip a script whose default language-system offset is zero."
+  (let* ((bytes [0 1 ?c ?y ?r ?l 0 8 0 0 0 0])
+         (list (bindat-unpack
+                (fontsloth-otf-typo--offset-spec
+                 0 fontsloth-otf-typo--script-list-spec)
+                bytes))
+         (script (elt (alist-get 'scripts list) 0)))
+    (should (equal (alist-get 'tag script) "cyrl"))
+    (should-not (alist-get 'default-lang-sys script))))
+
 (provide 'fontsloth-otf-typo-test)
+
 ;;; fontsloth-otf-typo-test.el ends here
